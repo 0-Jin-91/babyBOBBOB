@@ -1,11 +1,14 @@
 <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#FFE7DC">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>우리 아기 이유식 노트</title><style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="아빠의 이유식">
+<meta name="application-name" content="아내를 위한 아빠의 이유식 레시피">
+<meta name="description" content="아내를 위한 아빠의 이유식 레시피 — 영양 분석·재고관리·성장기록을 한 곳에서"><meta name="theme-color" content="#FFE7DC">
+<title>아내를 위한 아빠의 이유식 레시피</title><style>
 :root{--bg:#FFF9F5;--ink:#3E3A38;--sub:#8C8480;--ln:#F0E6DF;--pc:#FF9E7D;--pd:#F2734B;--mt:#7ED0B8;--lv:#A9A0E0;--sn:#FFC861;--rd:#EF6A4C;--bl:#7FA8D9;--nw:60px;--ok:#2E9C7D;--warn:#E08A00}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;padding:0}
-html{background:#FFE7DC}
+html{background:#FFE7DC;overscroll-behavior-y:none}
+body{overscroll-behavior-y:none}
 body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6}
 #top{display:none}
 #wrap{padding-left:var(--nw);padding-top:env(safe-area-inset-top);min-height:100vh;background:var(--bg)}
@@ -22,6 +25,13 @@ nav button{width:53px;padding:8px 0 6px;border-radius:12px;font-size:9px;font-we
 nav button i{display:block;font-size:19px;font-style:normal;margin-bottom:1px}
 nav button.on{color:#fff;background:var(--pc)}
 nav .lg{font-size:19px;margin-bottom:5px}
+/* nav 최상단 젖병 = 새로고침·버전확인 */
+.lgb{width:53px;padding:7px 0 5px;border-radius:12px;margin-bottom:4px;position:relative;background:#FFF1EB;color:var(--pd);font-size:8.5px;font-weight:800;line-height:1.1}
+.lgb i{display:block;font-size:20px;font-style:normal;margin-bottom:1px}
+.lgb:active{transform:scale(.93)}
+.lgb.spin i{display:inline-block;animation:rfspin .8s linear infinite}
+.lgb.new::after{content:'';position:absolute;right:6px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--rd);box-shadow:0 0 0 2px #fff}
+@media(max-width:360px){.lgb{width:46px;font-size:8px}.lgb i{font-size:18px}}
 #ob{padding:32px 20px 60px;text-align:center;max-width:440px;margin:0 auto}
 .fd{text-align:left;margin-bottom:11px}
 .fd label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin-bottom:4px}
@@ -176,7 +186,7 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 .tlg{margin:1px 0 1px 49px;font-size:9.5px;color:var(--mt);font-weight:700}
 
 /* 모달 스와이프 닫기 */
-.sh{will-change:transform}
+.sh{will-change:transform;background:var(--bg);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sh.drag{transition:none!important}
 .gb{cursor:grab;touch-action:none;position:relative}
 .gb:active{cursor:grabbing}
@@ -281,6 +291,9 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 </style><link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#F2734B">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="아빠의 이유식">
+<meta name="application-name" content="아내를 위한 아빠의 이유식 레시피">
+<meta name="description" content="아내를 위한 아빠의 이유식 레시피 — 영양 분석·재고관리·성장기록을 한 곳에서">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="이유식노트">
 </head><body>
@@ -297,7 +310,7 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 <linearGradient id="gK" x2="0" y2="1"><stop stop-color="#75706C"/><stop offset="1" stop-color="#3A3735"/></linearGradient>
 <radialGradient id="gL" cx=".35" cy=".28" r=".75"><stop stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 </defs></svg>
-<nav id="nv" class="hd"><div class="lg">🍼</div>
+<nav id="nv" class="hd"><button class="lgb" id="lgb" onclick="updCheck()" title="새로고침 · 업데이트 확인"><i>🍼</i><span>버전</span></button>
 <button data-t="home" class="on"><i>🏠</i>홈</button>
 <button data-t="today"><i>📅</i>오늘</button>
 <button data-t="plan"><i>🗓</i>식단</button>
@@ -310,8 +323,8 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 <button data-t="info"><i>📖</i>정보</button></nav>
 <div id="wrap"><div id="app">
 <section id="ob"><div style="font-size:54px">🍼</div>
-<h1 style="font-size:22px;margin-bottom:5px">우리 아기 이유식 노트</h1>
-<p class="mu" style="margin:0 0 20px">개월수·체중 기반 영양 계산 · 철분 흡수율 · 성장곡선까지</p>
+<h1 style="font-size:21px;margin-bottom:4px;line-height:1.3">아내를 위한 아빠의 이유식 레시피</h1>
+<p class="mu" style="margin:0 0 20px">개월수·체중 기반 영양 계산 · 재료 조합 · 재고관리 · 성장곡선까지</p>
 <div class="fd"><label>아기 이름</label><input id="iN" type="text" placeholder="예: 예린"></div>
 <div class="fd"><label>태어난 날</label><input id="iB" type="date"></div>
 <div class="fd"><label>성별 <span style="font-weight:400">(성장곡선 계산에 필요)</span></label><select id="iS"><option value="f">여아</option><option value="m">남아</option></select></div>
@@ -329,24 +342,24 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 <div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=22"></script>
-<script src="core.js?v=22"></script>
-<script src="update.js?v=22"></script>
-<script src="ui.js?v=22"></script>
-<script src="dash.js?v=22"></script>
-<script src="combo.js?v=22"></script>
-<script src="home.js?v=22"></script>
-<script src="today.js?v=22"></script>
-<script src="stock.js?v=22"></script>
-<script src="calc.js?v=22"></script>
-<script src="plan.js?v=22"></script>
-<script src="menu.js?v=22"></script>
-<script src="edit.js?v=22"></script>
-<script src="food.js?v=22"></script>
-<script src="grow.js?v=22"></script>
-<script src="log.js?v=22"></script>
-<script src="info.js?v=22"></script>
-<script src="boot.js?v=22"></script>
+<script src="data.js?v=24"></script>
+<script src="core.js?v=24"></script>
+<script src="update.js?v=24"></script>
+<script src="ui.js?v=24"></script>
+<script src="dash.js?v=24"></script>
+<script src="combo.js?v=24"></script>
+<script src="home.js?v=24"></script>
+<script src="today.js?v=24"></script>
+<script src="stock.js?v=24"></script>
+<script src="calc.js?v=24"></script>
+<script src="plan.js?v=24"></script>
+<script src="menu.js?v=24"></script>
+<script src="edit.js?v=24"></script>
+<script src="food.js?v=24"></script>
+<script src="grow.js?v=24"></script>
+<script src="log.js?v=24"></script>
+<script src="info.js?v=24"></script>
+<script src="boot.js?v=24"></script>
 <script>
 /* 시트 아래로 스와이프해서 닫기 */
 (function(){var md=document.getElementById('md'),sh=document.getElementById('sh');
@@ -361,17 +374,20 @@ function start(y,tgt){
  y0=y;dy=0;drag=true;sh.classList.add('drag');sh.classList.remove('snap')}
 function move(y,ev){if(!drag||y0===null)return;
  var d=y-y0;
- if(d<0){ /* 위로 끌면 저항 */ d=d/4 }
+ if(d<0)d=0;   /* 위로는 이동하지 않는다 — 시트 위쪽에 회색 배경이 드러나는 원인 */
  if(d>0&&!fromTop&&sh.scrollTop>2){end();return}
  dy=d;
  if(d>0&&ev&&ev.cancelable)ev.preventDefault();
- sh.style.transform='translateY('+Math.max(-40,d)+'px)';
+ sh.style.transform='translateY('+Math.max(0,d)+'px)';
  md.style.background='rgba(50,40,35,'+Math.max(.12,.5-d/700)+')'}
+function reset(){sh.style.transform='';sh.style.background='';md.style.background='';
+ sh.classList.remove('drag');sh.classList.remove('snap');y0=null;dy=0;drag=false}
+window.shReset=reset;
 function end(){if(!drag)return;drag=false;sh.classList.remove('drag');sh.classList.add('snap');
  var h=sh.getBoundingClientRect().height||600;
  if(dy>Math.min(150,h*0.28)){
    sh.style.transform='translateY(100%)';md.style.background='rgba(50,40,35,0)';
-   setTimeout(function(){closeM();sh.style.transform='';sh.classList.remove('snap');md.style.background=''},190)}
+   setTimeout(function(){closeM();reset()},190)}
  else{sh.style.transform='';md.style.background='';
    setTimeout(function(){sh.classList.remove('snap')},240)}
  y0=null;dy=0}

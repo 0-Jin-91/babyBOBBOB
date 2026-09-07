@@ -140,7 +140,9 @@ save();closeM();render()}
 /*========== 모달 공통 ==========*/
 function closeM(){var md=document.getElementById('md'),sh=document.getElementById('sh');
 md.classList.remove('on');document.body.style.overflow='';
-if(sh){sh.style.transform='';sh.classList.remove('drag','snap');sh.scrollTop=0}
+/* 스와이프 중 남은 인라인 스타일까지 완전히 초기화 — 안 지우면 회색 영역이 남는다 */
+if(window.shReset)shReset();
+if(sh){sh.style.transform='';sh.style.background='';sh.classList.remove('drag','snap');sh.scrollTop=0}
 md.style.background=''}
 function openSrc(k){var s=SRC[k];
 var off=(typeof isOnline==='function'&&!isOnline());

@@ -1,10 +1,11 @@
 /*========== 메뉴 탭 ==========*/
 function menuHead(){return '<div class="tt"><button class="'+(mTab==='s'?'on':'')+'" onclick="mTab=\'s\';render()">📚 단계별</button><button class="'+(mTab==='f'?'on':'')+'" onclick="mTab=\'f\';render()">⭐ 즐겨찾기</button><button class="'+(mTab==='m'?'on':'')+'" onclick="mTab=\'m\';render()">✏️ 나의 메뉴 ('+myR.length+')</button></div>'
 +'<div class="cd" style="padding:9px"><input value="'+esc(srch)+'" oninput="srch=this.value;reSearch()" id="sq" placeholder="🔎 메뉴·재료 검색 (예: 소고기, 토핑)" style="width:100%;padding:10px;border:1.5px solid var(--ln);border-radius:11px;outline:none"></div>'}
-function vMenu(){return menuHead()+(srch?vSearch():mTab==='s'?vStage():mTab==='f'?vFav():vMy())}
-function reSearch(){srch=document.getElementById('sq').value;
-document.getElementById('vw').innerHTML=vMenu();
-var s2=document.getElementById('sq');if(s2){s2.focus();s2.setSelectionRange(s2.value.length,s2.value.length)}}
+function menuBody(){return srch?vSearch():mTab==='s'?vStage():mTab==='f'?vFav():vMy()}
+function vMenu(){return menuHead()+'<div id="mres">'+menuBody()+'</div>'}
+/* 결과만 갱신 — 입력창(<input>) 은 건드리지 않는다. 재생성하면 한글 조합이 끊긴다 */
+function reSearch(){var i=document.getElementById('sq');if(i)srch=i.value;
+var e=document.getElementById('mres');if(e)e.innerHTML=menuBody()}
 function vSearch(){var q=srch.toLowerCase();
 var L=RCP().filter(function(r){
 if(r.n.toLowerCase().indexOf(q)>=0)return 1;

@@ -380,4 +380,4 @@ function csv(){var s='날짜,시각,구분,끼니,메뉴,양,반응,재료상세
 var gs=(l.gs||[]).map(function(x){return x[0]+' '+x[1]+x[2]}).join(' / ');
 return [l.d,l.tm||'',(l.k==='milk'?'수유':'이유식'),l.t||'','"'+l.n+'"',(l.k==='milk'?l.ml+'ml':(l.a||'')+'g'),l.rx||'','"'+gs+'"',rnd(n.p||0),rnd(n.fe||0),rnd(n.ca||0),rnd(n.zn||0)].join(',')}).join('\n');
 var g='\n\n날짜,몸무게kg,키cm,머리둘레cm\n'+grow.map(function(x){return [x.d,x.w||'',x.h||'',x.c||''].join(',')}).join('\n');
-dl(new Blob(['﻿'+s+g],{type:'text/csv'}),baby.name+'_이유식_성장기록.csv')}
+dl(new Blob(['﻿'+s+g],{type:'text/csv'}),baby.name+'_아빠의이유식_기록.csv')}
