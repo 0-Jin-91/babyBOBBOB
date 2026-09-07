@@ -40,6 +40,7 @@ return '<div class="rw" style="justify-content:space-between;align-items:center"
 +'<div class="cd"><div class="rw" style="justify-content:space-between"><b style="font-size:13.5px">🧾 재료</b><button class="mu" style="font-weight:700;color:var(--pd)" onclick="openEd(\''+r.i+'\')">✏️ 이름·재료·중량 수정</button></div><div style="margin-top:6px">'
 +r.g.map(function(x){return '<div class="ir"><span>'+esc(x[0])+'</span><b>'+rnd((+x[1]||0)*qty)+x[2]+'</b></div>'}).join('')+'</div><div class="mu" style="font-size:10.5px;margin-top:6px">기준: '+st.ra+' · 1회 '+st.am+'</div></div>'
 +nutBlock(nu,qty)
++comboBlock(r)
 +'<div class="cd"><b style="font-size:13.5px">👩‍🍳 만드는 순서</b><div class="mu" style="font-size:10.5px;margin:2px 0 8px">기본 그림이 표시됩니다. 📷로 직접 찍은 사진으로 바꿀 수 있어요.</div><ul class="sl">'
 +r.st.map(function(s,x){var k=r.i+'_'+x,p=ph[k];
 return '<li><div class="no">'+(x+1)+'</div><div class="ar2"><div class="bx">'+(p?'<img src="'+p+'">':ART(kOf(s)))+'</div><div class="p2"><button onclick="pickPh(\''+k+'\')">📷 '+(p?'변경':'내 사진')+'</button>'+(p?'<button class="d" onclick="delPh(\''+k+'\')">↺</button>':'')+'</div></div><div class="tx">'+esc(s)+'</div></li>'}).join('')

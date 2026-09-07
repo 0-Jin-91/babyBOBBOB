@@ -4,7 +4,7 @@ function thumb(r){var p=ph[r.i+'_0'];return p?'<img src="'+p+'">':ART(kOf((r.st&
 function rcard(r,x){var n=nutOf(r).t,sc=mealScore(r),lv=lvl(sc);
 return '<div class="rc '+lv+'"><div class="th" onclick="openR(\''+r.i+'\')">'+thumb(r)+'</div>'
 +'<div style="flex:1" onclick="openR(\''+r.i+'\')"><div class="nm">'+(fav[r.i]?'⭐ ':'')+esc(r.n)+(r.my?' <span class="tg m">내 메뉴</span>':'')+(r.ed?' <span class="tg p">수정</span>':'')+'</div>'
-+'<div class="ds">⏱ '+(r.tm||'-')+' · 철 '+rnd(n.fe)+'mg(흡수 '+rnd2(n.feAb)+') · 단백 '+rnd(n.p)+'g'+(x||'')+'</div></div>'
++'<div class="ds">⏱ '+(r.tm||'-')+' · 철 '+rnd(n.fe)+'mg(흡수 '+rnd2(n.feAb)+') · 단백 '+rnd(n.p)+'g'+(x||'')+'</div>'+comboTag(r)+'</div>'
 +'<button class="badge '+lv+'" style="flex:0 0 auto;font-size:11px;padding:7px 8px;line-height:1.25;text-align:center" onclick="event.stopPropagation();diagMeal(\''+r.i+'\')">'+lvIco(sc)+'<br>'+sc+'%</button></div>'}
 function todayLogs(){return logs.filter(function(l){return l.d===fmt(TD())})}
 function todaySum(){var f={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0},m={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0},ml=0,cnt=0;

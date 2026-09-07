@@ -23,6 +23,7 @@ return '<div style="margin-bottom:9px"><b style="font-size:12.5px;color:'+lvCol(
 +D.map(nrow).join('')
 +'<div class="mu" style="font-size:10px;margin-top:5px">헴철 '+rnd2(nu.hm)+' · 비헴철 '+rnd2(nu.nh)+' · 비타민C '+rnd(nu.t.vc)+'mg</div></div>'
 +feCoach(nu)
++comboEdit()
 +'<div class="st">만드는 순서 (그림 자동 매칭)</div><div class="cd">'
 +ME.st.map(function(s,i){return '<div class="rw" style="margin-bottom:6px;align-items:center"><div style="flex:0 0 40px;height:31px;border-radius:8px;overflow:hidden;border:1px solid var(--ln)">'+ART(kOf(s))+'</div><input value="'+esc(s)+'" oninput="ME.st['+i+']=this.value" onblur="drawEd()" placeholder="'+(i+1)+'단계" style="flex:1;padding:10px;border:1.5px solid var(--ln);border-radius:11px"><button style="color:var(--sub);padding:0 4px" onclick="ME.st.splice('+i+',1);drawEd()">✕</button></div>'}).join('')
 +'<button class="btn g s" onclick="ME.st.push(\'\');drawEd()">＋ 단계 추가</button></div>'
