@@ -20,6 +20,9 @@ return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아�
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> '+sT('kdri')+'</div>'
 +dualGoal()+'</div>'
 
+/*----- 오늘 탭 안내 -----*/
++'<div class="cd" style="background:#F3F6FA;cursor:pointer" onclick="tab=\'today\';render()"><div class="rw" style="justify-content:space-between;align-items:center"><div><b style="font-size:13px">📅 오늘 기록 관리</b><div class="mu" style="font-size:10.5px;margin-top:2px">끼니 체크 · 먹은 양 수정 · 수유 회차 · 간식까지 한 곳에서</div></div><span style="color:var(--bl);font-weight:800">›</span></div></div>'
+
 /*----- 수유 입력 -----*/
 +'<div class="st">🍼 오늘 수유 <span class="mu" style="font-weight:600;font-size:11.5px">· 권장 '+mlDay().lo+'~'+mlDay().hi+'ml ('+mlGuide().lb+')</span></div>'+milkCard()
 +'<div class="st">📊 오늘의 하루 영양 달성 (이유식 '+D.cnt+'끼 + 수유 '+D.ml+'ml)</div><div class="cd">'+stackBars(D.f,D.m,T.day)
@@ -42,8 +45,8 @@ return '<div class="cd" style="padding:10px"><div class="rw" style="justify-cont
 +rcard(r)
 +((sc<LV.mid||sc>LV.over)?'<div class="alert '+lvl(sc)+'" style="margin:6px 0 8px;cursor:pointer" onclick="diagMeal(\''+r.i+'\')"><span class="ic">'+lvIco(sc)+'</span><div>1끼 목표의 <b>'+sc+'%</b> ('+lvTxt(sc)+') — <u>눌러서 개선안 보기 ›</u></div></div>':'')
 +(function(){var done=loggedToday(r.i);
-return '<div class="rw">'+(done?'<button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 먹었어요 취소</button><button class="btn g s" onclick="editLog(\''+done+'\')">✏️ 먹은 내용 수정</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
-+(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 오늘 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+'</div>':'')})()+'</div>'}).join('')
+return '<div class="rw">'+(done?'<button class="btn g s" onclick="openAteFor(\''+done+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 취소</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
++(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+(logAmtOf(done)?' · '+logAmtOf(done)+'g':' · 양 미입력')+'</div>':'')})()+'</div>'}).join('')
 +'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'
 
 /*----- 단계 기준 · 로드맵 -----*/
@@ -136,6 +139,7 @@ logs=logs.filter(function(l){return l.id!==id});save();render()}
 function loggedToday(rid){var td=fmt(TD()),hit=null;
 logs.forEach(function(l){if(l.d===td&&l.k!=='milk'&&(l.rid===rid||l.n===(getR(rid)||{}).n))hit=l.id});
 return hit}
+function logAmtOf(id){var a='';logs.forEach(function(l){if(l.id===id)a=l.a||''});return a}
 function logTmOf(id){var t='';logs.forEach(function(l){if(l.id===id)t=l.tm||''});return t}
 function unLog(id){logs=logs.filter(function(l){return l.id!==id});save();render()}
 

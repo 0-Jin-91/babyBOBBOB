@@ -18,7 +18,7 @@ if(!selS)selS=curS().id==='ready'?'early':curS().id;
 migLogs();render();notiCheck()}
 
 /*========== 렌더 ==========*/
-var VIEW={home:vHome,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
+var VIEW={home:vHome,today:vToday,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
 function render(){var s=curS(),T=TG();
 document.getElementById('hdr').innerHTML='<div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:13px;font-weight:600;color:var(--sub)">이유식 노트</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
 document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)();

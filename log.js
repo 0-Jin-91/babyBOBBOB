@@ -80,7 +80,7 @@ return '<div class="cd"><div class="rw" style="justify-content:space-between;ali
 
 /*========== ⚖️ 그릇 무게 계산기 ==========*/
 var SC={tg:'gA',pre:'',post:''};
-function openScale(tg){SC={tg:tg||'gA',pre:'',post:''};drawScale();
+function openScale(tg){SCBACK='drawScale';SC={tg:tg||'gA',pre:'',post:''};drawScale();
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function drawScale(){var b=bwCur(),bwt=b?b.w:0;
 var pre=+SC.pre||0,post=+SC.post||0,ate=ateOf(pre,post);
@@ -108,7 +108,10 @@ closeM();
 if(SC.tg==='EL'){EL.a=ate;drawEL();return}
 var el=document.getElementById(SC.tg);
 if(el){el.value=ate}else{render();setTimeout(function(){var e2=document.getElementById(SC.tg);if(e2)e2.value=ate},60)}}
-function scMgr(){document.getElementById('mb').innerHTML='<div class="mt2">🥣 그릇 무게 관리</div>'
+var SCBACK='drawScale';
+function scBack(){if(SCBACK==='drawAte')drawAte();else drawScale()}
+function scMgr(){scMgrCore(SCBACK)}
+function scMgrCore(back){SCBACK=back||SCBACK;document.getElementById('mb').innerHTML='<div class="mt2">🥣 그릇 무게 관리</div>'
 +'<p class="mu" style="margin:6px 0 10px">자주 쓰는 그릇의 <b>빈 무게</b>를 미리 등록해 두면 매번 재지 않아도 됩니다.</p>'
 +(BW.list.length?'<div class="cd">'+BW.list.map(function(x){return '<div class="cb"><div style="flex:1"><b style="font-size:13.5px">'+esc(x.n)+'</b>'+(BW.cur===x.id?' <span class="tg p">사용 중</span>':'')+'<div class="mu" style="font-size:10.5px">빈 무게 '+x.w+'g</div></div>'
 +'<button class="mu" style="color:var(--bl);font-weight:700;padding:0 6px" onclick="bwSet(\''+x.id+'\');scMgr()">선택</button>'
@@ -117,12 +120,12 @@ function scMgr(){document.getElementById('mb').innerHTML='<div class="mt2">🥣 
 +'<div class="rw" style="margin-top:8px"><div class="fd" style="flex:1.4;margin:0"><label>이름</label><input id="bwN" placeholder="실리콘 그릇"></div><div class="fd" style="flex:.8;margin:0"><label>빈 무게(g)</label><input id="bwW" type="number" step="0.1" placeholder="120"></div></div>'
 +'<button class="btn g s" style="margin-top:9px" onclick="bwNew()">＋ 등록</button>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">빈 그릇만 저울에 올려 나온 숫자를 넣으세요.</div></div>'
-+'<button class="btn" onclick="drawScale()">‹ 계산기로 돌아가기</button>'
++'<button class="btn" onclick="scBack()">‹ 계산기로 돌아가기</button>'
 +'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>'}
 function bwNew(){var n=document.getElementById('bwN').value.trim(),w=+document.getElementById('bwW').value;
 if(!n)return alert('그릇 이름을 입력해 주세요');
 if(!w)return alert('빈 무게를 입력해 주세요');
-bwAdd(n,w);scMgr()}
+bwAdd(n,w);scMgrCore(SCBACK)}
 
 /*========== 재료별 입력 UI ==========*/
 var LG=[];
@@ -163,10 +166,69 @@ if(amt){var base=0;(r.g||[]).forEach(function(x){base+=gOf(x)});base=base/(r.sv|
 if(base>0){var f=amt/base,n2={};NK.forEach(function(k){n2[k]=nu[k]*f});n2.vc=nu.vc*f;nu=n2}}}}
 logs.push({id:''+Date.now(),d:fmt(TD()),n:n||'직접 입력',a:amt,t:slotOf(tm),tm:tm,rx:lRx,nu:nu,gs:gs});
 LG=[];save();render()}
-function qLog(id){var r=getR(id),tm=nowHM(),sv=r.sv||1;
-logs.push({id:''+Date.now(),d:fmt(TD()),n:r.n,a:'',t:slotOf(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,
+/* 즉시 기록 (양 미입력) */
+function qLogNow(id,tm){var r=getR(id),sv=r.sv||1;tm=tm||nowHM();
+var lid=''+Date.now();
+logs.push({id:lid,d:fmt(TD()),n:r.n,a:'',t:slotOf(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,
 gs:(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']})});
-save();closeM();tab='home';render()}
+save();return lid}
+
+/* 먹었어요 → 중량 입력 모달 */
+var AT=null;
+function qLog(id){var r=getR(id);if(!r)return;
+AT={rid:id,n:r.n,tm:nowHM(),a:'',rx:'😋',pre:'',post:'',lid:null};
+drawAte();document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
+function openAteFor(lid){var l=null;logs.forEach(function(x){if(x.id===lid)l=x});if(!l)return;
+AT={rid:l.rid||'',n:l.n,tm:l.tm||nowHM(),a:l.a||'',rx:l.rx||'😋',pre:l.pre||'',post:l.post||'',lid:lid};
+drawAte();document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
+function drawAte(){SCBACK='drawAte';var b=bwCur(),bwt=b?b.w:0;
+var pre=+AT.pre||0,post=+AT.post||0,calc=ateOf(pre,post);
+var served=pre?Math.round((pre-bwt)*10)/10:0;
+var rate=(served>0&&calc)?Math.round(calc/served*100):0;
+var a=+AT.a||0;
+document.getElementById('mb').innerHTML='<div class="mt2">'+(AT.lid?'✏️ 먹은 양 수정':'📝 먹었어요')+'</div>'
++'<div class="cd" style="background:#F3FAF7;padding:10px"><b style="font-size:13.5px">'+esc(AT.n)+'</b>'
++'<div class="rw" style="margin-top:8px"><div class="fd" style="flex:1;margin:0"><label>먹은 시각</label><input type="time" value="'+AT.tm+'" onchange="AT.tm=this.value;drawAte()"></div>'
++'<div class="fd" style="flex:1;margin:0"><label>반응</label><select onchange="AT.rx=this.value">'+['😋','😐','😖'].map(function(x){return '<option '+(AT.rx===x?'selected':'')+'>'+x+'</option>'}).join('')+'</select></div></div></div>'
+
+/* 직접 입력 */
++'<div class="cd"><div class="fd" style="margin:0"><label>먹은 양 (g) — 아는 경우 바로 입력</label><input type="number" step="0.1" value="'+AT.a+'" oninput="AT.a=this.value;drawAte()" placeholder="80"></div>'
++'<div class="ch" style="margin-top:8px">'+[30,50,80,100,120].map(function(v){return '<button class="'+(a===v?'on':'')+'" onclick="AT.a='+v+';drawAte()">'+v+'g</button>'}).join('')
++'<button onclick="AT.a=\'\';AT.pre=\'\';AT.post=\'\';drawAte()" style="background:#F5EFEA;color:var(--sub)">지우기</button></div></div>'
+
+/* 그릇 무게 계산 */
++'<div class="cd" style="background:#FBF6F2"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:12.5px">⚖️ 그릇 무게로 계산</b><button class="mu" style="color:var(--bl);font-weight:700" onclick="scMgr2()">그릇 관리 ›</button></div>'
++(BW.list.length?'<div class="ch" style="margin-top:7px">'+BW.list.map(function(x){return '<button class="'+(BW.cur===x.id?'on':'')+'" onclick="bwSet(\''+x.id+'\');drawAte()">'+esc(x.n)+' '+x.w+'g</button>'}).join('')+'</div>':'<div class="mu" style="margin-top:6px;font-size:11px">등록된 그릇이 없어요. 그릇 관리에서 추가해 주세요.</div>')
++'<div class="rw" style="margin-top:9px"><div class="fd" style="flex:1;margin:0"><label>① 먹이기 전 (그릇 포함)</label><input type="number" step="0.1" value="'+AT.pre+'" oninput="AT.pre=this.value;drawAte()" placeholder="'+(bwt+80)+'"></div>'
++'<div class="fd" style="flex:1;margin:0"><label>② 먹인 후 (그릇 포함)</label><input type="number" step="0.1" value="'+AT.post+'" oninput="AT.post=this.value;drawAte()" placeholder="'+(bwt+15)+'"></div></div>'
++(calc?'<div class="cd" style="background:#fff;margin:9px 0 0;padding:9px"><div class="ir"><span>담아준 양</span><b>'+served+'g</b></div><div class="ir"><span>남긴 양</span><b>'+Math.max(0,Math.round((post-bwt)*10)/10)+'g</b></div>'
++'<div class="ir" style="border:0"><span style="font-weight:800">계산된 먹은 양</span><b style="font-size:18px;color:var(--pd)">'+calc+'g</b></div>'
++'<div class="bar" style="height:13px;margin-top:5px"><i class="solid" style="width:'+Math.min(100,rate)+'%;background:#3FAE8E"></i></div>'
++'<div class="mu" style="font-size:10px;margin-top:4px">담아준 양의 <b>'+rate+'%</b>'+(rate>=80?' 👍 잘 먹었어요':rate<50?' — 오늘은 입맛이 없었나 봐요':'')+'</div>'
++'<button class="btn g s" style="margin-top:8px" onclick="AT.a='+calc+';drawAte()">✓ '+calc+'g 로 채우기</button></div>'
+:'<div class="mu" style="font-size:10.5px;margin-top:7px">그릇 무게 <b>'+bwt+'g</b>을 자동으로 빼고 계산합니다.</div>')
++'</div>'
+
++'<div class="cd" style="background:#F3F6FA;font-size:11.5px"><b>기록될 양:</b> <b style="color:var(--pd);font-size:14px">'+(AT.a?AT.a+'g':'미입력 (레시피 1회분 기준)')+'</b><div class="mu" style="font-size:10px;margin-top:3px">양을 넣으면 실제 먹은 만큼 영양이 계산됩니다.</div></div>'
++'<button class="btn" onclick="saveAte()">'+(AT.lid?'수정 저장':'기록 저장')+'</button>'
++(AT.lid?'<button class="btn y" style="margin-top:8px" onclick="delLog(\''+AT.lid+'\');closeM()">이 기록 삭제</button>':'')
++'<button class="btn y" style="margin-top:8px" onclick="closeM()">취소</button>'}
+function scMgr2(){scMgrCore('drawAte')}
+function saveAte(){var r=AT.rid?getR(AT.rid):null,sv=r?(r.sv||1):1;
+var amt=AT.a===''?null:+AT.a;
+var nu=null,gs=[];
+if(r){nu=nutOf(r).t;
+gs=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']});
+if(amt){var base=0;(r.g||[]).forEach(function(x){base+=gOf(x)});base=base/sv;
+if(base>0){var f=amt/base,n2={};NK.forEach(function(k){n2[k]=nu[k]*f});n2.vc=nu.vc*f;nu=n2;
+gs=gs.map(function(x){return [x[0],Math.round(x[1]*f*10)/10,x[2],x[3]]})}}}
+if(AT.lid){var i=-1;logs.forEach(function(l,x){if(l.id===AT.lid)i=x});
+if(i>=0){logs[i].a=AT.a;logs[i].tm=AT.tm;logs[i].t=slotOf(AT.tm);logs[i].rx=AT.rx;
+logs[i].pre=AT.pre;logs[i].post=AT.post;
+if(nu)logs[i].nu=nu;if(gs.length)logs[i].gs=gs}}
+else{logs.push({id:''+Date.now(),d:fmt(TD()),n:AT.n,a:AT.a,t:slotOf(AT.tm),tm:AT.tm,rx:AT.rx,
+nu:nu,gs:gs,rid:AT.rid,pre:AT.pre,post:AT.post})}
+save();closeM();if(tab!=='today')tab='today';render()}
 function delLog(id){if(!confirm('이 기록을 삭제할까요?'))return;
 logs=logs.filter(function(l){return l.id!==id});save();render()}
 
