@@ -9,9 +9,13 @@ function reSearch(){var i=document.getElementById('sq');if(i)srch=i.value;
 var e=document.getElementById('mres');if(e)e.innerHTML=menuBody()}
 function vSearch(){var q=srch.toLowerCase();
 var L=RCP().filter(function(r){
-if(r.n.toLowerCase().indexOf(q)>=0)return 1;
+if(nrm(r.n).indexOf(nrm(q))>=0)return 1;
 if(TY[r.y].indexOf(q)>=0)return 1;
-return (r.g||[]).filter(function(x){return (x[0]+' '+(x[3]||'')).toLowerCase().indexOf(q)>=0}).length});
+/* 재료 검색 — 동의어·초성까지 본다. '계란' 으로도 달걀 들어간 메뉴가 나온다 */
+return (r.g||[]).filter(function(x){
+if(nrm(x[0]+' '+(x[3]||'')).indexOf(nrm(q))>=0)return 1;
+var f=FD.filter(function(z){return z[4]&&x[3]&&z[4]===x[3]})[0];
+return f?fdMatch(f,q):0}).length});
 return '<div class="st">검색 결과 '+L.length+'개</div>'+(L.length?L.map(function(r){return rcard(r,' · '+STG[r.s].n+' '+TY[r.y])}).join(''):'<div class="cd mu">결과가 없어요.</div>')}
 function vFav(){var L=RCP().filter(function(r){return fav[r.i]});
 return '<div class="cd" style="background:#FFF6EC;font-size:12px">즐겨찾기한 메뉴는 <b>추천에서 우선 선택</b>됩니다. 메뉴 상세에서 ☆를 눌러 등록하세요.</div>'

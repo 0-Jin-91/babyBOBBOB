@@ -107,7 +107,7 @@ return h+'<button class="btn" style="margin-top:11px" onclick="cmToEdit()">✏�
 
 /*----- 재료 그리드 (검색·분류) -----*/
 function cmGrid(){var q=(CMQ||'').trim().toLowerCase(),L;
-if(q){L=FD.filter(function(f){return f[4]&&NUT[f[4]]&&(f[0].toLowerCase().indexOf(q)>=0||f[2].toLowerCase().indexOf(q)>=0)})}
+if(q){L=FD.filter(function(f){return f[4]&&NUT[f[4]]&&fdMatch(f,q)})}
 else if(cmCat==='재고'){var av=stkAvailNut().map(function(x){return x.key});
 L=FD.filter(function(f){return av.indexOf(f[4])>=0})}
 else L=FD.filter(function(f){return f[4]&&NUT[f[4]]&&(cmCat==='전체'||f[2]===cmCat)});

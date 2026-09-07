@@ -1,5 +1,5 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='27';                     /* index.html 의 ?v= 와 같은 값 */
+var APPV='29';                     /* index.html 의 ?v= 와 같은 값 */
 var UPDS=LS('b6.updfound',null)||{};
 var UPD={found:!!(UPDS.v&&UPDS.v!==APPV),checking:false,last:LS('b6.updchk',0),newv:(UPDS.v&&UPDS.v!==APPV)?UPDS.v:''};
 function updSaveF(){localStorage.setItem('b6.updfound',JSON.stringify({v:UPD.found?UPD.newv:''}))}

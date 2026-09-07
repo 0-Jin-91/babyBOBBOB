@@ -3,7 +3,42 @@ var NK=['p','fe','ca','zn'];
 var NI={p:1,fe:2,ca:3,zn:4};
 var NL={p:['단백질','g','#3FAE8E'],fe:['철분','mg','#E85536'],ca:['칼슘','mg','#5B8FCC'],zn:['아연','mg','#8B7FD4']};
 var MILK={f:{n:'분유',v:[67,1.4,.8,55,.5],vc:9,ab:.10},b:{n:'모유',v:[65,1.0,.03,32,.15],vc:4,ab:.50}};
-var PCG={'달걀':50,'달걀노른자':17};
+var PCG={'달걀':50,'달걀노른자':17,'달걀흰자':33};
+/*========== 재료 검색 매칭 ==========
+  '계란'→달걀, 'ㄱㄹ'→고구마/김 처럼 다르게 쳐도 찾아준다.
+  ① 이름·분류·영양키 부분일치  ② SYN 동의어 사전  ③ 초성 검색
+  ④ 공백·특수문자 무시  ⑤ 조합 중인 자모('ㄱㅖ')도 통과 ==========*/
+var CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+/* 한글 문자열의 초성만 뽑는다. '고구마' -> 'ㄱㄱㅁ' */
+function choOf(s){var o='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
+if(c>=0xAC00&&c<=0xD7A3)o+=CHO[Math.floor((c-0xAC00)/588)];
+else if(c>=0x3131&&c<=0x314E)o+=s.charAt(i);
+else if(c!==' ')o+=s.charAt(i).toLowerCase()}
+return o}
+/* 검색용 정규화 — 공백·괄호·중점 제거 후 소문자 */
+function nrm(s){return String(s||'').toLowerCase().replace(/[\s()·\-_,.\/]/g,'')}
+/* 초성만으로 입력했는지 판정 (ㄱ~ㅎ 만 있는 경우) */
+function isCho(q){return /^[ㄱ-ㅎ]+$/.test(q)}
+/* 한 재료(f)가 검색어(q)에 걸리는지 */
+function fdMatch(f,q){var ql=nrm(q);if(!ql)return true;
+var name=f[0]||'',cat=f[2]||'',key=f[4]||'',ali=f[7]||'';
+var syn=(typeof SYN!=='undefined'&&SYN[name])||'';
+var hay=nrm(name+' '+cat+' '+key+' '+ali+' '+syn);
+if(hay.indexOf(ql)>=0)return true;
+/* 동의어를 낱말 단위로도 확인 — '계란 노른자' 처럼 띄어 쳐도 걸린다 */
+var words=(name+' '+ali+' '+syn).split(/\s+/),qw=String(q||'').trim().toLowerCase().split(/\s+/);
+if(qw.length>1){var all=1;
+for(var i=0;i<qw.length;i++){var hit=0,qq=nrm(qw[i]);
+if(!qq)continue;
+for(var j=0;j<words.length;j++)if(nrm(words[j]).indexOf(qq)>=0){hit=1;break}
+if(!hit){all=0;break}}
+if(all)return true}
+/* 초성 검색 — 'ㄱㄱㅁ' -> 고구마 */
+if(isCho(String(q||'').replace(/\s/g,''))){
+var cq=String(q||'').replace(/\s/g,'');
+if(choOf(name).indexOf(cq)>=0)return true;
+for(var k=0;k<words.length;k++)if(choOf(words[k]).indexOf(cq)>=0)return true}
+return false}
 var IDS=['ready','early','mid','late','final'];
 var TY={p:'🍲 죽',t:'🧊 토핑',f:'✋ 핑거',m:'🍚 유아식'};
 var GN={w:['몸무게','kg'],h:['키','cm'],c:['머리둘레','cm']};
@@ -152,7 +187,7 @@ fe:{f:['소고기','달걀노른자','오트밀','시금치','파프리카'],t:'
 ca:{f:['두부','아기치즈','미역','멸치가루','청경채','요거트'],t:'칼슘은 <b>수유·유제품이 주 공급원</b>입니다. 이유식에서 올리려면 두부 20g·아기치즈 5g·불린미역·무염 멸치가루를 활용하세요.'},
 zn:{f:['소고기','달걀노른자','표고버섯','두부'],t:'<b>소고기·달걀노른자·표고버섯</b>이 아연이 많습니다.'}};
 var QG={'소고기':15,'닭고기':15,'두부':20,'흰살생선':15,'달걀노른자':1,'오트밀':10,'시금치':10,'파프리카':10,'아기치즈':5,'미역':10,'멸치가루':2,'표고버섯':10,'고구마':20,'단호박':20,'아보카도':10,'참기름':2,'요거트':30,'청경채':10,'밥':30,'브로콜리':10,'당근':10};
-function qUnit(fn){return fn==='달걀노른자'?'개':(fn==='참기름'?'방울':'g')}
+function qUnit(fn){return (fn==='달걀노른자'||fn==='달걀흰자'||fn==='달걀')?'개':(fn==='참기름'?'방울':'g')}
 function tipFor(n){var m={'단백질':'p','철분':'fe','칼슘':'ca','아연':'zn'};
 return FIX[m[n]]?FIX[m[n]].t:''}
 function mealScore(r){var T=TG(),n=nutOf(r).t,W={p:1.3,fe:1.4,ca:.9,zn:.8},s=0,tw=0;

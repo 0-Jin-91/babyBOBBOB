@@ -142,7 +142,7 @@ return '<div class="ir" style="background:#fff;border-radius:9px;padding:8px 10p
 /* cb: 선택 시 호출할 함수명, store: 선택 결과를 담을 전역변수명 */
 var SU='개';  /* 등록 폼에서 고른 세는 단위 */
 /* 도감 재료의 1개 무게 힌트 — PCG(달걀 등) 와 흔한 포장 단위 */
-var PERH={'달걀':[['달걀 1개',50]],'달걀노른자':[['노른자 1개',17]],'두부':[['두부 1팩',300],['부침용 1모',400]],
+var PERH={'달걀':[['달걀 1개',50],['왕란 1개',68]],'달걀노른자':[['노른자 1개',17]],'달걀흰자':[['흰자 1개',33]],'두부':[['두부 1팩',300],['부침용 1모',400]],
 '아기치즈':[['치즈 1장',18]],'요거트':[['1컵',85]],'김':[['김 1장',2]],'바나나':[['1개',100]],
 '사과':[['1개',200]],'배':[['1개',300]],'감자':[['1개',150]],'고구마':[['1개',150]],'단호박':[['1/4쪽',200]],
 '브로콜리':[['1송이',300]],'양파':[['1개',180]],'당근':[['1개',150]],'토마토':[['1개',150]],'파프리카':[['1개',120]]};
@@ -153,8 +153,7 @@ var ISQ={},IScb={};
 /* 검색 결과 HTML — 입력창과 분리해서 이 부분만 갱신한다 */
 function isResHTML(q,cb){var ql=(q||'').trim().toLowerCase();
 if(!ql)return '<div class="mu" style="font-size:10.5px;margin-top:7px">재료명을 입력하면 도감에서 찾아 드려요. 도감에 없으면 직접 입력할 수 있습니다.</div>';
-var L=FD.filter(function(f){
-return f[0].toLowerCase().indexOf(ql)>=0||f[2].toLowerCase().indexOf(ql)>=0||(f[4]||'').toLowerCase().indexOf(ql)>=0}).slice(0,18);
+var L=FD.filter(function(f){return fdMatch(f,ql)}).slice(0,18);
 var exact=L.filter(function(f){return f[0].toLowerCase()===ql}).length;
 return (L.length?'<div class="g4" style="margin-top:9px">'+L.map(function(f){
 return '<button class="ig" onclick="'+cb+'(\''+esc(f[0])+'\')"><div class="e">'+f[1]+'</div><div class="n">'+f[0]+'</div><div class="m">'+f[3]+'개월+</div></button>'}).join('')+'</div>'
