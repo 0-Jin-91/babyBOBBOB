@@ -1,7 +1,7 @@
 /*========== 홈 ==========*/
 function vHome(){var s=curS(),T=TG(),rec=todayRec(),sl=SLOTS(),D=todaySum();
-var pAcc={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0};
-rec.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){pAcc[k]+=n[k]});pAcc.feAb+=n.feAb});
+var pAcc={p:0,fe:0,ca:0,zn:0};
+rec.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){pAcc[k]+=n[k]})});
 var due=obs.filter(function(o){return !o.done&&dObs(o)<=3});
 var exp=cubes.filter(function(c){return c.q>0&&dLeft(c)<=2});
 var ns=nextStage(),nd=ns?Math.ceil((addM(d0(baby.birth),ns.f)-TD())/864e5):999;
@@ -15,23 +15,19 @@ return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아�
 /*----- 하루 목표 기준 -----*/
 +'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13.5px">🎯 오늘의 하루 목표 기준</b><button class="mu" style="color:var(--bl);font-weight:700" onclick="tab=\'grow\';render()">📈 성장기록</button></div>'
 +'<div class="g2" style="margin-top:8px">'
-+'<div style="background:'+(T.use?'#fff':'#FFEDE4')+';border:1.5px solid '+(T.use?'var(--ln)':'var(--pc)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="baby.useW=0;save();render()"><div class="mu" style="font-size:10px;font-weight:800">표준 기준 ('+T.lb+')</div><b style="font-size:13px">'+dri.kcal+'kcal · 단백 '+dri.p+'g</b><div class="mu" style="font-size:10px">2020 섭취기준</div></div>'
-+'<div style="background:'+(T.use?'#FFEDE4':'#fff')+';border:1.5px solid '+(T.use?'var(--pc)':'var(--ln)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="if(!'+(w?1:0)+'){alert(\'성장 탭에서 몸무게를 먼저 기록해 주세요\');return}baby.useW=1;save();render()"><div class="mu" style="font-size:10px;font-weight:800">우리 아기 체중 기준</div><b style="font-size:13px">'+(w?Math.round(w*dri.ekg)+'kcal · 단백 '+rnd(w*dri.pkg)+'g':'몸무게 미입력')+'</b><div class="mu" style="font-size:10px">'+(w?w+'kg × '+dri.ekg+'kcal/kg':'성장 탭에서 입력')+'</div></div></div>'
-+'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> · '+curS().n+' 이유식 담당비율 — 열량 '+Math.round(T.sfk.kcal*100)+'% · 단백 '+Math.round(T.sfk.p*100)+'% · 철 '+Math.round(T.sfk.fe*100)+'% · 칼슘 '+Math.round(T.sfk.ca*100)+'% '+sT('kdri')+'</div></div>'
++'<div style="background:'+(T.use?'#fff':'#FFEDE4')+';border:1.5px solid '+(T.use?'var(--ln)':'var(--pc)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="baby.useW=0;save();render()"><div class="mu" style="font-size:10px;font-weight:800">표준 기준 ('+T.lb+')</div><b style="font-size:13px">단백 '+dri.p+'g · 철 '+dri.fe+'mg</b><div class="mu" style="font-size:10px">2020 섭취기준</div></div>'
++'<div style="background:'+(T.use?'#FFEDE4':'#fff')+';border:1.5px solid '+(T.use?'var(--pc)':'var(--ln)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="if(!'+(w?1:0)+'){alert(\'성장 탭에서 몸무게를 먼저 기록해 주세요\');return}baby.useW=1;save();render()"><div class="mu" style="font-size:10px;font-weight:800">우리 아기 체중 기준</div><b style="font-size:13px">'+(w?'단백 '+rnd(w*dri.pkg)+'g · 철 '+dri.fe+'mg':'몸무게 미입력')+'</b><div class="mu" style="font-size:10px">'+(w?w+'kg × '+dri.pkg+'g/kg':'성장 탭에서 입력')+'</div></div></div>'
++'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> '+sT('kdri')+'</div>'
++dualGoal()+'</div>'
 
 /*----- 수유 입력 -----*/
-+'<div class="st">🍼 오늘 수유 입력</div><div class="cd"><div class="rw" style="justify-content:space-between;align-items:baseline;margin-bottom:8px"><b style="font-size:18px">'+D.ml+' ml</b><span class="mu">'+MILK[MTYPE()].n+' · '+todayLogs().filter(function(l){return l.k==='milk'}).length+'회</span></div>'
-+'<div class="mlk">'+[100,120,150,180,200,220].map(function(v){return '<button onclick="addMilk('+v+')">+'+v+'</button>'}).join('')
-+'<button onclick="addMilkP()" style="background:#F5EFEA;color:var(--sub)">직접</button><button onclick="undoMilk()" style="background:#FDEAE5;color:var(--rd)">↩︎</button></div>'
-+'<div class="mu" style="font-size:10.5px;margin-top:8px">'+(MTYPE()==='f'?'분유 100ml당 67kcal·철 0.8mg(흡수율 약 10%)':'모유 100ml당 65kcal·철 0.03mg(흡수율 약 50%)')+' 기준 합산 '+sT('milk')+'</div></div>'
-
-/*----- 하루 영양 달성 -----*/
++'<div class="st">🍼 오늘 수유 <span class="mu" style="font-weight:600;font-size:11.5px">· 권장 '+mlDay().lo+'~'+mlDay().hi+'ml ('+mlGuide().lb+')</span></div>'+milkCard()
 +'<div class="st">📊 오늘의 하루 영양 달성 (이유식 '+D.cnt+'끼 + 수유 '+D.ml+'ml)</div><div class="cd">'+stackBars(D.f,D.m,T.day)
 +'</div>'
 
 /*----- 추천 N끼 합계 -----*/
 +'<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
-return '<div style="text-align:center;background:#fff;border-radius:9px;padding:7px 2px"><div class="mu" style="font-size:9.5px">'+NL[k][0]+'</div><b style="color:'+lvCol(p)+';font-size:15px">'+p+'%</b></div>'}).join('')+'</div><div class="mu" style="font-size:10px;margin-top:6px">이유식 담당 목표 대비 · 흡수철 '+rnd2(pAcc.feAb)+'mg</div></div>'
+return '<div style="text-align:center;background:#fff;border-radius:9px;padding:7px 2px"><div class="mu" style="font-size:9.5px">'+NL[k][0]+'</div><b style="color:'+lvCol(p)+';font-size:15px">'+p+'%</b></div>'}).join('')+'</div><div class="mu" style="font-size:10px;margin-top:6px">이유식 담당 목표 대비</div></div>'
 
 /*----- 오늘 추천 끼니 -----*/
 +'<div class="st">🍽 오늘 '+MEALS()+'끼 추천 <span style="color:'+lvCol(DS.sc)+'">· 하루 합계 '+DS.sc+'%</span></div>'
@@ -45,7 +41,9 @@ return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="boostDay(\''+x
 return '<div class="cd" style="padding:10px"><div class="rw" style="justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:12.5px;color:var(--pd)">'+sl[i]+'</b><span><button class="mu" style="font-weight:700;color:var(--bl)" onclick="openAlt('+i+')">🔄 대안</button> <button class="mu" style="font-weight:700;color:var(--pd);margin-left:8px" onclick="openEd(\''+r.i+'\')">✏️ 수정</button></span></div>'
 +rcard(r)
 +((sc<LV.mid||sc>LV.over)?'<div class="alert '+lvl(sc)+'" style="margin:6px 0 8px;cursor:pointer" onclick="diagMeal(\''+r.i+'\')"><span class="ic">'+lvIco(sc)+'</span><div>1끼 목표의 <b>'+sc+'%</b> ('+lvTxt(sc)+') — <u>눌러서 개선안 보기 ›</u></div></div>':'')
-+'<div class="rw"><button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button></div></div>'}).join('')
++(function(){var done=loggedToday(r.i);
+return '<div class="rw">'+(done?'<button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 먹었어요 취소</button><button class="btn g s" onclick="editLog(\''+done+'\')">✏️ 먹은 내용 수정</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
++(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 오늘 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+'</div>':'')})()+'</div>'}).join('')
 +'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'
 
 /*----- 단계 기준 · 로드맵 -----*/
@@ -53,10 +51,98 @@ return '<div class="cd" style="padding:10px"><div class="rw" style="justify-cont
 +'<div class="st">'+esc(baby.name)+'의 로드맵</div><div class="cd"><div class="rm">'+roadmap()+'</div></div>'
 +'<p class="mu" style="text-align:center;font-size:10.5px;margin:14px 6px 0">참고 자료입니다. 최종 판단은 담당 소아과와 상의하세요.</p>'}
 
+/*========== 🎯 이유식 + 수유 이중 목표 ==========*/
+function dualGoal(){var T=TG(),D=todaySum(),DY=mlDay(),G=mlGuide(),s=curS();
+var mlPc=Math.min(150,D.ml/Math.max(1,(DY.lo+DY.hi)/2)*100);
+var solidPc=0,n=0;
+NK.forEach(function(k){solidPc+=D.f[k]/Math.max(.01,T.solid[k])*100;n++});
+solidPc=solidPc/n;
+var sfAvg=Math.round(T.sf*100);
+return '<div class="hr"></div><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:7px">🍲 이유식과 🍼 수유가 함께 채웁니다 <span style="font-weight:600">('+s.n+')</span></div>'
++'<div class="dg">'
++'<div class="dgi"><div class="dgh"><b>🍲 이유식</b><span class="badge '+lvl(solidPc)+'">'+lvIco(solidPc)+' '+Math.round(solidPc)+'%</span></div>'
++'<div class="bar" style="height:13px"><i class="solid" style="width:'+Math.min(100,solidPc)+'%;background:#3FAE8E"></i><span class="goal" style="left:calc(100% - 3px)"></span></div>'
++'<div class="dgv">'+D.cnt+'끼 / 목표 '+MEALS()+'끼 · 영양의 <b>약 '+sfAvg+'%</b> 담당</div>'
++'<div class="dgs">단백 '+rnd(T.solid.p)+'g · 철 '+rnd(T.solid.fe)+'mg · 칼슘 '+Math.round(T.solid.ca)+'mg</div></div>'
++'<div class="dgi"><div class="dgh"><b>🍼 수유</b><span class="badge '+mlLv(D.ml)+'">'+(mlLv(D.ml)==='ok'?'✅':mlLv(D.ml)==='mid'?'⚠️':'🚨')+' '+Math.round(mlPc)+'%</span></div>'
++'<div class="bar" style="height:13px"><i class="solid" style="width:'+Math.min(100,mlPc)+'%;background:#7FB5E8"></i><span class="goal" style="left:calc(100% - 3px)"></span></div>'
++'<div class="dgv">'+D.ml+'ml / 권장 <b>'+DY.lo+'~'+DY.hi+'ml</b> · 영양의 <b>약 '+(100-sfAvg)+'%</b> 담당</div>'
++'<div class="dgs">회당 '+G.per[0]+'~'+G.per[1]+'ml · 하루 '+G.cnt[0]+'~'+G.cnt[1]+'회</div></div>'
++'</div>'
++'<div class="mu" style="font-size:10px;margin-top:7px">'+s.n+'에는 이유식이 영양의 <b>'+sfAvg+'%</b>, 수유가 <b>'+(100-sfAvg)+'%</b>를 담당하는 것이 일반적입니다. 둘을 <b>합쳐서 100%</b>면 충분해요.</div>'}
+
+/*========== 🍼 회차별 진행 막대 차트 ==========*/
+function milkChart(){var ms=todayLogs().filter(function(l){return l.k==='milk'&&l.tm})
+.sort(function(a,b){return hm2min(a.tm)-hm2min(b.tm)});
+if(!ms.length)return '<div class="mu" style="font-size:11px;text-align:center;padding:14px 0">아래에서 첫 수유를 기록해 보세요.</div>';
+var G=mlGuide(),hi=G.per[1],mx=hi;
+ms.forEach(function(l){if(+l.ml>mx)mx=+l.ml});
+var DY=mlDay();
+var bars=ms.map(function(l,i){var v=+l.ml||0;
+var h=Math.round(v/mx*100),lo=G.per[0],inR=(v>=lo&&v<=hi);
+var col=inR?'#7FB5E8':(v<lo?'#F2C879':'#E88A6B');
+var gap=i?hm2min(l.tm)-hm2min(ms[i-1].tm):null;
+return '<div class="mcol" onclick="editMilk(\''+l.id+'\')">'
++'<div class="mcv">'+v+'</div>'
++'<div class="mcb"><i style="height:'+h+'%;background:'+col+'"></i></div>'
++'<div class="mct">'+l.tm+'</div>'
++'<div class="mcg">'+(gap!=null?'+'+minTxt(gap):'&nbsp;')+'</div></div>'}).join('');
+var loH=Math.round(G.per[0]/mx*100),hiH=Math.round(hi/mx*100);
+return '<div class="mch"><div class="mcgrid"><span style="bottom:'+hiH+'%"><b>'+hi+'</b></span><span style="bottom:'+loH+'%"><b>'+G.per[0]+'</b></span></div>'
++'<div class="mcrow">'+bars+'</div></div>'
++'<div class="sub2" style="margin-top:5px;font-size:9.5px"><span><b style="background:#7FB5E8"></b>권장 범위</span><span><b style="background:#F2C879"></b>적게</span><span><b style="background:#E88A6B"></b>많이</span><span style="margin-left:auto">막대를 누르면 수정</span></div>'
++cumBar(ms,DY)}
+function cumBar(ms,DY){var cum=0,segs=ms.map(function(l){var v=+l.ml||0;var st=cum;cum+=v;
+return {st:st,v:v,tm:l.tm}});
+var total=cum,base=Math.max(DY.hi,total);
+return '<div style="margin-top:10px"><div class="mu" style="font-size:10.5px;font-weight:800;margin-bottom:4px">누적 진행 · '+total+'ml / 권장 '+DY.lo+'~'+DY.hi+'ml</div>'
++'<div class="cum">'+segs.map(function(s,i){return '<i style="left:'+(s.st/base*100)+'%;width:'+(s.v/base*100)+'%;background:'+(i%2?'#7FB5E8':'#5B9BD8')+'" title="'+s.tm+' '+s.v+'ml"></i>'}).join('')
++'<span class="cl" style="left:'+(DY.lo/base*100)+'%"></span><span class="cl hi" style="left:'+(DY.hi/base*100)+'%"></span></div>'
++'<div class="mu" style="font-size:9.5px;margin-top:3px">초록선 = 권장 하한('+DY.lo+') · 파란선 = 권장 상한('+DY.hi+')</div></div>'}
+
+/*========== 수유 카드 ==========*/
+function milkCard(){var D=todaySum(),G=mlGuide(),DY=mlDay(),ms=todayLogs().filter(function(l){return l.k==='milk'});
+var lv=mlLv(D.ml),pc=Math.min(100,D.ml/Math.max(1,DY.hi)*100),lop=DY.lo/Math.max(1,DY.hi)*100;
+return '<div class="cd"><div class="rw" style="justify-content:space-between;align-items:baseline"><b style="font-size:22px">'+D.ml+' <span style="font-size:13px;font-weight:600">ml</span></b>'
++'<span class="badge '+lv+'">'+(lv==='ok'?'✅':lv==='mid'?'⚠️':'🚨')+' '+mlTxt(D.ml)+'</span></div>'
++'<div class="bar" style="height:15px;margin-top:7px"><i class="solid" style="width:'+pc+'%;background:#7FB5E8"></i><span class="goal" style="left:'+lop+'%;background:var(--ok)"></span><span class="goal" style="left:calc(100% - 3px)"></span></div>'
++'<div class="mu" style="font-size:10.5px;margin-top:5px">'+MILK[MTYPE()].n+' · '+ms.length+'회 / 권장 '+G.cnt[0]+'~'+G.cnt[1]+'회 · 회당 '+G.per[0]+'~'+G.per[1]+'ml</div>'
++'<div class="hr"></div><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:6px">📊 회차별 진행</div>'+milkChart()
++(ms.length?'<div class="hr"></div><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">회차별 기록 <span style="font-weight:600">(숫자를 눌러 수정)</span></div>'
++ms.sort(function(a,b){return hm2min(a.tm||'00:00')-hm2min(b.tm||'00:00')}).map(function(l,i){
+return '<div class="mrow"><span class="mno">'+(i+1)+'회</span><span class="mtm">'+(l.tm||'--:--')+'</span>'
++'<button class="mml" onclick="editMilk(\''+l.id+'\')">'+l.ml+'ml</button>'
++'<span class="mu" style="font-size:10px;flex:1">'+MILK[l.mt||MTYPE()].n+'</span>'
++'<button class="mx" onclick="delMilk(\''+l.id+'\')">✕</button></div>'}).join(''):'')
++'<div class="hr"></div><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:6px">＋ 이번 회차 추가</div>'
++'<div class="mlk">'+milkQuick().map(function(v){return '<button onclick="addMilk('+v+')">+'+v+'</button>'}).join('')
++'<button onclick="addMilkP()" style="background:#F5EFEA;color:var(--sub)">직접</button></div>'
++'<div class="mu" style="font-size:10px;margin-top:7px">권장량은 일반적 기준이며 아기마다 다릅니다. '+sT('milk')+'</div></div>'}
+function milkQuick(){var G=mlGuide(),lo=G.per[0],hi=G.per[1],st=(hi-lo)/4,a=[];
+for(var i=0;i<5;i++)a.push(Math.round((lo+st*i)/10)*10);
+var u={},r=[];a.forEach(function(v){if(!u[v]){u[v]=1;r.push(v)}});return r}
+function editMilk(id){var L=null;logs.forEach(function(l){if(l.id===id)L=l});if(!L)return;
+var v=prompt('수유량 (ml)  ·  '+(L.tm||'')+' 회차',L.ml);
+if(v===null)return;v=+v;
+if(!v){if(confirm('0으로 두면 이 회차를 삭제합니다. 삭제할까요?'))delMilk(id);return}
+L.ml=v;L.n=MILK[L.mt||MTYPE()].n+' '+v+'ml';
+var t=prompt('먹은 시각 (HH:MM) — 비워두면 그대로',L.tm||'');
+if(t!==null&&t.trim())L.tm=t.trim();
+save();render()}
+function delMilk(id){if(!confirm('이 수유 회차를 삭제할까요?'))return;
+logs=logs.filter(function(l){return l.id!==id});save();render()}
+
+/*========== 오늘 먹은 여부 ==========*/
+function loggedToday(rid){var td=fmt(TD()),hit=null;
+logs.forEach(function(l){if(l.d===td&&l.k!=='milk'&&(l.rid===rid||l.n===(getR(rid)||{}).n))hit=l.id});
+return hit}
+function logTmOf(id){var t='';logs.forEach(function(l){if(l.id===id)t=l.tm||''});return t}
+function unLog(id){logs=logs.filter(function(l){return l.id!==id});save();render()}
+
 /*========== 수유 · 즐겨찾기 ==========*/
-function addMilk(v){logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'});save();render()}
-function addMilkP(){var v=prompt('수유량(ml)',baby.vol||180);if(v===null)return;v=+v;if(!v)return;addMilk(v)}
-function undoMilk(){for(var i=logs.length-1;i>=0;i--)if(logs[i].k==='milk'&&logs[i].d===fmt(TD())){logs.splice(i,1);break}save();render()}
+function addMilk(v){logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:nowHM(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'});save();render()}
+function addMilkP(){var G=mlGuide(),v=prompt('수유량 (ml)  ·  권장 회당 '+G.per[0]+'~'+G.per[1]+'ml',baby.vol||G.per[0]);
+if(v===null)return;v=+v;if(!v)return;addMilk(v)}
 function toggleFav(id){fav[id]=fav[id]?0:1;if(!fav[id])delete fav[id];save();render()}
 
 /*========== 추천 재편성 · 대안 ==========*/

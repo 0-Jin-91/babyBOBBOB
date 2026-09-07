@@ -26,7 +26,7 @@ return '<div class="tab">'+STG.slice(1).map(function(s){return '<button class="'
 +(selT==='t'?'<div class="cd" style="background:#F3FAF7;font-size:12px"><b>🧊 토핑이유식</b> — 기본 죽(밥)에 재료별 큐브를 올려 주는 방식. 먼저 <b>[준비] 큐브 만들기</b>로 큐브를 만들고 아래 조합을 돌려 쓰세요. '+sT('topping')+'</div>':'')
 +(selT==='p'?'<div class="cd" style="background:#FFF6EC;font-size:12px"><b>🍲 죽 이유식</b> — 배죽 비율(10→7→5배죽→진밥)에 따라 재료를 함께 끓이는 방식. '+sT('bboon')+'</div>':'')
 +(list.length?list.map(function(r){return rcard(r)}).join(''):'<div class="cd mu">메뉴가 없습니다.</div>')}
-function vMy(){return '<div class="cd"><b>✏️ 나의 메뉴</b><p class="mu" style="margin:5px 0 10px">재료와 중량을 입력하면 영양소·권장량 %·<b>철분 흡수 추정</b>까지 자동 계산됩니다. <b>기본 메뉴도 메뉴명까지 수정</b> 가능해요.</p><button class="btn" onclick="openEd()">＋ 새 메뉴 만들기</button></div>'
+function vMy(){return '<div class="cd"><b>✏️ 나의 메뉴</b><p class="mu" style="margin:5px 0 10px">재료와 중량을 입력하면 영양소·권장량 %·<b>재료 조합 점수</b>까지 자동 계산됩니다. <b>기본 메뉴도 메뉴명까지 수정</b> 가능해요.</p><button class="btn" onclick="openEd()">＋ 새 메뉴 만들기</button></div>'
 +(myR.length?myR.slice().reverse().map(function(r){return rcard(r,' · '+STG[r.s].n)}).join(''):'<div class="cd mu">아직 등록한 메뉴가 없어요.</div>')}
 
 /*========== 레시피 상세 모달 ==========*/

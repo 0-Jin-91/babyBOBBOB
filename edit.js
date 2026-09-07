@@ -21,7 +21,7 @@ return '<div style="margin-bottom:9px"><b style="font-size:12.5px;color:'+lvCol(
 +'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">🍀 자동 계산 영양 (1회분)</b><span class="badge '+lvl(sc)+'" style="font-size:12px;padding:5px 10px">'+lvIco(sc)+' 종합 '+sc+'%</span></div>'
 +'<div class="mu" style="font-size:10.5px;margin:4px 0 8px">1끼 목표 = '+(T.use?'체중 '+T.w+'kg':'표준')+' 하루 목표 × 영양소별 이유식 담당비율 ÷ '+MEALS()+'끼</div>'
 +D.map(nrow).join('')
-+'<div class="mu" style="font-size:10px;margin-top:5px">헴철 '+rnd2(nu.hm)+' · 비헴철 '+rnd2(nu.nh)+' · 비타민C '+rnd(nu.t.vc)+'mg</div></div>'
++'<div class="mu" style="font-size:10px;margin-top:5px">비타민C '+rnd(nu.t.vc)+'mg · 고기 '+Math.round(nu.meat)+'g</div></div>'
 +feCoach(nu)
 +comboEdit()
 +'<div class="st">만드는 순서 (그림 자동 매칭)</div><div class="cd">'

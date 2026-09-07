@@ -15,7 +15,7 @@ document.getElementById('mv').classList.add('hd');document.getElementById('nv').
 B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
-render();notiCheck()}
+migLogs();render();notiCheck()}
 
 /*========== 렌더 ==========*/
 var VIEW={home:vHome,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};

@@ -21,13 +21,13 @@ tbl+='</tr>'}
 tbl+='</table></div>';
 if(badN)h+='<div class="alert bad" style="cursor:pointer" onclick="diagMeal(\''+badFirst+'\')"><span class="ic">🚨</span><div>영양이 <b>'+LV.mid+'% 미만인 끼니가 '+badN+'개</b> 있습니다.<br><u>눌러서 첫 항목 진단·개선안 보기 ›</u> (또는 붉은 칸을 직접 눌러 교체)</div></div>';
 h+=tbl;
-var wk={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0},cnt=0;
+var wk={p:0,fe:0,ca:0,zn:0},cnt=0;
 plan.d.forEach(function(day){day.forEach(function(id){var r=getR(id);
-if(r){var n=nutOf(r).t;NK.forEach(function(k){wk[k]+=n[k]});wk.feAb+=n.feAb;cnt++}})});
+if(r){var n=nutOf(r).t;NK.forEach(function(k){wk[k]+=n[k]});cnt++}})});
 h+='<div class="st">주간 평균 (1일 이유식 기준)</div><div class="cd">'+NK.map(function(k){var v=wk[k]/7,pc=v/T.solid[k]*100,lv=lvl(pc);
 return '<div class="nrow" style="cursor:pointer" onclick="diagDay(\''+k+'\')"><div class="nhd"><div class="nnm"><i class="ndot" style="background:'+NL[k][2]+'"></i>'+NL[k][0]+' <span class="badge '+lv+'">'+lvIco(pc)+'</span></div><div><div class="npc" style="color:'+lvCol(pc)+';font-size:16px">'+Math.round(pc)+'%</div><div class="nval">'+rnd(v)+' / '+rnd(T.solid[k])+NL[k][1]+'</div></div></div>'
 +'<div class="bar" style="height:17px"><i class="solid" style="width:'+Math.min(100,pc)+'%;background:'+NL[k][2]+'"></i><span class="goal" style="left:calc(100% - 3px)"></span></div></div>'}).join('')
-+'<div class="mu" style="font-size:10.5px;margin-top:7px">총 '+cnt+'끼 · 하루 흡수철 평균 '+rnd2(wk.feAb/7)+'mg (이유식 담당 목표 '+rnd2(T.feAbSolid)+'mg)</div></div>'
++'<div class="mu" style="font-size:10.5px;margin-top:7px">총 '+cnt+'끼 · 하루 철분 평균 '+rnd(wk.fe/7)+'mg (이유식 담당 목표 '+rnd(T.solid.fe)+'mg)</div></div>'
 +'<button class="btn g s" onclick="pTab=\'s\';render()">🛒 장보기 리스트 만들기</button>';
 return h}
 function swapPlan(i,j){var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),L=altList(si,[plan.d[i][j]]);

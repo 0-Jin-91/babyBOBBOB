@@ -1,6 +1,7 @@
 /*========== 상수 ==========*/
-var NK=['kcal','p','fe','ca','zn'];
-var NL={kcal:['열량','kcal','#F0A93C'],p:['단백질','g','#3FAE8E'],fe:['철분','mg','#E85536'],ca:['칼슘','mg','#5B8FCC'],zn:['아연','mg','#8B7FD4']};
+var NK=['p','fe','ca','zn'];
+var NI={p:1,fe:2,ca:3,zn:4};
+var NL={p:['단백질','g','#3FAE8E'],fe:['철분','mg','#E85536'],ca:['칼슘','mg','#5B8FCC'],zn:['아연','mg','#8B7FD4']};
 var MILK={f:{n:'분유',v:[67,1.4,.8,55,.5],vc:9,ab:.10},b:{n:'모유',v:[65,1.0,.03,32,.15],vc:4,ab:.50}};
 var PCG={'달걀':50,'달걀노른자':17};
 var IDS=['ready','early','mid','late','final'];
@@ -13,23 +14,21 @@ function gOf(x){var q=+x[1]||0,u=x[2],k=x[3];
 if(u==='개')return q*(x[4]?+x[4]:(PCG[k]||10));
 if(u==='방울')return q*.5;
 if(u==='ml')return NUT[k]?q:0;return q}
-function absFe(hm,nh,vc,meat){var f=.05*(1+Math.min(2,vc/25));if(meat>15)f*=1.3;f=Math.min(.18,f);return hm*.25+nh*f}
-function nutOf(r,ml){ml=ml||1;var t={kcal:0,p:0,fe:0,ca:0,zn:0,vc:0},hm=0,nh=0,meat=0,d=[],ms=[],sv=r.sv||1;
+function nutOf(r,ml){ml=ml||1;var t={p:0,fe:0,ca:0,zn:0,vc:0},meat=0,d=[],ms=[],sv=r.sv||1;
 (r.g||[]).forEach(function(x){var v=NUT[x[3]];if(!v){if(x[2]!=='ml')ms.push(x[0]);return}
 var gr=gOf(x)*ml/sv,o={n:x[0],g:gr};
-NK.forEach(function(k,i){o[k]=v[i]*gr/100;t[k]+=o[k]});
-o.vc=v[5]*gr/100;t.vc+=o.vc;var fe=v[2]*gr/100;o.ty=v[6];
-if(v[6]==='h'){hm+=fe*.4;nh+=fe*.6;meat+=gr}else nh+=fe;
+NK.forEach(function(k){o[k]=v[NI[k]]*gr/100;t[k]+=o[k]});
+o.vc=v[5]*gr/100;t.vc+=o.vc;o.ty=v[6];
+if(v[6]==='h')meat+=gr;
 d.push(o)});
-t.feAb=absFe(hm,nh,t.vc,meat);
-return {t:t,d:d,ms:ms,hm:hm,nh:nh,meat:meat}}
+return {t:t,d:d,ms:ms,meat:meat}}
 function milkNut(v,tp){var M=MILK[tp]||MILK.f,o={};
-NK.forEach(function(k,i){o[k]=M.v[i]*v/100});
-o.vc=M.vc*v/100;o.feAb=o.fe*M.ab;return o}
-function DRI(m){if(m<6)return{kcal:500,p:10,fe:.3,ca:250,zn:2,lb:'0~5개월',ekg:95,pkg:1.4};
-if(m<12)return{kcal:600,p:15,fe:6,ca:300,zn:3,lb:'6~11개월',ekg:80,pkg:1.2};
-if(m<24)return{kcal:900,p:20,fe:6,ca:500,zn:3,lb:'12~23개월',ekg:82,pkg:1.1};
-return{kcal:1400,p:25,fe:7,ca:600,zn:4,lb:'만 3~5세',ekg:75,pkg:1.05}}
+NK.forEach(function(k){o[k]=M.v[NI[k]]*v/100});
+o.vc=M.vc*v/100;return o}
+function DRI(m){if(m<6)return{p:10,fe:.3,ca:250,zn:2,lb:'0~5개월',pkg:1.4};
+if(m<12)return{p:15,fe:6,ca:300,zn:3,lb:'6~11개월',pkg:1.2};
+if(m<24)return{p:20,fe:6,ca:500,zn:3,lb:'12~23개월',pkg:1.1};
+return{p:25,fe:7,ca:600,zn:4,lb:'만 3~5세',pkg:1.05}}
 
 /*========== 성장 유틸 ==========*/
 function gArr(kind,sx){var D=GD[kind][sx];
@@ -45,20 +44,57 @@ function ipol(a,m){var i=Math.floor(m);if(i>=a.length-1)return a[a.length-1];if(
 return a[i]+(a[i+1]-a[i])*(m-i)}
 
 /*========== 상태 ==========*/
-var KY={b:'b6.baby',l:'b6.log',f:'b6.food',m:'b6.my',c:'b6.cube',o:'b6.ov',p:'b6.ph',w:'b6.plan',a:'b6.obs',s:'b6.shop',t:'b6.today',v:'b6.fav',g:'b6.grow'};
+var KY={b:'b6.baby',l:'b6.log',f:'b6.food',m:'b6.my',c:'b6.cube',o:'b6.ov',p:'b6.ph',w:'b6.plan',a:'b6.obs',s:'b6.shop',t:'b6.today',v:'b6.fav',g:'b6.grow',bw:'b6.bowl'};
 function LS(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v===null?d:v}catch(e){return d}}
 var baby=LS(KY.b,null),logs=LS(KY.l,[]),tried=LS(KY.f,{}),myR=LS(KY.m,[]),cubes=LS(KY.c,[]),ov=LS(KY.o,{}),ph=LS(KY.p,{}),plan=LS(KY.w,null),obs=LS(KY.a,[]),shopChk=LS(KY.s,{}),todaySel=LS(KY.t,null),fav=LS(KY.v,{}),grow=LS(KY.g,[]);
+function migLogs(){var ch=0;
+logs.forEach(function(l){if(l.nu){if(l.nu.kcal!=null){delete l.nu.kcal;ch=1}if(l.nu.feAb!=null){delete l.nu.feAb;ch=1}}});
+if(ch)save()}
 function save(){localStorage.setItem(KY.b,JSON.stringify(baby));localStorage.setItem(KY.l,JSON.stringify(logs));
 localStorage.setItem(KY.f,JSON.stringify(tried));localStorage.setItem(KY.m,JSON.stringify(myR));
 localStorage.setItem(KY.c,JSON.stringify(cubes));localStorage.setItem(KY.o,JSON.stringify(ov));
 localStorage.setItem(KY.w,JSON.stringify(plan));localStorage.setItem(KY.a,JSON.stringify(obs));
 localStorage.setItem(KY.s,JSON.stringify(shopChk));localStorage.setItem(KY.t,JSON.stringify(todaySel));
 localStorage.setItem(KY.v,JSON.stringify(fav));localStorage.setItem(KY.g,JSON.stringify(grow));
+if(typeof BW!=='undefined')localStorage.setItem(KY.bw,JSON.stringify(BW));
 try{localStorage.setItem(KY.p,JSON.stringify(ph))}catch(e){alert('사진 저장 공간이 부족합니다.')}}
 function RCP(){return BASE.map(function(r){var o=ov[r.i];if(!o)return r;
 var c={};for(var k in r)c[k]=r[k];for(var k2 in o)c[k2]=o[k2];c.ed=1;return c}).concat(myR)}
 function getR(id){var a=RCP();for(var i=0;i<a.length;i++)if(a[i].i===id)return a[i];return null}
 var tab='home',selS=null,selT='p',qty=1,curR=null,fCat='전체',lRx='😋',mTab='s',ME=null,phT=null,pTab='w',srch='',gK='w';
+
+
+/*========== 개월수별 권장 수유 ==========*/
+/* [회당ml최소,회당ml최대,하루횟수최소,하루횟수최대,라벨] */
+var MLG=[
+{f:0,t:1,per:[60,90],cnt:[8,12],lb:'0~1개월'},
+{f:1,t:2,per:[90,120],cnt:[7,9],lb:'1~2개월'},
+{f:2,t:4,per:[120,150],cnt:[6,8],lb:'2~3개월'},
+{f:4,t:6,per:[150,180],cnt:[5,6],lb:'4~5개월'},
+{f:6,t:9,per:[180,210],cnt:[4,5],lb:'6~8개월'},
+{f:9,t:12,per:[200,240],cnt:[3,4],lb:'9~11개월'},
+{f:12,t:99,per:[200,240],cnt:[2,3],lb:'12개월+'}];
+function mlGuide(){var m=ageM();
+for(var i=0;i<MLG.length;i++)if(m>=MLG[i].f&&m<MLG[i].t)return MLG[i];
+return MLG[MLG.length-1]}
+function mlDay(){var G=mlGuide();
+return {lo:G.per[0]*G.cnt[0],hi:G.per[1]*G.cnt[1],G:G}}
+function mlPct(ml){var D=mlDay(),mid=(D.lo+D.hi)/2;return ml/Math.max(1,mid)*100}
+function mlLv(ml){var D=mlDay();
+return ml<D.lo*.7?'bad':ml<D.lo?'mid':ml<=D.hi?'ok':ml<=D.hi*1.25?'mid':'bad'}
+function mlTxt(ml){var D=mlDay();
+return ml<D.lo*.7?'많이 부족':ml<D.lo?'조금 부족':ml<=D.hi?'적정':ml<=D.hi*1.25?'조금 많음':'많이 많음'}
+
+/*========== 그릇 무게 프리셋 ==========*/
+var BW=LS(KY.bw,null)||{list:[{id:'b1',n:'기본 이유식 그릇',w:120}],cur:'b1'};
+function bwCur(){var a=BW.list.filter(function(x){return x.id===BW.cur});return a.length?a[0]:(BW.list[0]||null)}
+function bwSave(){localStorage.setItem(KY.bw,JSON.stringify(BW))}
+function bwAdd(n,w){var id='b'+Date.now();BW.list.push({id:id,n:n,w:w});BW.cur=id;bwSave()}
+function bwDel(id){BW.list=BW.list.filter(function(x){return x.id!==id});
+if(BW.cur===id)BW.cur=BW.list.length?BW.list[0].id:null;bwSave()}
+function bwSet(id){BW.cur=id;bwSave()}
+/* 실제 먹은 양 = (먹이기전 총중량 - 먹인후 총중량) */
+function ateOf(pre,post){var a=(+pre||0)-(+post||0);return a>0?Math.round(a*10)/10:0}
 
 /*========== 날짜 ==========*/
 function d0(s){var d=new Date(s);d.setHours(0,0,0,0);return d}
@@ -88,22 +124,21 @@ function lastG(k){var a=grow.filter(function(g){return g[k]!=null&&g[k]!==''}).s
 return a.length?a[0]:null}
 function curW(){var g=lastG('w');return g?+g.w:null}
 var SFT={
-ready:{kcal:.08,p:.10,fe:.10,ca:.06,zn:.15},
-early:{kcal:.15,p:.25,fe:.30,ca:.10,zn:.35},
-mid:{kcal:.32,p:.50,fe:.32,ca:.14,zn:.55},
-late:{kcal:.55,p:.78,fe:.50,ca:.30,zn:.78},
-final:{kcal:.90,p:.95,fe:.85,ca:.78,zn:.92}};
+ready:{p:.10,fe:.10,ca:.06,zn:.15},
+early:{p:.25,fe:.30,ca:.10,zn:.35},
+mid:{p:.50,fe:.32,ca:.14,zn:.55},
+late:{p:.78,fe:.50,ca:.30,zn:.78},
+final:{p:.95,fe:.85,ca:.78,zn:.92}};
 function TG(){var m=ageM(),dri=DRI(m),w=curW(),use=(baby.useW!==0)&&w,day={};
 NK.forEach(function(k){day[k]=dri[k]});
-if(use){day.kcal=Math.round(w*dri.ekg);day.p=rnd(w*dri.pkg)}
+if(use){day.p=rnd(w*dri.pkg)}
 var sid=curS().id,SF=SFT[sid]||SFT.mid,bm=MTYPE()==='b';
 var sf={};NK.forEach(function(k){sf[k]=SF[k]});
 if(bm){sf.fe=Math.min(.9,sf.fe*2.4);sf.ca=Math.min(.9,sf.ca*1.3)}
 var solid={},meal={};
 NK.forEach(function(k){solid[k]=day[k]*sf[k];meal[k]=solid[k]/MEALS()});
-var avg=(sf.kcal+sf.p+sf.fe+sf.ca+sf.zn)/5;
-return {day:day,solid:solid,meal:meal,dri:dri,sf:avg,sfk:sf,w:w,use:!!use,
-feAb:day.fe*.10,feAbSolid:day.fe*.10*sf.fe,lb:dri.lb,bm:bm}}
+var avg=(sf.p+sf.fe+sf.ca+sf.zn)/4;
+return {day:day,solid:solid,meal:meal,dri:dri,sf:avg,sfk:sf,w:w,use:!!use,lb:dri.lb,bm:bm}}
 
 /*========== 등급 (기준: ✅70% / ⚠️45% / 🚨45%미만) ==========*/
 function lvl(pc){return pc>180?'bad':pc>150?'mid':pc>=70?'ok':pc>=45?'mid':'bad'}
@@ -112,43 +147,35 @@ function lvTxt(pc){return pc>180?'많이 과다':pc>150?'조금 과다':pc>=70?'
 function lvCol(pc){return pc>150?'var(--warn)':pc>=70?'var(--ok)':pc>=45?'var(--warn)':'var(--rd)'}
 var LV={ok:70,mid:45,over:150};
 var FIX={
-kcal:{f:['고구마','단호박','아보카도','참기름','밥'],t:'열량은 <b>수유가 대부분 담당</b>합니다. 이유식만으로 낮게 나오는 것은 정상이며, 수유량을 기록하면 합산됩니다. 이유식 열량을 올리려면 고구마·단호박·아보카도·참기름을 활용하세요.'},
 p:{f:['소고기','닭고기','두부','흰살생선','달걀노른자'],t:'고기·생선·두부·달걀 양을 <b>5~10g 늘리면</b> 빠르게 채워집니다.'},
 fe:{f:['소고기','달걀노른자','오트밀','시금치','파프리카'],t:'<b>소고기 10~20g</b>을 넣고 <b>파프리카·브로콜리·토마토</b>를 곁들이면 흡수율이 2~3배 올라갑니다. 분유수유 중이면 분유가 철분을 상당 부분 공급합니다.'},
 ca:{f:['두부','아기치즈','미역','멸치가루','청경채','요거트'],t:'칼슘은 <b>수유·유제품이 주 공급원</b>입니다. 이유식에서 올리려면 두부 20g·아기치즈 5g·불린미역·무염 멸치가루를 활용하세요.'},
 zn:{f:['소고기','달걀노른자','표고버섯','두부'],t:'<b>소고기·달걀노른자·표고버섯</b>이 아연이 많습니다.'}};
 var QG={'소고기':15,'닭고기':15,'두부':20,'흰살생선':15,'달걀노른자':1,'오트밀':10,'시금치':10,'파프리카':10,'아기치즈':5,'미역':10,'멸치가루':2,'표고버섯':10,'고구마':20,'단호박':20,'아보카도':10,'참기름':2,'요거트':30,'청경채':10,'밥':30,'브로콜리':10,'당근':10};
 function qUnit(fn){return fn==='달걀노른자'?'개':(fn==='참기름'?'방울':'g')}
-function tipFor(n){var m={'열량':'kcal','단백질':'p','철분':'fe','칼슘':'ca','아연':'zn'};
+function tipFor(n){var m={'단백질':'p','철분':'fe','칼슘':'ca','아연':'zn'};
 return FIX[m[n]]?FIX[m[n]].t:''}
-function mealScore(r){var T=TG(),n=nutOf(r).t,W={kcal:1.2,p:1.3,fe:1.3,ca:.8,zn:.7},s=0,tw=0;
+function mealScore(r){var T=TG(),n=nutOf(r).t,W={p:1.3,fe:1.4,ca:.9,zn:.8},s=0,tw=0;
 NK.forEach(function(k){var pc=n[k]/Math.max(.01,T.meal[k])*100;
 if(pc>150)pc=150-Math.min(50,(pc-150)*.3);
 s+=Math.min(150,pc)*W[k];tw+=W[k]});
-var fp=n.feAb/Math.max(.001,T.feAbSolid/MEALS())*100;
-if(fp>150)fp=150-Math.min(50,(fp-150)*.3);
-s+=Math.min(150,fp)*1.1;tw+=1.1;
 return Math.round(s/tw)}
 function diagOf(r){var T=TG(),n=nutOf(r).t,out=[];
-NK.forEach(function(k){var o={k:k,nm:NL[k][0],u:NL[k][1],pc:n[k]/Math.max(.01,T.meal[k])*100,v:n[k],goal:T.meal[k],col:NL[k][2]};
-if(k==='fe'){o.ab=n.feAb;o.abGoal=T.feAbSolid/MEALS();o.abPc=n.feAb/Math.max(.001,o.abGoal)*100;
-o.pcTot=o.pc;o.pc=Math.min(o.pcTot,o.abPc)}
-out.push(o)});
+NK.forEach(function(k){out.push({k:k,nm:NL[k][0],u:NL[k][1],pc:n[k]/Math.max(.01,T.meal[k])*100,v:n[k],goal:T.meal[k],col:NL[k][2]})});
 return out}
 
 /*========== 추천 엔진 ==========*/
 function mainKeys(r){var s={};
 (r.g||[]).forEach(function(x){if(x[3]&&['소고기','닭고기','돼지고기','흰살생선','연어','새우','두부','달걀','달걀노른자'].indexOf(x[3])>=0)s['P'+x[3]]=1;else if(x[3])s[x[3]]=1});
 return Object.keys(s)}
-function score(r,acc,tg,used){var n=nutOf(r),nu=n.t,sc=0,W={kcal:1,p:1.4,fe:1.4,ca:1.2,zn:1.3};
+function score(r,acc,tg,used){var n=nutOf(r),nu=n.t,sc=0,W={p:1.4,fe:1.5,ca:1.2,zn:1.3};
 NK.forEach(function(k){var need=Math.max(0,tg[k]-(acc[k]||0));sc+=Math.min(nu[k],need)/Math.max(.01,tg[k])*W[k]});
-sc+=Math.min(nu.feAb,Math.max(0,tg.feAb-(acc.feAb||0)))/Math.max(.001,tg.feAb)*1.8;
 var mk=mainKeys(r),dup=0;mk.forEach(function(k){if(used[k])dup++});
 return sc-dup*.45}
 function pool(si){return RCP().filter(function(r){return r.s===si&&r.y!=='f'&&(r.g||[]).length&&(r.sv||1)<5})}
 function recommend(si,seed,mealN,pre){var P=pool(si);if(!P.length)return [];
-var T=TG(),tgt={};NK.forEach(function(k){tgt[k]=T.solid[k]});tgt.feAb=T.feAbSolid;
-var acc={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0},used={},out=[];
+var T=TG(),tgt={};NK.forEach(function(k){tgt[k]=T.solid[k]});
+var acc={p:0,fe:0,ca:0,zn:0},used={},out=[];
 (pre||[]).forEach(function(k){used[k]=1});
 for(var s=0;s<mealN;s++){var best=null,bs=-999;
 P.forEach(function(r,idx){if(out.filter(function(o){return o.i===r.i}).length)return;
@@ -156,19 +183,16 @@ var v=score(r,acc,tgt,used)*2.2+mealScore(r)/100*.5+((idx+seed*7+s*13)%5)*.008+(
 if(v>bs){bs=v;best=r}});
 if(!best)break;
 out.push(best);var nu=nutOf(best).t;
-NK.forEach(function(k){acc[k]+=nu[k]});acc.feAb+=nu.feAb;
+NK.forEach(function(k){acc[k]+=nu[k]});
 mainKeys(best).forEach(function(k){used[k]=1})}
 return out}
-function dayScore(list){var T=TG(),acc={kcal:0,p:0,fe:0,ca:0,zn:0,feAb:0};
-list.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){acc[k]+=n[k]});acc.feAb+=n.feAb});
-var W={kcal:1.2,p:1.3,fe:1.3,ca:.8,zn:.7},s=0,tw=0,low=[];
+function dayScore(list){var T=TG(),acc={p:0,fe:0,ca:0,zn:0};
+list.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){acc[k]+=n[k]})});
+var W={p:1.3,fe:1.4,ca:.9,zn:.8},s=0,tw=0,low=[];
 NK.forEach(function(k){var pc=acc[k]/Math.max(.01,T.solid[k])*100;
 if(pc<LV.ok)low.push({k:k,nm:NL[k][0],pc:pc,lack:T.solid[k]-acc[k],u:NL[k][1]});
 if(pc>150)pc=150-Math.min(50,(pc-150)*.3);
 s+=Math.min(150,pc)*W[k];tw+=W[k]});
-var fp=acc.feAb/Math.max(.001,T.feAbSolid)*100;
-if(fp>150)fp=150-Math.min(50,(fp-150)*.3);
-s+=Math.min(150,fp)*1.1;tw+=1.1;
 return {sc:Math.round(s/tw),low:low.sort(function(a,b){return a.pc-b.pc}),acc:acc}}
 function altList(si,ex){var P=pool(si);
 return P.filter(function(r){return ex.indexOf(r.i)<0}).sort(function(a,b){return mealScore(b)-mealScore(a)})}

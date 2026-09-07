@@ -166,6 +166,57 @@ main{padding:11px 11px 24px}
 code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 @media(max-width:360px){:root{--nw:52px}nav button{width:46px;font-size:8.5px}nav button i{font-size:17px}}
 @media(min-width:900px){:root{--nw:86px}nav button{width:74px;font-size:10px}}
+
+/* 기록 타임라인 */
+.tl{margin:8px 0 10px;padding:9px 10px;background:#FBF6F2;border-radius:11px}
+.tli{display:flex;align-items:center;gap:7px;padding:3px 0}
+.tlt{flex:0 0 42px;font-size:11.5px;font-weight:800;color:var(--pd)}
+.tle{flex:0 0 18px;font-size:14px;text-align:center}
+.tln{flex:1;font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tlg{margin:1px 0 1px 49px;font-size:9.5px;color:var(--mt);font-weight:700}
+
+/* 모달 스와이프 닫기 */
+.sh{will-change:transform}
+.sh.drag{transition:none!important}
+.gb{cursor:grab;touch-action:none;position:relative}
+.gb:active{cursor:grabbing}
+.gb::after{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-14px}
+.md .sh.snap{transition:transform .22s cubic-bezier(.22,.68,.36,1)}
+
+/* 수유 회차 목록 */
+.mrow{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--ln)}
+.mrow:last-child{border-bottom:0}
+.mno{flex:0 0 30px;font-size:10.5px;font-weight:800;color:var(--mt)}
+.mtm{flex:0 0 40px;font-size:11.5px;font-weight:700;color:var(--pd)}
+.mml{flex:0 0 auto;background:#E7F1FB;color:#3A6FA8;border-radius:8px;padding:4px 9px;font-size:12.5px;font-weight:800}
+.mx{flex:0 0 auto;color:var(--mt);font-size:14px;padding:2px 4px}
+
+/* 이중 목표 카드 */
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dgi{background:#FBF6F2;border-radius:11px;padding:9px}
+.dgh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.dgv{font-size:10.5px;color:var(--sub);margin-top:5px;line-height:1.4}
+.dgs{font-size:9.5px;color:var(--mt);margin-top:3px;line-height:1.35}
+@media(max-width:360px){.dg{grid-template-columns:1fr}}
+
+/* 회차별 막대 차트 */
+.mch{position:relative;padding:14px 0 0}
+.mcrow{display:flex;align-items:flex-end;gap:5px;overflow-x:auto;padding-bottom:2px;position:relative;z-index:2}
+.mcol{flex:0 0 auto;min-width:38px;text-align:center;cursor:pointer}
+.mcb{height:76px;display:flex;align-items:flex-end;justify-content:center;background:#F7F1EC;border-radius:6px;overflow:hidden}
+.mcb i{display:block;width:100%;border-radius:6px 6px 0 0;transition:height .3s}
+.mcv{font-size:10px;font-weight:800;color:var(--sub);margin-bottom:3px}
+.mct{font-size:9.5px;font-weight:700;color:var(--pd);margin-top:3px}
+.mcg{font-size:8.5px;color:var(--mt);font-weight:600}
+.mcgrid{position:absolute;left:0;right:0;top:14px;height:76px;z-index:1;pointer-events:none}
+.mcgrid span{position:absolute;left:0;right:0;border-top:1px dashed #D9CFC7}
+.mcgrid b{position:absolute;right:0;top:-9px;font-size:8.5px;color:var(--mt);background:#fff;padding:0 3px;font-weight:700}
+
+/* 누적 막대 */
+.cum{position:relative;height:16px;background:#F0E6DF;border-radius:8px;overflow:hidden}
+.cum i{position:absolute;top:0;bottom:0;border-right:1.5px solid #fff}
+.cum .cl{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ok);z-index:3}
+.cum .cl.hi{background:#3A6FA8}
 </style></head><body>
 <div id="top"></div>
 <svg style="position:absolute;width:0;height:0"><defs>
@@ -204,20 +255,61 @@ code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 <p class="mu" style="margin-top:13px;font-size:10.5px">데이터는 이 기기에만 저장됩니다.</p></section>
 <section id="mv" class="hd"><header id="hdr"></header><main id="vw"></main></section>
 </div></div>
-<div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh"><div class="gb"></div><div id="mb"></div></div></div>
+<div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=11"></script>
-<script src="core.js?v=11"></script>
-<script src="ui.js?v=11"></script>
-<script src="combo.js?v=11"></script>
-<script src="home.js?v=11"></script>
-<script src="plan.js?v=11"></script>
-<script src="menu.js?v=11"></script>
-<script src="edit.js?v=11"></script>
-<script src="food.js?v=11"></script>
-<script src="grow.js?v=11"></script>
-<script src="log.js?v=11"></script>
-<script src="info.js?v=11"></script>
-<script src="boot.js?v=11"></script>
+<script src="data.js?v=14"></script>
+<script src="core.js?v=14"></script>
+<script src="ui.js?v=14"></script>
+<script src="combo.js?v=14"></script>
+<script src="home.js?v=14"></script>
+<script src="plan.js?v=14"></script>
+<script src="menu.js?v=14"></script>
+<script src="edit.js?v=14"></script>
+<script src="food.js?v=14"></script>
+<script src="grow.js?v=14"></script>
+<script src="log.js?v=14"></script>
+<script src="info.js?v=14"></script>
+<script src="boot.js?v=14"></script>
+<script>
+/* 시트 아래로 스와이프해서 닫기 */
+(function(){var md=document.getElementById('md'),sh=document.getElementById('sh');
+if(!md||!sh)return;
+var y0=null,dy=0,drag=false,fromTop=false;
+function body(){return document.getElementById('mb')}
+function start(y,tgt){
+ var gb=document.getElementById('gb');
+ fromTop=(gb&&(tgt===gb||gb.contains(tgt)));
+ /* 핸들이 아니면, 시트가 맨 위로 스크롤된 상태에서만 끌어내리기 허용 */
+ if(!fromTop&&sh.scrollTop>2)return;
+ y0=y;dy=0;drag=true;sh.classList.add('drag');sh.classList.remove('snap')}
+function move(y,ev){if(!drag||y0===null)return;
+ var d=y-y0;
+ if(d<0){ /* 위로 끌면 저항 */ d=d/4 }
+ if(d>0&&!fromTop&&sh.scrollTop>2){end();return}
+ dy=d;
+ if(d>0&&ev&&ev.cancelable)ev.preventDefault();
+ sh.style.transform='translateY('+Math.max(-40,d)+'px)';
+ md.style.background='rgba(50,40,35,'+Math.max(.12,.5-d/700)+')'}
+function end(){if(!drag)return;drag=false;sh.classList.remove('drag');sh.classList.add('snap');
+ var h=sh.getBoundingClientRect().height||600;
+ if(dy>Math.min(150,h*0.28)){
+   sh.style.transform='translateY(100%)';md.style.background='rgba(50,40,35,0)';
+   setTimeout(function(){closeM();sh.style.transform='';sh.classList.remove('snap');md.style.background=''},190)}
+ else{sh.style.transform='';md.style.background='';
+   setTimeout(function(){sh.classList.remove('snap')},240)}
+ y0=null;dy=0}
+sh.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;start(e.touches[0].clientY,e.target)},{passive:true});
+sh.addEventListener('touchmove',function(e){if(e.touches.length!==1)return;move(e.touches[0].clientY,e)},{passive:false});
+sh.addEventListener('touchend',end);
+sh.addEventListener('touchcancel',end);
+/* 데스크톱: 핸들 드래그 */
+var gb=document.getElementById('gb');
+if(gb){gb.addEventListener('mousedown',function(e){start(e.clientY,gb);e.preventDefault()});
+document.addEventListener('mousemove',function(e){if(drag)move(e.clientY,null)});
+document.addEventListener('mouseup',end)}
+/* ESC 로도 닫기 */
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&md.classList.contains('on'))closeM()});
+})();
+</script>
 </body></html>
