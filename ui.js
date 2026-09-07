@@ -143,7 +143,9 @@ md.classList.remove('on');document.body.style.overflow='';
 if(sh){sh.style.transform='';sh.classList.remove('drag','snap');sh.scrollTop=0}
 md.style.background=''}
 function openSrc(k){var s=SRC[k];
-document.getElementById('mb').innerHTML='<div class="mt2">📎 출처</div><div class="cd" style="margin-top:10px"><span class="tg v">'+s.t+'</span><b style="display:block;margin:6px 0">'+s.n+'</b><p class="mu" style="margin:0">'+s.d+'</p><div class="hr"></div><a href="'+s.u+'" target="_blank" rel="noopener">'+s.u+'</a></div><button class="btn y" onclick="closeM()">닫기</button>';
+var off=(typeof isOnline==='function'&&!isOnline());
+document.getElementById('mb').innerHTML='<div class="mt2">📎 출처</div><div class="cd" style="margin-top:10px"><span class="tg v">'+s.t+'</span><b style="display:block;margin:6px 0">'+s.n+'</b><p class="mu" style="margin:0">'+s.d+'</p><div class="hr"></div><a href="'+s.u+'" target="_blank" rel="noopener">'+s.u+'</a></div>'
++(off?netWarn('원문 링크 열기'):'')+'<button class="btn y" onclick="closeM()">닫기</button>';
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function pickPh(k){phT=k;document.getElementById('fi').click()}
 function delPh(k){delete ph[k];save();document.getElementById('mb').innerHTML=rBody();render()}

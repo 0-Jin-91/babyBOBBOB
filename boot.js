@@ -15,16 +15,26 @@ document.getElementById('mv').classList.add('hd');document.getElementById('nv').
 B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
-migLogs();render();notiCheck()}
+migLogs();render();notiCheck();netBanner();updBanner();updAuto();updSWHook()}
 
 /*========== 렌더 ==========*/
-var VIEW={home:vHome,today:vToday,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
+var VIEW={home:vHome,today:vToday,stock:vStock,calc:vCalc,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
 function render(){var s=curS(),T=TG();
-document.getElementById('hdr').innerHTML='<div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:13px;font-weight:600;color:var(--sub)">이유식 노트</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
+document.getElementById('hdr').innerHTML='<button class="rfb'+(UPD.found?' new':'')+'" id="rfb" onclick="updCheck()" title="새로고침 · 업데이트 확인">🍼</button><div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:13px;font-weight:600;color:var(--sub)">이유식 노트</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
 document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)();
 window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;
 var bs=document.querySelectorAll('nav button');
 for(var i=0;i<bs.length;i++)bs[i].className=bs[i].dataset.t===tab?'on':''}
+
+/*========== 온라인 상태 ==========*/
+function isOnline(){return navigator.onLine!==false}
+function netWarn(what){return '<div class="alert mid"><span class="ic">📡</span><div><b>인터넷이 연결되어야 가능합니다.</b><br>'+(what||'이 기능')+'은 온라인 상태에서만 동작해요. 나머지 기능(기록·계산·영양분석)은 오프라인에서도 모두 사용할 수 있습니다.</div></div>'}
+function netGuard(what){if(isOnline())return true;
+alert('📡 인터넷이 연결되어야 가능합니다.\n\n'+(what||'이 기능')+'은 온라인 상태에서만 동작해요.\n기록·계산 등 나머지 기능은 오프라인에서도 그대로 쓸 수 있습니다.');
+return false}
+function netBanner(){var b=document.getElementById('nb');if(!b)return;
+b.className=isOnline()?'nb':'nb on';
+b.innerHTML=isOnline()?'':'📡 오프라인 — 기록·계산은 정상 작동합니다'}
 
 /*========== 이벤트 ==========*/
 document.getElementById('nv').addEventListener('click',function(e){var b=e.target.closest('button');
@@ -49,8 +59,18 @@ r.onload=function(ev){try{var d=JSON.parse(ev.target.result);
 if(!confirm('현재 데이터를 덮어씁니다. 계속할까요?'))return;
 baby=d.baby||baby;logs=d.logs||[];tried=d.tried||{};myR=d.my||[];cubes=d.cubes||[];
 ov=d.ov||{};ph=d.ph||{};plan=d.plan||null;obs=d.obs||[];fav=d.fav||{};grow=d.grow||[];
+if(d.stock&&typeof STK!=='undefined'){STK=d.stock;stkSave()}
+if(d.bowl&&typeof BW!=='undefined'){BW=d.bowl;bwSave()}
+if(d.calc)localStorage.setItem('b6.calc',JSON.stringify(d.calc));
 save();alert('불러오기 완료!');boot()}catch(err){alert('파일을 읽을 수 없습니다.')}};
 r.readAsText(f);e.target.value=''});
 
 /*========== 시작 ==========*/
 boot();
+
+/*========== 오프라인 지원 ==========*/
+window.addEventListener('online',function(){netBanner();render()});
+window.addEventListener('offline',function(){netBanner()});
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+window.addEventListener('load',function(){
+navigator.serviceWorker.register('./sw.js').catch(function(){})})}

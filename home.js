@@ -25,8 +25,7 @@ return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아�
 
 /*----- 수유 입력 -----*/
 +'<div class="st">🍼 오늘 수유 <span class="mu" style="font-weight:600;font-size:11.5px">· 권장 '+mlDay().lo+'~'+mlDay().hi+'ml ('+mlGuide().lb+')</span></div>'+milkCard()
-+'<div class="st">📊 오늘의 하루 영양 달성 (이유식 '+D.cnt+'끼 + 수유 '+D.ml+'ml)</div><div class="cd">'+stackBars(D.f,D.m,T.day)
-+'</div>'
++'<div class="st">📊 영양 현황</div>'+dashCard()
 
 /*----- 추천 N끼 합계 -----*/
 +'<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
@@ -118,6 +117,7 @@ return '<div class="mrow"><span class="mno">'+(i+1)+'회</span><span class="mtm"
 +'<span class="mu" style="font-size:10px;flex:1">'+MILK[l.mt||MTYPE()].n+'</span>'
 +'<button class="mx" onclick="delMilk(\''+l.id+'\')">✕</button></div>'}).join(''):'')
 +'<div class="hr"></div><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:6px">＋ 이번 회차 추가</div>'
++'<div class="rw" style="align-items:flex-end;margin-bottom:8px"><div class="fd" style="flex:1;margin:0"><label>먹인 시각</label><input id="mkTm" type="time" value="'+nowHM()+'"></div><button class="btn g s" style="flex:0 0 auto;margin:0 0 0 7px;width:auto;padding:10px 12px" onclick="document.getElementById(\'mkTm\').value=nowHM()">지금</button></div>'
 +'<div class="mlk">'+milkQuick().map(function(v){return '<button onclick="addMilk('+v+')">+'+v+'</button>'}).join('')
 +'<button onclick="addMilkP()" style="background:#F5EFEA;color:var(--sub)">직접</button></div>'
 +'<div class="mu" style="font-size:10px;margin-top:7px">권장량은 일반적 기준이며 아기마다 다릅니다. '+sT('milk')+'</div></div>'}
@@ -141,12 +141,15 @@ logs.forEach(function(l){if(l.d===td&&l.k!=='milk'&&(l.rid===rid||l.n===(getR(ri
 return hit}
 function logAmtOf(id){var a='';logs.forEach(function(l){if(l.id===id)a=l.a||''});return a}
 function logTmOf(id){var t='';logs.forEach(function(l){if(l.id===id)t=l.tm||''});return t}
-function unLog(id){logs=logs.filter(function(l){return l.id!==id});save();render()}
+function unLog(id){if(typeof stkUndo==='function')stkUndo(id);
+logs=logs.filter(function(l){return l.id!==id});save();render()}
 
 /*========== 수유 · 즐겨찾기 ==========*/
-function addMilk(v){logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:nowHM(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'});save();render()}
-function addMilkP(){var G=mlGuide(),v=prompt('수유량 (ml)  ·  권장 회당 '+G.per[0]+'~'+G.per[1]+'ml',baby.vol||G.per[0]);
-if(v===null)return;v=+v;if(!v)return;addMilk(v)}
+function addMilk(v,tm){logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:tm||milkTm(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'});save();render()}
+function milkTm(){var e=document.getElementById('mkTm');return (e&&e.value)?e.value:nowHM()}
+function addMilkP(){var G=mlGuide(),tm=milkTm();
+var v=prompt('수유량 (ml)  ·  '+tm+'  ·  권장 회당 '+G.per[0]+'~'+G.per[1]+'ml',baby.vol||G.per[0]);
+if(v===null)return;v=+v;if(!v)return;addMilk(v,tm)}
 function toggleFav(id){fav[id]=fav[id]?0:1;if(!fav[id])delete fav[id];save();render()}
 
 /*========== 추천 재편성 · 대안 ==========*/

@@ -1,0 +1,26 @@
+{
+  "name": "이유식 노트",
+  "short_name": "이유식노트",
+  "description": "아기 이유식 영양·성장·수유 기록 노트",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF6F2",
+  "theme_color": "#F2734B",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%23FBF6F2'/%3E%3Cpath d='M46 84h100l-10 60a14 14 0 0 1-14 12H70a14 14 0 0 1-14-12z' fill='%23fff' stroke='%23E8DDD4' stroke-width='3'/%3E%3Cellipse cx='96' cy='84' rx='50' ry='13' fill='%23EDE3DA'/%3E%3Cellipse cx='96' cy='86' rx='43' ry='10' fill='%23FFD79A'/%3E%3Cellipse cx='80' cy='85' rx='11' ry='5' fill='%23F2734B'/%3E%3Cellipse cx='105' cy='88' rx='11' ry='5' fill='%233FAE8E'/%3E%3Crect x='120' y='30' width='9' height='50' rx='4.5' transform='rotate(16 120 30)' fill='%23C9A227'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23F2734B'/%3E%3Cpath d='M126 224h260l-26 156a36 36 0 0 1-36 31H188a36 36 0 0 1-36-31z' fill='%23fff'/%3E%3Cellipse cx='256' cy='224' rx='130' ry='34' fill='%23FFE9D6'/%3E%3Cellipse cx='256' cy='228' rx='112' ry='26' fill='%23FFD79A'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

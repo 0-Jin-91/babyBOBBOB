@@ -54,5 +54,6 @@ return '<li><div class="no">'+(x+1)+'</div><div class="ar2"><div class="bx">'+(p
 +'<button class="btn g" style="margin-top:8px" onclick="openEd(\''+r.i+'\')">✏️ 이 레시피 수정</button>'
 +(ov[r.i]?'<button class="btn y" style="margin-top:8px" onclick="resetOv(\''+r.i+'\')">↩️ 기본값 복원</button>':'')
 +'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>'}
-function ytSearch(){window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(curR.n+' 이유식 만들기'),'_blank')}
+function ytSearch(){if(!netGuard('유튜브 조리영상 검색'))return;
+window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(curR.n+' 이유식 만들기'),'_blank')}
 function setQ(d){qty=Math.max(1,Math.min(10,qty+d));document.getElementById('mb').innerHTML=rBody()}

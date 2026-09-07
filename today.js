@@ -87,6 +87,7 @@ return '<div class="cd" style="padding:10px;border-left:4px solid '+(done?'var(-
 /*----- 수유 빠른 추가 -----*/
 function tdMilkQuick(){var G=mlGuide();
 return '<div class="mu" style="font-size:11px;font-weight:800;margin-bottom:6px">＋ 회차 추가</div>'
++'<div class="rw" style="align-items:flex-end;margin-bottom:8px"><div class="fd" style="flex:1;margin:0"><label>먹인 시각</label><input id="mkTm" type="time" value="'+nowHM()+'"></div><button class="btn g s" style="flex:0 0 auto;margin:0 0 0 7px;width:auto;padding:10px 12px" onclick="document.getElementById(\'mkTm\').value=nowHM()">지금</button></div>'
 +'<div class="mlk" style="margin-bottom:9px">'+milkQuick().map(function(v){return '<button onclick="addMilk('+v+')">+'+v+'</button>'}).join('')
 +'<button onclick="addMilkP()" style="background:#F5EFEA;color:var(--sub)">직접</button></div>'}
 
