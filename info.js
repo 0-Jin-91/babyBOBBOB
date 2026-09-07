@@ -1,6 +1,7 @@
 /*========== 정보 · 설정 탭 ==========*/
 function vInfo(){var T=TG(),dri=T.dri;
-return '<div class="cd"><b>⚙️ 식사·수유 설정</b>'
+return '<div class="cd" style="background:#F3F6FA"><b>⚙️ 탭 순서·표시</b><p class="mu" style="margin:5px 0 9px">필요한 탭만 남기고 순서를 바꿀 수 있어요. 왼쪽 메뉴 맨 아래 <b>⚙️ 탭설정</b>에서도 열립니다.</p><button class="btn g s" onclick="navCfgOpen()">⚙️ 탭 설정 열기</button></div>'
++'<div class="cd"><b>⚙️ 식사·수유 설정</b>'
 +'<div class="fd" style="margin:10px 0 0"><label>하루 이유식 끼니 수</label><select onchange="baby.meals=+this.value;todaySel=null;plan=null;save();render()">'+[1,2,3].map(function(n){return '<option value="'+n+'" '+(MEALS()===n?'selected':'')+'>'+n+'끼</option>'}).join('')+'</select></div>'
 +'<div class="fd" style="margin:10px 0 0"><label>수유 방식 (영양 계산 기준)</label><select onchange="baby.feed=this.value;todaySel=null;plan=null;save();render()">'+[['f','분유 위주'],['b','모유 위주'],['m','혼합']].map(function(x){return '<option value="'+x[0]+'" '+(baby.feed===x[0]?'selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'
 +'<div class="fd" style="margin:10px 0 0"><label>성별 (성장곡선)</label><select onchange="baby.sex=this.value;save();render()">'+[['f','여아'],['m','남아']].map(function(x){return '<option value="'+x[0]+'" '+(baby.sex===x[0]?'selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'
@@ -34,7 +35,7 @@ return '<div style="padding:8px 0;border-bottom:1px solid var(--ln)"><b style="c
 +'<p class="mu" style="text-align:center;font-size:10.5px;margin:14px 6px 0">본 앱은 의료 행위를 대체하지 않습니다. 영양·알레르기·성장 판단은 담당 소아과와 상의하세요.</p>'}
 
 /*========== 백업 · 아기정보 · 초기화 ==========*/
-function expJ(){dl(new Blob([JSON.stringify({v:7,baby:baby,logs:logs,tried:tried,my:myR,cubes:cubes,ov:ov,ph:ph,plan:plan,obs:obs,fav:fav,grow:grow,stock:(typeof STK!=='undefined'?STK:[]),bowl:(typeof BW!=='undefined'?BW:null),calc:LS('b6.calc',null)})],{type:'application/json'}),baby.name+'_아빠의이유식_백업.json')}
+function expJ(){dl(new Blob([JSON.stringify({v:7,baby:baby,logs:logs,tried:tried,my:myR,cubes:cubes,ov:ov,ph:ph,plan:plan,obs:obs,fav:fav,grow:grow,stock:(typeof STK!=='undefined'?STK:[]),bowl:(typeof BW!=='undefined'?BW:null),calc:LS('b6.calc',null),nav:(typeof NAVC!=='undefined'?NAVC:null)})],{type:'application/json'}),baby.name+'_아빠의이유식_백업.json')}
 function editBaby(){var n=prompt('아기 이름',baby.name);if(n===null)return;
 var b=prompt('생년월일 (YYYY-MM-DD)',baby.birth);if(b===null)return;
 if(isNaN(d0(b)))return alert('날짜 형식 오류');

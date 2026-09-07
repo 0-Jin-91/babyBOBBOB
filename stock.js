@@ -17,6 +17,11 @@ return (isCnt(s.unit)?rnd2(v):rnd(v))+u}
 /* 개수 단위면 총 g 도 함께 보여준다 */
 function stkSub(s,v){if(!isCnt(s.unit))return '';
 return ' <span class="mu" style="font-size:9.5px">(약 '+rnd(v*stkPer(s))+'g)</span>'}
+/* 규격 문자열 — "200g/개" 처럼 1단위 용량을 보여준다 */
+function stkSpec(s){return isCnt(s.unit)?stkPer(s)+'g/'+s.unit:''}
+/* "200g × 3개 = 600g" 형태의 규격 요약 */
+function stkSpecFull(s,v){if(!isCnt(s.unit))return stkAmt(s,v);
+return stkPer(s)+'g × '+rnd2(v)+s.unit+' = '+rnd(v*stkPer(s))+'g'}
 /* g → 재고 단위 값 */
 function g2u(s,g){return isCnt(s.unit)?g/stkPer(s):g}
 /* 재고 단위 값 → g */
@@ -80,13 +85,13 @@ if(!L.length)return '<div class="cd mu">검색 결과가 없어요.</div>';
 return L.map(function(s){var p=stkPct(s),lv=stkLv(s),ed=stkExpLeft(s);
 var used=(s.hist||[]).filter(function(h){return h.g<0}).reduce(function(a,h){return a-h.g},0);
 return '<div class="cd" style="padding:10px;border-left:4px solid '+(lv==='bad'?'var(--rd)':lv==='mid'?'var(--warn)':'var(--ok)')+'">'
-+'<div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13.5px">'+esc(s.n)+(s.key&&NUT[s.key]?'':' <span class="tg m">직접</span>')+'</b>'
++'<div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13.5px">'+esc(s.n)+(isCnt(s.unit)?' <span class="tg">'+stkSpec(s)+'</span>':'')+(s.key&&NUT[s.key]?'':' <span class="tg m">직접</span>')+'</b>'
 +'<span class="badge '+lv+'">'+stkIco(s)+' '+stkTxt(s)+' '+Math.round(p)+'%</span></div>'
 +'<div class="bar" style="height:15px;margin-top:7px"><i class="solid" style="width:'+Math.min(100,p)+'%;background:'+(lv==='bad'?'#E85536':lv==='mid'?'#F0A93C':'#3FAE8E')+'"></i>'
 +'<span class="goal" style="left:20%;background:var(--warn)"></span><span class="goal" style="left:10%;background:var(--rd)"></span></div>'
 +'<div class="rw" style="justify-content:space-between;margin-top:5px"><span class="mu" style="font-size:10.5px">남음 <b style="font-size:13px;color:var(--pd)">'+stkAmt(s,Math.max(0,s.left))+'</b>'+stkSub(s,Math.max(0,s.left))+' / 충전 '+stkAmt(s,s.full)+'</span>'
 +'<span class="mu" style="font-size:10px">누적 사용 '+stkAmt(s,used)+(ed!=null?' · 기한 '+(ed<0?'지남':'D-'+ed):'')+'</span></div>'
-+(isCnt(s.unit)?'<div class="mu" style="font-size:9.5px;margin-top:3px">1'+s.unit+' ≈ '+stkPer(s)+'g 으로 환산해 차감합니다 · <span style="color:var(--bl);font-weight:700" onclick="stkPerEdit(\''+s.id+'\')">환산량 수정 ›</span></div>':'')
++(isCnt(s.unit)?'<div class="mu" style="font-size:9.5px;margin-top:3px">📦 <b>'+stkPer(s)+'g</b> 짜리 · 현재 '+stkSpecFull(s,Math.max(0,s.left))+' · <span style="color:var(--bl);font-weight:700" onclick="stkPerEdit(\''+s.id+'\')">규격 수정 ›</span></div>':'')
 +(s.memo?'<div class="mu" style="font-size:10.5px;margin-top:4px">'+esc(s.memo)+'</div>':'')
 +'<div class="rw" style="margin-top:8px"><button class="btn g s" onclick="stkRefill(\''+s.id+'\')">🔄 충전</button>'
 +'<button class="btn y s" onclick="stkAdj(\''+s.id+'\')">✏️ 조정</button></div>'
@@ -96,7 +101,7 @@ return '<button class="mu" style="flex:1;font-weight:700;color:var(--bl);font-si
 +'<button class="mu" style="flex:1;font-weight:700;color:var(--mt);font-size:11px" onclick="stkDel(\''+s.id+'\')">삭제</button></div></div>'}).join('')}
 /*----- 개수 단위 환산량(1개당 g) 수정 -----*/
 function stkPerEdit(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
-var v=prompt('「'+s.n+'」 1'+s.unit+'은 몇 g 인가요?\n\n레시피는 g 으로 적혀 있어서, 이 값으로 나눠 '+s.unit+' 수를 차감합니다.\n예) 달걀 1개 = 50g, 두부 1팩 = 300g',stkPer(s));
+var v=prompt('「'+s.n+'」 1'+s.unit+'의 용량(g)\n\n예) 소고기 200g 짜리 → 200 / 달걀 1개 → 50 / 두부 1팩 → 300\n\n레시피 사용량(g)을 이 값으로 나눠 '+s.unit+' 수를 차감합니다.',stkPer(s));
 if(v===null)return;v=+v;if(!v||v<=0)return alert('0보다 큰 숫자를 넣어 주세요');
 s.per=v;stkSave();render()}
 
@@ -105,17 +110,50 @@ function vStkAdd(){return '<div class="cd"><b style="font-size:13.5px">＋ 재�
 +ingSearch('stkPick','SE')
 +'</div>'
 +(SE?'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">'+(SE.emoji||'📦')+' '+esc(SE.n)+'</b>'+(SE.key&&NUT[SE.key]?'<span class="tg p">영양 연동</span>':'<span class="tg m">직접 입력</span>')+'</div>'
-+'<div class="rw" style="margin-top:9px"><div class="fd" style="flex:1;margin:0"><label>충전량 (구매/보유량)</label><input id="skF" type="number" inputmode="decimal" step="0.1" placeholder="'+(isCnt(SU)?'10':'500')+'"></div>'
-+'<div class="fd" style="flex:.8;margin:0"><label>단위</label><select id="skU" onchange="SU=this.value;render()">'+['g','ml','개','팩','봉','통','조각','컵'].map(function(u){return '<option '+(SU===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></div></div>'
-+'<div class="ch" style="margin-top:8px">'+(isCnt(SU)?[1,2,5,10,20,30]:[100,200,300,500,1000]).map(function(v){return '<button onclick="document.getElementById(\'skF\').value='+v+'">'+v+SU+'</button>'}).join('')+'</div>'
-+(isCnt(SU)?'<div class="cd" style="background:#F3F6FA;padding:9px;margin:9px 0 0"><div class="fd" style="margin:0"><label>1'+SU+'은 몇 g 인가요? (환산용)</label><input id="skP" type="number" inputmode="decimal" step="0.1" value="'+(SEper()||'')+'" placeholder="예: 달걀 1개 = 50"></div>'
-+'<div class="ch" style="margin-top:7px">'+SEperHint().map(function(v){return '<button onclick="document.getElementById(\'skP\').value='+v[1]+'">'+v[0]+' '+v[1]+'g</button>'}).join('')+'</div>'
-+'<div class="mu" style="font-size:10.5px;margin-top:6px">레시피에는 <b>g</b> 으로 적혀 있어서, 먹었어요를 누르면 이 값으로 나눠 <b>'+SU+' 수</b>를 차감합니다. 모르면 비워 두세요 (기본 10g).</div></div>':'')
+/* 입력 방식 — ① 총량만 ② 규격 × 개수 */
++'<div class="tt" style="margin:9px 0 0"><button class="'+(SMODE==='tot'?'on':'')+'" onclick="SMODE=\'tot\';render()">⚖️ 총량으로</button>'
++'<button class="'+(SMODE==='pack'?'on':'')+'" onclick="SMODE=\'pack\';render()">📦 규격 × 개수</button></div>'
++(SMODE==='pack'
+/* ===== 규격 × 개수 : 소고기 200g 3개 ===== */
+?'<div class="cd" style="background:#F3F6FA;padding:10px;margin:9px 0 0"><b style="font-size:12.5px">📦 몇 g 짜리 · 몇 개</b>'
++'<div class="mu" style="font-size:10.5px;margin:3px 0 8px">예) 소고기 <b>200g</b> 짜리 <b>3개</b> → 총 600g. 개수로 관리하면서 실제 사용량은 g 으로 정확히 차감됩니다.</div>'
++'<div class="rw" style="align-items:flex-end"><div class="fd" style="flex:1;margin:0"><label>1개 용량</label><input id="skP" type="number" inputmode="decimal" step="1" value="'+(SEper()||'')+'" oninput="skLive()" placeholder="200"></div>'
++'<div class="fd" style="flex:.62;margin:0"><label>용량단위</label><select id="skPU" onchange="skLive()">'+['g','ml'].map(function(u){return '<option '+(SPU===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></div>'
++'<div style="flex:0 0 14px;text-align:center;font-weight:800;color:var(--sub);padding-bottom:12px">×</div>'
++'<div class="fd" style="flex:.68;margin:0"><label>개수</label><input id="skF" type="number" inputmode="decimal" step="0.5" oninput="skLive()" placeholder="3"></div>'
++'<div class="fd" style="flex:.62;margin:0"><label>세는단위</label><select id="skU" onchange="SU=this.value;skLive()">'+CNTU.map(function(u){return '<option '+(SU===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></div></div>'
++'<div class="ch" style="margin-top:8px">'+[[100,'100g'],[150,'150g'],[200,'200g'],[300,'300g'],[500,'500g']].map(function(v){return '<button onclick="skSet(\'skP\','+v[0]+')">'+v[1]+'</button>'}).join('')+'</div>'
++'<div class="ch" style="margin-top:5px">'+[1,2,3,5,10].map(function(v){return '<button onclick="skSet(\'skF\','+v+')">'+v+SU+'</button>'}).join('')+'</div>'
++'<div id="skcalc" style="margin-top:9px">'+skCalcHTML()+'</div></div>'
+/* ===== 총량만 ===== */
+:'<div class="rw" style="margin-top:9px"><div class="fd" style="flex:1;margin:0"><label>충전량 (구매/보유량)</label><input id="skF" type="number" inputmode="decimal" step="0.1" oninput="skLive()" placeholder="'+(isCnt(SU)?'10':'500')+'"></div>'
++'<div class="fd" style="flex:.8;margin:0"><label>단위</label><select id="skU" onchange="SU=this.value;render()">'+['g','ml'].concat(CNTU).map(function(u){return '<option '+(SU===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></div></div>'
++'<div class="ch" style="margin-top:8px">'+(isCnt(SU)?[1,2,5,10,20,30]:[100,200,300,500,1000]).map(function(v){return '<button onclick="skSet(\'skF\','+v+')">'+v+SU+'</button>'}).join('')+'</div>'
++(isCnt(SU)?'<div class="cd" style="background:#F3F6FA;padding:9px;margin:9px 0 0"><div class="fd" style="margin:0"><label>1'+SU+'은 몇 g 인가요? (환산용)</label><input id="skP" type="number" inputmode="decimal" step="0.1" value="'+(SEper()||'')+'" oninput="skLive()" placeholder="예: 달걀 1개 = 50"></div>'
++'<div class="ch" style="margin-top:7px">'+SEperHint().map(function(v){return '<button onclick="skSet(\'skP\','+v[1]+')">'+v[0]+' '+v[1]+'g</button>'}).join('')+'</div>'
++'<div class="mu" style="font-size:10.5px;margin-top:6px">레시피에는 <b>g</b> 으로 적혀 있어서, 먹었어요를 누르면 이 값으로 나눠 <b>'+SU+' 수</b>를 차감합니다. 모르면 비워 두세요 (기본 10g).</div>'
++'<div id="skcalc" style="margin-top:8px">'+skCalcHTML()+'</div></div>':''))
 +'<div class="rw" style="margin-top:10px"><div class="fd" style="flex:1;margin:0"><label>유통기한 (선택)</label><input id="skE" type="date"></div>'
 +'<div class="fd" style="flex:1;margin:0"><label>메모 (선택)</label><input id="skM" placeholder="냉동실 2번칸"></div></div>'
 +'<button class="btn" style="margin-top:10px" onclick="stkAdd()">＋ 등록</button>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">등록하면 <b>먹었어요·기록 저장 시 자동 차감</b>됩니다. 남은 양이 충전량의 <b>20% 이하 ⚠️ · 10% 이하 🚨</b>가 되면 장보기 목록에 자동으로 올라갑니다.</div></div>'
 :'<div class="cd mu">위에서 재료를 검색해 선택해 주세요.</div>')}
+/*----- 등록 폼 실시간 계산 (입력창 재생성 금지 — 한글·숫자 입력 유지) -----*/
+var SMODE='tot',SPU='g';
+function skSet(id,v){var e=document.getElementById(id);if(e){e.value=v;skLive()}}
+function skLive(){var c=document.getElementById('skcalc');if(c)c.innerHTML=skCalcHTML()}
+function skVal(id){var e=document.getElementById(id);return e?+e.value||0:0}
+function skCalcHTML(){var per=skVal('skP'),cnt=skVal('skF');
+var ue=document.getElementById('skU');if(ue)SU=ue.value;
+var pe=document.getElementById('skPU');if(pe)SPU=pe.value;
+if(SMODE==='pack'){
+ if(!per||!cnt)return '<div class="mu" style="font-size:10.5px">1개 용량과 개수를 넣으면 총량이 계산됩니다.</div>';
+ return '<div class="ir" style="background:#fff;border-radius:9px;padding:8px 10px"><span>총 보유량</span><b style="color:var(--pd);font-size:15px">'+rnd(per*cnt)+SPU+'</b></div>'
+ +'<div class="mu" style="font-size:10.5px;margin-top:5px">'+per+SPU+' × '+rnd2(cnt)+SU+' = <b>'+rnd(per*cnt)+SPU+'</b> · 재고는 <b>'+SU+'</b> 단위로 관리하고, 레시피 사용량은 '+per+SPU+' 기준으로 나눠 차감합니다.</div>'}
+if(!per)return '';
+if(!cnt)return '<div class="mu" style="font-size:10.5px">1'+SU+' ≈ '+per+'g 으로 환산합니다.</div>';
+return '<div class="mu" style="font-size:10.5px">총 <b>'+rnd(per*cnt)+'g</b> ('+per+'g × '+rnd2(cnt)+SU+')</div>'}
+
 
 /*========== 🔎 재료 검색 선택기 (재고·관찰 공용) ==========*/
 /* cb: 선택 시 호출할 함수명, store: 선택 결과를 담을 전역변수명 */
@@ -155,19 +193,26 @@ render()}
 
 /*----- 등록 실행 -----*/
 function stkAdd(){if(!SE)return alert('재료를 선택해 주세요');
-var full=+document.getElementById('skF').value,u=document.getElementById('skU').value;
+var u=document.getElementById('skU').value,cnt=skVal('skF'),per=skVal('skP');
+var pe=document.getElementById('skPU');var pu=pe?pe.value:'g';
 var exp=document.getElementById('skE').value,memo=document.getElementById('skM').value.trim();
-if(!full||full<=0)return alert('충전량을 입력해 주세요');
 if(stkFind(SE.n))return alert('이미 등록된 재료예요. 목록에서 🔄 충전을 눌러 주세요.');
-var pe=document.getElementById('skP');
-var per=isCnt(u)?(+(pe&&pe.value)||10):1;   /* 개수 단위면 1단위당 g */
-STK.push({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:u,per:per,full:full,left:full,dt:fmt(TD()),exp:exp,memo:memo,
-hist:[{d:fmt(TD()),t:nowHM(),g:full,why:'최초 등록'}]});
-stkSave();SE=null;ISQ.SE='';SU='g';sTab='list';render()}
+var full,unit,pv,spec='';
+if(SMODE==='pack'){
+ if(!per||per<=0)return alert('1개 용량(예: 200)을 입력해 주세요');
+ if(!cnt||cnt<=0)return alert('개수를 입력해 주세요');
+ unit=u;full=cnt;pv=per;spec=per+pu;}
+else{
+ if(!cnt||cnt<=0)return alert('충전량을 입력해 주세요');
+ unit=u;full=cnt;pv=isCnt(u)?(per||10):1;
+ if(isCnt(u))spec=pv+'g';}
+STK.push({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:unit,per:pv,spec:spec,full:full,left:full,dt:fmt(TD()),exp:exp,memo:memo,
+hist:[{d:fmt(TD()),t:nowHM(),g:full,why:'최초 등록'+(spec&&isCnt(unit)?' ('+spec+'×'+rnd2(full)+unit+')':'')}]});
+stkSave();SE=null;ISQ.SE='';SU='g';SMODE='tot';sTab='list';render()}
 
 /*----- 충전 · 조정 -----*/
 function stkRefill(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
-var v=prompt('「'+s.n+'」 충전량 ('+s.unit+')\n\n남은 양에 더합니다. 새로 산 만큼 넣어주세요.'+(isCnt(s.unit)?'\n(1'+s.unit+' ≈ '+stkPer(s)+'g)':''),s.full);
+var v=prompt('「'+s.n+'」 충전량 ('+s.unit+')\n\n남은 양에 더합니다. 새로 산 만큼 넣어주세요.'+(isCnt(s.unit)?'\n\n규격: 1'+s.unit+' = '+stkPer(s)+'g\n예) 200g 짜리 3개 사왔으면 → 3':''),s.full);
 if(v===null)return;v=+v;if(!v)return;
 s.left=Math.round((Math.max(0,s.left)+v)*10)/10;
 if(v>s.full)s.full=v;

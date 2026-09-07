@@ -1,5 +1,5 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='24';                     /* index.html 의 ?v= 와 같은 값 */
+var APPV='25';                     /* index.html 의 ?v= 와 같은 값 */
 var UPD={found:false,checking:false,last:LS('b6.updchk',0),newv:''};
 /* 업데이트 이력 — 실제로 버전이 올라간 순간만 기록한다.
    최신 상태에서 확인만 한 것은 '업데이트'가 아니므로 절대 갱신하지 않는다. */
