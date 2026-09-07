@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#FFE7DC">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>우리 아기 이유식 노트</title><style>
+:root{--bg:#FFF9F5;--ink:#3E3A38;--sub:#8C8480;--ln:#F0E6DF;--pc:#FF9E7D;--pd:#F2734B;--mt:#7ED0B8;--lv:#A9A0E0;--sn:#FFC861;--rd:#EF6A4C;--bl:#7FA8D9;--nw:60px;--ok:#2E9C7D;--warn:#E08A00}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;padding:0}
+html{background:#FFE7DC}
+body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6}
+#top{display:none}
+#wrap{padding-left:var(--nw);padding-top:env(safe-area-inset-top);min-height:100vh;background:var(--bg)}
+body.solo{--nw:0px}body.solo #top{background:var(--bg)}
+body{background:#FFE7DC}
+#app{background:var(--bg)}
+#app{max-width:560px;margin:0 auto;padding-bottom:40px}
+h1,h4{margin:0;line-height:1.35}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:16px}
+a{color:var(--pd);word-break:break-all}
+nav{position:fixed;left:0;top:0;bottom:0;width:var(--nw);background:#fff;border-right:1px solid var(--ln);z-index:46;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 0 12px;gap:1px;overflow-y:auto}
+nav button{width:53px;padding:8px 0 6px;border-radius:12px;font-size:9px;font-weight:800;color:#BDB1A9;line-height:1.15}
+nav button i{display:block;font-size:19px;font-style:normal;margin-bottom:1px}
+nav button.on{color:#fff;background:var(--pc)}
+nav .lg{font-size:19px;margin-bottom:5px}
+#ob{padding:32px 20px 60px;text-align:center;max-width:440px;margin:0 auto}
+.fd{text-align:left;margin-bottom:11px}
+.fd label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin-bottom:4px}
+.fd input,.fd select,.fd textarea{width:100%;padding:11px;border:1.5px solid var(--ln);border-radius:12px;background:#fff;outline:none}
+.fd input:focus,.fd textarea:focus{border-color:var(--pc)}
+.fd input[type=date],.fd input[type=number],.fd input[type=text],.fd select{height:46px}
+.fd input[type=date]{-webkit-appearance:none;appearance:none;padding:0 12px;line-height:44px;min-width:0}
+.fd select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8480' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.btn{display:block;width:100%;padding:13px;border-radius:13px;background:var(--pc);color:#fff;font-weight:800}
+.btn.g{background:#fff;color:var(--pd);border:1.5px solid var(--pc)}
+.btn.y{background:#fff;color:var(--sub);border:1.5px solid var(--ln)}
+.btn.s{padding:9px;font-size:13px;border-radius:11px}
+header{padding:14px 15px 13px;background:linear-gradient(160deg,#FFE7DC,#FFF9F5)}
+.hg{font-size:11px;color:var(--pd);font-weight:800}
+.hn{font-size:20px;font-weight:800;margin:2px 0}
+.ha{font-size:12px;color:var(--sub)}
+.pl{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;color:#fff;margin-top:6px}
+main{padding:11px 11px 24px}
+.cd{background:#fff;border-radius:16px;padding:13px;margin-bottom:10px;box-shadow:0 2px 10px rgba(180,150,130,.08)}
+.st{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.4px;margin:16px 4px 7px}
+.rw{display:flex;gap:6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.tg{display:inline-block;padding:2px 7px;border-radius:7px;font-size:10px;font-weight:700;background:#F7F1EC;color:var(--sub);margin:1px}
+.tg.p{background:#FFEDE4;color:var(--pd)}.tg.m{background:#E4F6F0;color:#2E9C7D}
+.tg.v{background:#EEEBFB;color:#6B5FC7}.tg.r{background:#FDEAE5;color:var(--rd)}
+.tg.w{background:#FFF3D6;color:#A8710A}
+.mu{color:var(--sub);font-size:12px}
+.hr{height:1px;background:var(--ln);margin:10px 0}
+/* === 영양 막대 (가시성 개선) === */
+.nrow{padding:11px 0;border-bottom:1px solid #F7F1EC}
+.nrow:last-child{border:none}
+.nhd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px}
+.nnm{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:5px}
+.ndot{width:11px;height:11px;border-radius:4px;display:inline-block}
+.nval{font-size:12px;color:var(--sub);text-align:right}
+.npc{font-size:19px;font-weight:900;line-height:1}
+.bar{height:22px;border-radius:11px;background:#F2EAE4;overflow:hidden;display:flex;position:relative;box-shadow:inset 0 1px 3px rgba(150,120,100,.12)}
+.bar i{display:block;height:100%;position:relative}
+.bar i.solid{border-radius:11px 0 0 11px}
+.bar i.milk{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 5px,transparent 5px 10px)}
+.bar .goal{position:absolute;top:-4px;bottom:-4px;width:3px;background:#3E3A38;border-radius:2px;opacity:.75}
+.bar .txt{position:absolute;right:8px;top:0;bottom:0;display:flex;align-items:center;font-size:10.5px;font-weight:800;color:#8C8480}
+.sub2{display:flex;gap:10px;font-size:11px;margin-top:5px;flex-wrap:wrap;align-items:center}
+.sub2 span{display:flex;align-items:center;gap:3px;color:var(--sub);font-weight:700}
+.sub2 b{width:10px;height:10px;border-radius:3px;display:inline-block}
+.alert{display:flex;gap:8px;align-items:flex-start;border-radius:12px;padding:11px 12px;font-size:12.5px;margin-bottom:10px;font-weight:600}
+.alert .ic{font-size:18px;line-height:1.2}
+.alert.bad{background:#FFEBE6;border:1.5px solid #FFB9A8;color:#9C3016}
+.alert.mid{background:#FFF6E0;border:1.5px solid #FFD97A;color:#8A5D00}
+.alert.ok{background:#E7F7F1;border:1.5px solid #A8E0CE;color:#1F7A5F}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:9px;font-size:10.5px;font-weight:800}
+.badge.bad{background:#FFE3DC;color:#C0350F}
+.badge.mid{background:#FFF1CC;color:#8A5D00}
+.badge.ok{background:#DFF4EC;color:#1F7A5F}
+.rm{position:relative;padding-left:23px}
+.rm:before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--ln)}
+.ri{position:relative;margin-bottom:12px}
+.ri .dt{position:absolute;left:-22px;top:4px;width:13px;height:13px;border-radius:50%;background:#fff;border:2.5px solid var(--ln)}
+.ri.dn .dt{background:var(--mt);border-color:var(--mt)}
+.ri.nw2 .dt{background:var(--pc);border-color:var(--pc);box-shadow:0 0 0 5px rgba(255,158,125,.22)}
+.ri h4{font-size:13.5px}
+.ri .wh{font-size:10.5px;color:var(--sub);font-weight:700}
+.ri.nw2 h4{color:var(--pd)}
+.ri ul{margin:3px 0 0;padding-left:15px;font-size:12px;color:var(--sub)}
+.tab{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding:2px}
+.tab button{flex:0 0 auto;padding:8px 12px;border-radius:11px;background:#fff;font-size:12.5px;font-weight:700;color:var(--sub);border:1.5px solid var(--ln)}
+.tab button.on{color:#fff;border-color:transparent;background:var(--ink)}
+.tt{display:flex;gap:5px;margin-bottom:9px}
+.tt button{flex:1;padding:9px 2px;border-radius:11px;background:#F5EFEA;font-size:11.5px;font-weight:700;color:var(--sub)}
+.tt button.on{background:var(--ink);color:#fff}
+.rc{display:flex;gap:9px;align-items:center;background:#fff;border-radius:14px;padding:9px;margin-bottom:7px;box-shadow:0 2px 8px rgba(180,150,130,.08);width:100%;text-align:left}
+.rc.bad{border-left:4px solid var(--rd)}
+.rc.mid{border-left:4px solid var(--sn)}
+.rc.ok{border-left:4px solid var(--mt)}
+.rc .th{flex:0 0 48px;height:48px;border-radius:11px;overflow:hidden;background:#FBF6F2}
+.rc .th img,.rc .th svg{width:100%;height:100%;object-fit:cover;display:block}
+.rc .nm{font-weight:800;font-size:13.5px}
+.rc .ds{font-size:10.5px;color:var(--sub);margin-top:2px}
+.rc .ar{color:#DDD2CA;font-size:18px}
+.ig{background:#fff;border-radius:12px;padding:9px 3px;text-align:center;box-shadow:0 2px 8px rgba(180,150,130,.07)}
+.ig .e{font-size:23px}.ig .n{font-size:11px;font-weight:700}.ig .m{font-size:9px;color:var(--sub)}
+.ig.lk{opacity:.4}.ig .ok{font-size:9px;color:#2E9C7D;font-weight:800}
+.md{position:fixed;inset:0;background:rgba(50,40,35,.5);z-index:60;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:.2s}
+.md.on{opacity:1;pointer-events:auto}
+.sh{background:var(--bg);width:100%;max-width:560px;margin:0 auto;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:8px 13px 40px;transform:translateY(24px);transition:.2s}
+.md.on .sh{transform:none}
+.gb{width:40px;height:4px;border-radius:4px;background:#E2D6CE;margin:6px auto 11px}
+.mt2{font-size:18px;font-weight:800}
+.sl{padding:0;margin:0;list-style:none}
+.sl li{display:flex;gap:8px;margin-bottom:11px}
+.sl .no{flex:0 0 21px;height:21px;border-radius:50%;background:var(--pc);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:14px}
+.sl .ar2{flex:0 0 82px}
+.sl .bx{width:82px;height:62px;border-radius:10px;overflow:hidden;border:1px solid var(--ln);background:#fff}
+.sl .bx img,.sl .bx svg{width:100%;height:100%;object-fit:cover;display:block}
+.sl .p2{display:flex;gap:3px;margin-top:3px}
+.sl .p2 button{flex:1;font-size:9px;color:var(--bl);font-weight:700;padding:4px 0;background:#F1F5FA;border-radius:6px}
+.sl .p2 button.d{flex:0 0 21px;color:var(--sub);background:#F5EFEA}
+.sl .tx{flex:1;font-size:13px;padding-top:9px}
+.ir{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--ln);font-size:12.5px}
+.ir:last-child{border:none}
+.qb{display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:8px 11px;margin-bottom:9px}
+.qb button{width:31px;height:31px;border-radius:9px;background:#F5EFEA;font-weight:800;color:var(--pd)}
+.tp{background:#FFF6EC;border-left:3px solid var(--sn);border-radius:10px;padding:10px;font-size:12.5px}
+.wn{background:#FFEFEC;border-left:3px solid var(--rd);border-radius:10px;padding:10px;font-size:12.5px}
+.sb{background:#F3F6FA;border-left:3px solid var(--bl);border-radius:10px;padding:10px;font-size:12px}
+.fe{background:#FFF1EE;border-left:3px solid var(--rd);border-radius:10px;padding:10px;font-size:12px}
+.lg2{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ln)}
+.lg2:last-child{border:none}
+.ch{display:flex;gap:5px;flex-wrap:wrap}
+.ch button{padding:7px 11px;border-radius:19px;background:#F5EFEA;font-size:12px;font-weight:700;color:var(--sub)}
+.ch button.on{background:var(--pc);color:#fff}
+.cb{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--ln)}
+.cb:last-child{border:none}
+.sp{display:flex;align-items:center;gap:5px}
+.sp button{width:27px;height:27px;border-radius:8px;background:#F5EFEA;font-weight:800;color:var(--pd)}
+.tb{width:100%;border-collapse:collapse;font-size:11px}
+.tb th,.tb td{padding:5px 2px;border-bottom:1px solid var(--ln);text-align:right}
+.tb th:first-child,.tb td:first-child{text-align:left}
+.tb th{color:var(--sub);font-size:10px}
+.ei{display:flex;gap:4px;align-items:center;margin-bottom:6px}
+.ei input,.ei select{padding:9px 5px;border:1.5px solid var(--ln);border-radius:10px;background:#fff;outline:none;font-size:13px;min-width:0}
+.sc{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--ln)}
+.sc .bx2{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
+.sc.on .bx2{background:var(--mt);border-color:var(--mt)}
+.sc.on .nm2{text-decoration:line-through;color:var(--sub)}
+.wk{width:100%;border-collapse:separate;border-spacing:3px;font-size:10.5px}
+.wk td,.wk th{padding:5px 2px;border-radius:8px;text-align:center;vertical-align:middle}
+.wk th{background:#F5EFEA;color:var(--sub);font-size:10px;font-weight:800}
+.wk td{background:#fff;line-height:1.3;border:1.5px solid transparent}
+.wk td.tdy{outline:2px solid var(--pc)}
+.wk td.bad{background:#FFEDE8;border-color:#FFB9A8}
+.wk td.mid{background:#FFF8E8;border-color:#FFE0A0}
+.wk .mn{font-weight:700;font-size:10px;display:block}
+.mlk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mlk button{padding:11px 0;border-radius:11px;background:#EEF4FB;color:#4B7CB5;font-weight:800;font-size:13px}
+.gc{width:100%;height:auto;display:block;background:#fff;border-radius:12px}
+.pill2{display:inline-block;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:800}
+.hd{display:none!important}
+code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
+@media(max-width:360px){:root{--nw:52px}nav button{width:46px;font-size:8.5px}nav button i{font-size:17px}}
+@media(min-width:900px){:root{--nw:86px}nav button{width:74px;font-size:10px}}
+</style></head><body>
+<div id="top"></div>
+<svg style="position:absolute;width:0;height:0"><defs>
+<linearGradient id="gW" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#DCD0C6"/></linearGradient>
+<linearGradient id="gP" x2="0" y2="1"><stop stop-color="#FFD9C6"/><stop offset="1" stop-color="#EE7A52"/></linearGradient>
+<linearGradient id="gM" x2="0" y2="1"><stop stop-color="#CCF0E4"/><stop offset="1" stop-color="#4FB89C"/></linearGradient>
+<linearGradient id="gB" x2="0" y2="1"><stop stop-color="#D6EAFB"/><stop offset="1" stop-color="#6E9FD4"/></linearGradient>
+<linearGradient id="gY" x2="0" y2="1"><stop stop-color="#FFEFC9"/><stop offset="1" stop-color="#EFAA3D"/></linearGradient>
+<linearGradient id="gG" x2="0" y2="1"><stop stop-color="#DAF2C1"/><stop offset="1" stop-color="#68AE49"/></linearGradient>
+<linearGradient id="gS" x2="0" y2="1"><stop stop-color="#FBFCFD"/><stop offset="1" stop-color="#AEB5BF"/></linearGradient>
+<linearGradient id="gD" x2="0" y2="1"><stop stop-color="#F0D6B0"/><stop offset="1" stop-color="#B98A55"/></linearGradient>
+<linearGradient id="gK" x2="0" y2="1"><stop stop-color="#75706C"/><stop offset="1" stop-color="#3A3735"/></linearGradient>
+<radialGradient id="gL" cx=".35" cy=".28" r=".75"><stop stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs></svg>
+<nav id="nv" class="hd"><div class="lg">🍼</div>
+<button data-t="home" class="on"><i>🏠</i>홈</button>
+<button data-t="plan"><i>🗓</i>식단</button>
+<button data-t="menu"><i>🍲</i>메뉴</button>
+<button data-t="food"><i>🥕</i>재료</button>
+<button data-t="grow"><i>📈</i>성장</button>
+<button data-t="log"><i>📝</i>기록</button>
+<button data-t="info"><i>📖</i>정보</button></nav>
+<div id="wrap"><div id="app">
+<section id="ob"><div style="font-size:54px">🍼</div>
+<h1 style="font-size:22px;margin-bottom:5px">우리 아기 이유식 노트</h1>
+<p class="mu" style="margin:0 0 20px">개월수·체중 기반 영양 계산 · 철분 흡수율 · 성장곡선까지</p>
+<div class="fd"><label>아기 이름</label><input id="iN" type="text" placeholder="예: 예린"></div>
+<div class="fd"><label>태어난 날</label><input id="iB" type="date"></div>
+<div class="fd"><label>성별 <span style="font-weight:400">(성장곡선 계산에 필요)</span></label><select id="iS"><option value="f">여아</option><option value="m">남아</option></select></div>
+<div class="fd"><label>현재 몸무게 (kg) <span style="font-weight:400">· 선택</span></label><input id="iW" type="number" step="0.1" placeholder="8.2"></div>
+<div class="fd"><label>현재 키 (cm) <span style="font-weight:400">· 선택</span></label><input id="iH" type="number" step="0.1" placeholder="70.5"></div>
+<div class="fd"><label>수유 방식</label><select id="iF"><option value="f">분유 위주</option><option value="b">모유 위주</option><option value="m">혼합</option></select></div>
+<div class="fd"><label>하루 이유식 끼니 수</label><select id="iM"><option value="1">1끼</option><option value="2" selected>2끼</option><option value="3">3끼</option></select></div>
+<div class="fd"><label>1회 수유량 (ml)</label><input id="iV" type="number" value="180"></div>
+<button class="btn" onclick="saveBaby()">시작하기</button>
+<p class="mu" style="margin-top:13px;font-size:10.5px">데이터는 이 기기에만 저장됩니다.</p></section>
+<section id="mv" class="hd"><header id="hdr"></header><main id="vw"></main></section>
+</div></div>
+<div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh"><div class="gb"></div><div id="mb"></div></div></div>
+<input type="file" id="fi" accept="image/*" style="display:none">
+<input type="file" id="fj" accept=".json" style="display:none">
+<script src="data.js?v=9"></script>
+<script src="core.js?v=9"></script>
+<script src="ui.js?v=9"></script>
+<script src="home.js?v=9"></script>
+<script src="plan.js?v=9"></script>
+<script src="menu.js?v=9"></script>
+<script src="edit.js?v=9"></script>
+<script src="food.js?v=9"></script>
+<script src="grow.js?v=9"></script>
+<script src="log.js?v=9"></script>
+<script src="info.js?v=9"></script>
+<script src="boot.js?v=9"></script>
+</body></html>
