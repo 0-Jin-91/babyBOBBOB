@@ -130,8 +130,10 @@ if(fp>150)fp=150-Math.min(50,(fp-150)*.3);
 s+=Math.min(150,fp)*1.1;tw+=1.1;
 return Math.round(s/tw)}
 function diagOf(r){var T=TG(),n=nutOf(r).t,out=[];
-NK.forEach(function(k){out.push({k:k,nm:NL[k][0],u:NL[k][1],pc:n[k]/Math.max(.01,T.meal[k])*100,v:n[k],goal:T.meal[k],col:NL[k][2]})});
-out.push({k:'fe2',nm:'흡수 철분',u:'mg',pc:n.feAb/Math.max(.001,T.feAbSolid/MEALS())*100,v:n.feAb,goal:T.feAbSolid/MEALS(),col:'#E85536'});
+NK.forEach(function(k){var o={k:k,nm:NL[k][0],u:NL[k][1],pc:n[k]/Math.max(.01,T.meal[k])*100,v:n[k],goal:T.meal[k],col:NL[k][2]};
+if(k==='fe'){o.ab=n.feAb;o.abGoal=T.feAbSolid/MEALS();o.abPc=n.feAb/Math.max(.001,o.abGoal)*100;
+o.pcTot=o.pc;o.pc=Math.min(o.pcTot,o.abPc)}
+out.push(o)});
 return out}
 
 /*========== 추천 엔진 ==========*/

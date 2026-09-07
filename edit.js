@@ -16,13 +16,11 @@ document.getElementById('mb').innerHTML='<div class="mt2" style="margin-bottom:4
 +'<div class="hr"></div><div class="fd" style="margin-bottom:8px"><label>기본 재료 선택 (영양 자동 계산)</label><select id="eK" onchange="document.getElementById(\'eN\').value=this.value"><option value="">— 직접 입력 —</option>'+ks.map(function(k){return '<option>'+k+'</option>'}).join('')+'</select></div>'
 +'<div class="ei"><input id="eN" style="flex:1.4" placeholder="재료명"><input id="eQ" style="flex:.62" type="number" placeholder="20"><select id="eU" style="flex:.52"><option>g</option><option>ml</option><option>개</option><option>방울</option></select></div>'
 +'<button class="btn g s" onclick="addIng()">＋ 재료 추가</button></div>'
-+(low.length&&ME.g.length?'<div class="st">🔧 부족한 영양소 원터치 보충</div><div class="cd">'+low.slice(0,3).map(function(x){var kk=x.k==='fe2'?'fe':x.k;
++(low.length&&ME.g.length?'<div class="st">🔧 부족한 영양소 원터치 보충</div><div class="cd">'+low.slice(0,3).map(function(x){var kk=x.k;
 return '<div style="margin-bottom:9px"><b style="font-size:12.5px;color:'+lvCol(x.pc)+'">'+lvIco(x.pc)+' '+x.nm+' '+Math.round(x.pc)+'%</b><div class="ch" style="margin-top:5px">'+FIX[kk].f.map(function(fn){return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="edAdd(\''+fn+'\')">＋ '+fn+' '+(QG[fn]||10)+qUnit(fn)+'</button>'}).join('')+'</div></div>'}).join('')+'</div>':'')
 +'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">🍀 자동 계산 영양 (1회분)</b><span class="badge '+lvl(sc)+'" style="font-size:12px;padding:5px 10px">'+lvIco(sc)+' 종합 '+sc+'%</span></div>'
 +'<div class="mu" style="font-size:10.5px;margin:4px 0 8px">1끼 목표 = '+(T.use?'체중 '+T.w+'kg':'표준')+' 하루 목표 × 영양소별 이유식 담당비율 ÷ '+MEALS()+'끼</div>'
-+D.map(function(x){var lv=lvl(x.pc);
-return '<div class="nrow"><div class="nhd"><div class="nnm" style="font-size:13px">'+(x.k==='fe2'?'🩸 ':'<i class="ndot" style="background:'+x.col+'"></i>')+x.nm+' <span class="badge '+lv+'">'+lvIco(x.pc)+'</span></div><div><div class="npc" style="color:'+lvCol(x.pc)+';font-size:15px">'+Math.round(x.pc)+'%</div><div class="nval">'+rnd2(x.v)+' / '+rnd2(x.goal)+x.u+'</div></div></div>'
-+'<div class="bar" style="height:15px"><i class="solid" style="width:'+Math.min(100,x.pc)+'%;background:'+x.col+'"></i><span class="goal" style="left:calc(100% - 3px)"></span></div></div>'}).join('')
++D.map(nrow).join('')
 +'<div class="mu" style="font-size:10px;margin-top:5px">헴철 '+rnd2(nu.hm)+' · 비헴철 '+rnd2(nu.nh)+' · 비타민C '+rnd(nu.t.vc)+'mg</div></div>'
 +feCoach(nu)
 +'<div class="st">만드는 순서 (그림 자동 매칭)</div><div class="cd">'

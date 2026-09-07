@@ -5,7 +5,7 @@ rec.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){pAc
 var due=obs.filter(function(o){return !o.done&&dObs(o)<=3});
 var exp=cubes.filter(function(c){return c.q>0&&dLeft(c)<=2});
 var ns=nextStage(),nd=ns?Math.ceil((addM(d0(baby.birth),ns.f)-TD())/864e5):999;
-var feTot=D.f.feAb+D.m.feAb,fePc=feTot/T.feAb*100,dri=T.dri,w=T.w;
+var dri=T.dri,w=T.w;
 var DS=dayScore(rec);
 return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아직 이유식 시작 전</b><p class="mu" style="margin:5px 0 0">시작 예정일 <b style="color:var(--pd)">'+fmt(addM(d0(baby.birth),6))+'</b> · <b>'+Math.max(0,Math.ceil((addM(d0(baby.birth),6)-TD())/864e5))+'일</b> 남음</p></div>':'')
 +(ns&&nd>0&&nd<=14?'<div class="cd" style="background:#F3FAF7"><b>🎉 '+nd+'일 후 '+ns.n+'로 넘어가요</b><p class="mu" style="margin:4px 0 0">'+fmt(addM(d0(baby.birth),ns.f))+'부터 <b>'+ns.ra+'</b> · '+ns.ct+'</p></div>':'')
@@ -27,9 +27,7 @@ return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아�
 
 /*----- 하루 영양 달성 -----*/
 +'<div class="st">📊 오늘의 하루 영양 달성 (이유식 '+D.cnt+'끼 + 수유 '+D.ml+'ml)</div><div class="cd">'+stackBars(D.f,D.m,T.day)
-+'<div class="nrow" style="cursor:pointer" onclick="diagDay(\'fe\')"><div class="nhd"><div class="nnm">🩸 흡수 추정 철분 <span class="badge '+lvl(fePc)+'">'+lvIco(fePc)+' '+lvTxt(fePc)+'</span></div><div><div class="npc" style="color:'+lvCol(fePc)+'">'+Math.round(fePc)+'%</div><div class="nval">'+rnd2(feTot)+' / '+rnd2(T.feAb)+'mg</div></div></div>'
-+'<div class="bar"><i class="solid" style="width:'+Math.min(100,D.f.feAb/T.feAb*100)+'%;background:var(--rd)"></i><i class="milk" style="width:'+Math.max(0,Math.min(100-D.f.feAb/T.feAb*100,D.m.feAb/T.feAb*100))+'%;background:var(--rd);opacity:.62"></i><span class="goal" style="left:calc(100% - 3px)"></span></div>'
-+'<div class="mu" style="font-size:10px;margin-top:4px">철 권장량 '+dri.fe+'mg은 흡수율 10% 가정값이므로 실제 흡수 목표는 <b>'+rnd2(T.feAb)+'mg</b>입니다.</div></div></div>'
++'</div>'
 
 /*----- 추천 N끼 합계 -----*/
 +'<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
