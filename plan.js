@@ -32,10 +32,14 @@ return '<div class="nrow" style="cursor:pointer" onclick="diagDay(\''+k+'\')"><d
 return h}
 function swapPlan(i,j){var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),L=altList(si,[plan.d[i][j]]);
 document.getElementById('mb').innerHTML='<div class="mt2">메뉴 교체</div><p class="mu" style="margin:6px 0 10px">'+['월','화','수','목','금','토','일'][i]+'요일 '+SLOTS()[j]+' · 영양 점수 높은 순</p>'
++'<div class="rw" style="margin-bottom:10px"><button class="btn" style="flex:1.4;margin:0" onclick="planNewMenu('+i+','+j+')">✏️ 새 메뉴 만들어 넣기</button><button class="btn g" style="flex:1;margin:0" onclick="closeM();tab=\'combo\';render()">🧩 조합 실험</button></div>'
 +L.map(function(r){return '<div onclick="doSwap('+i+','+j+',\''+r.i+'\')">'+rcard(r)+'</div>'}).join('')
 +'<button class="btn y" onclick="closeM()">닫기</button>';
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function doSwap(i,j,id){plan.d[i][j]=id;shopChk={};save();closeM();render()}
+/* 식단 칸에서 새 메뉴 만들기 — 저장하면 그 칸에 자동으로 들어간다 */
+var PLSLOT=null;
+function planNewMenu(i,j){PLSLOT=[i,j];openEd()}
 
 
 /*========== 🛒 장보기 추천 ==========*/

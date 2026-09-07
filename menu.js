@@ -1,5 +1,6 @@
 /*========== 메뉴 탭 ==========*/
-function menuHead(){return '<div class="tt"><button class="'+(mTab==='s'?'on':'')+'" onclick="mTab=\'s\';render()">📚 단계별</button><button class="'+(mTab==='f'?'on':'')+'" onclick="mTab=\'f\';render()">⭐ 즐겨찾기</button><button class="'+(mTab==='m'?'on':'')+'" onclick="mTab=\'m\';render()">✏️ 나의 메뉴 ('+myR.length+')</button></div>'
+function menuHead(){return '<div class="rw" style="margin-bottom:9px"><button class="btn" style="flex:1.4;margin:0" onclick="openEd()">✏️ 새 메뉴 만들기</button><button class="btn g" style="flex:1;margin:0" onclick="tab=\'combo\';render()">🧩 조합 실험</button></div>'
++'<div class="tt"><button class="'+(mTab==='s'?'on':'')+'" onclick="mTab=\'s\';render()">📚 단계별</button><button class="'+(mTab==='f'?'on':'')+'" onclick="mTab=\'f\';render()">⭐ 즐겨찾기</button><button class="'+(mTab==='m'?'on':'')+'" onclick="mTab=\'m\';render()">✏️ 나의 메뉴 ('+myR.length+')</button></div>'
 +'<div class="cd" style="padding:9px"><input value="'+esc(srch)+'" oninput="srch=this.value;reSearch()" id="sq" placeholder="🔎 메뉴·재료 검색 (예: 소고기, 토핑)" style="width:100%;padding:10px;border:1.5px solid var(--ln);border-radius:11px;outline:none"></div>'}
 function menuBody(){return srch?vSearch():mTab==='s'?vStage():mTab==='f'?vFav():vMy()}
 function vMenu(){return menuHead()+'<div id="mres">'+menuBody()+'</div>'}

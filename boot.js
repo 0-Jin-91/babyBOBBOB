@@ -19,9 +19,10 @@ food :{i:'🥕',n:'재료' ,d:'재료도감·관찰·섭취분석'},
 grow :{i:'📈',n:'성장' ,d:'성장곡선·측정기록'},
 stock:{i:'📦',n:'재고' ,d:'재고관리·자동차감'},
 calc :{i:'🧮',n:'계산' ,d:'배죽·분유·계량 등'},
+combo:{i:'🧩',n:'조합' ,d:'재료 궁합 점수·경고'},
 log  :{i:'📝',n:'기록' ,d:'전체 기록·CSV'},
 info :{i:'📖',n:'정보' ,d:'설정·출처·백업'}};
-var TABDEF=['home','today','plan','menu','food','grow','stock','calc','log','info'];
+var TABDEF=['home','today','plan','menu','food','grow','stock','calc','combo','log','info'];
 var NAVK='b6.nav';
 /* NAVC={order:[...], off:{tab:1}} */
 var NAVC=LS(NAVK,null)||{order:TABDEF.slice(),off:{}};
@@ -78,7 +79,7 @@ if(!selS)selS=curS().id==='ready'?'early':curS().id;
 migLogs();updMark();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook()}
 
 /*========== 렌더 ==========*/
-var VIEW={home:vHome,today:vToday,stock:vStock,calc:vCalc,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
+var VIEW={home:vHome,today:vToday,stock:vStock,calc:vCalc,combo:vCombo,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
 function render(){var s=curS(),T=TG();
 document.getElementById('hdr').innerHTML='<button class="rfb'+(UPD.found?' new':'')+'" id="rfb" onclick="updCheck()" title="새로고침 · 업데이트 확인">🍼</button><div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:12px;font-weight:600;color:var(--sub)">아빠의 이유식 레시피</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
 document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)();
@@ -123,6 +124,7 @@ if(d.stock&&typeof STK!=='undefined'){STK=d.stock;stkSave()}
 if(d.bowl&&typeof BW!=='undefined'){BW=d.bowl;bwSave()}
 if(d.calc)localStorage.setItem('b6.calc',JSON.stringify(d.calc));
 if(d.nav){NAVC=d.nav;navSave()}
+if(d.cmix&&typeof CMIX!=='undefined'){CMIX=d.cmix;cmSave()}
 save();alert('불러오기 완료!');boot()}catch(err){alert('파일을 읽을 수 없습니다.')}};
 r.readAsText(f);e.target.value=''});
 

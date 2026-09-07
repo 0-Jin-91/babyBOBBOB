@@ -1,7 +1,9 @@
 /*========== 레시피 편집 ==========*/
-function openEd(id){var r=id?getR(id):null;
+function openEd(id,pre){var r=id?getR(id):null;
 ME=r?JSON.parse(JSON.stringify(r)):{i:'my'+Date.now(),my:1,n:'',s:IDS.indexOf(curS().id==='ready'?'early':curS().id),y:'p',tm:'',g:[],st:[''],tip:'',sv:1,sr:['ppibbo']};
-ME.orig=(id&&r&&!r.my)?id:null;
+ME.orig=(id&&r&&!r.my)?id:null;EDGATE=0;
+if(pre&&pre.length&&!id){ME.g=pre.map(function(k){return [k,QG[k]||10,qUnit(k),k]});
+if(!ME.n)ME.n=pre.slice(0,2).join(' ')+'죽'}
 drawEd();document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function drawEd(){var nu=nutOf(ME),T=TG(),ks=Object.keys(NUT),sc=ME.g.length?mealScore(ME):0;
 var D=diagOf(ME),low=D.filter(function(x){return x.pc<LV.ok}).sort(function(a,b){return a.pc-b.pc});
@@ -16,6 +18,7 @@ document.getElementById('mb').innerHTML='<div class="mt2" style="margin-bottom:4
 +'<div class="hr"></div><div class="fd" style="margin-bottom:8px"><label>기본 재료 선택 (영양 자동 계산)</label><select id="eK" onchange="document.getElementById(\'eN\').value=this.value"><option value="">— 직접 입력 —</option>'+ks.map(function(k){return '<option>'+k+'</option>'}).join('')+'</select></div>'
 +'<div class="ei"><input id="eN" style="flex:1.4" placeholder="재료명"><input id="eQ" style="flex:.62" type="number" placeholder="20"><select id="eU" style="flex:.52"><option>g</option><option>ml</option><option>개</option><option>방울</option></select></div>'
 +'<button class="btn g s" onclick="addIng()">＋ 재료 추가</button></div>'
++stkPanel('edit')
 +(low.length&&ME.g.length?'<div class="st">🔧 부족한 영양소 원터치 보충</div><div class="cd">'+low.slice(0,3).map(function(x){var kk=x.k;
 return '<div style="margin-bottom:9px"><b style="font-size:12.5px;color:'+lvCol(x.pc)+'">'+lvIco(x.pc)+' '+x.nm+' '+Math.round(x.pc)+'%</b><div class="ch" style="margin-top:5px">'+FIX[kk].f.map(function(fn){return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="edAdd(\''+fn+'\')">＋ '+fn+' '+(QG[fn]||10)+qUnit(fn)+'</button>'}).join('')+'</div></div>'}).join('')+'</div>':'')
 +'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">🍀 자동 계산 영양 (1회분)</b><span class="badge '+lvl(sc)+'" style="font-size:12px;padding:5px 10px">'+lvIco(sc)+' 종합 '+sc+'%</span></div>'
@@ -39,6 +42,9 @@ function addIng(){var k=document.getElementById('eK').value,n=document.getElemen
 if(!n)return alert('재료명을 입력해 주세요');if(!q)return alert('양을 입력해 주세요');
 ME.g.push([n,q,u,k||'']);drawEd()}
 function saveEd(){if(!(ME.n||'').trim())return alert('메뉴 이름을 입력해 주세요');
+/* 저장 전 재료 조합 검증 — 문제가 있으면 확인 모달을 띄우고 멈춘다 */
+if(!EDGATE&&(ME.g||[]).length&&typeof edComboGate==='function'&&!edComboGate())return;
+EDGATE=0;
 ME.st=ME.st.filter(function(x){return x.trim()});
 if(!ME.st.length)ME.st=['—'];
 if(ME.orig){var id=ME.orig;ov[id]={n:ME.n,g:ME.g,st:ME.st,tm:ME.tm,sv:ME.sv,tip:ME.tip,s:ME.s,y:ME.y};
@@ -46,7 +52,11 @@ save();closeM();curR=getR(id);openR(id);render();return}
 ME.my=1;ME.tag='내 레시피';delete ME.orig;
 var i=-1;myR.forEach(function(r,x){if(r.i===ME.i)i=x});
 if(i>=0)myR[i]=ME;else myR.push(ME);
-save();closeM();mTab='m';tab='menu';srch='';render()}
+save();closeM();
+/* 식단 칸에서 만들기로 들어왔으면 그 칸에 넣고 식단으로 돌아간다 */
+if(typeof PLSLOT!=='undefined'&&PLSLOT&&plan&&plan.d){plan.d[PLSLOT[0]][PLSLOT[1]]=ME.i;
+PLSLOT=null;shopChk={};save();tab='plan';pTab='w';render();return}
+mTab='m';tab='menu';srch='';render()}
 function resetOv(id){if(!confirm('기본 레시피로 되돌릴까요?'))return;
 delete ov[id];save();curR=getR(id);document.getElementById('mb').innerHTML=rBody();render()}
 function delMy(id){if(!confirm('삭제할까요?'))return;

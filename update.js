@@ -1,6 +1,8 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='25';                     /* index.html 의 ?v= 와 같은 값 */
-var UPD={found:false,checking:false,last:LS('b6.updchk',0),newv:''};
+var APPV='27';                     /* index.html 의 ?v= 와 같은 값 */
+var UPDS=LS('b6.updfound',null)||{};
+var UPD={found:!!(UPDS.v&&UPDS.v!==APPV),checking:false,last:LS('b6.updchk',0),newv:(UPDS.v&&UPDS.v!==APPV)?UPDS.v:''};
+function updSaveF(){localStorage.setItem('b6.updfound',JSON.stringify({v:UPD.found?UPD.newv:''}))}
 /* 업데이트 이력 — 실제로 버전이 올라간 순간만 기록한다.
    최신 상태에서 확인만 한 것은 '업데이트'가 아니므로 절대 갱신하지 않는다. */
 var UH=LS('b6.updhist',null);
@@ -28,9 +30,9 @@ fetch(url,{cache:'no-store'}).then(function(r){return r.text()}).then(function(t
 var m=t.match(/\?v=(\d+)/);
 UPD.checking=false;updSpin(false);
 UPD.last=Date.now();localStorage.setItem('b6.updchk',JSON.stringify(UPD.last));
-if(m&&m[1]!==APPV){UPD.found=true;UPD.newv=m[1];updBanner();
+if(m&&m[1]!==APPV){UPD.found=true;UPD.newv=m[1];updSaveF();updBanner();
 if(!silent)updAsk()}
-else{UPD.found=false;updBanner();
+else{UPD.found=false;UPD.newv='';updSaveF();updBanner();
 if(!silent)updOk()}
 }).catch(function(){UPD.checking=false;updSpin(false);
 if(!silent)alert('업데이트 확인에 실패했어요. 잠시 뒤 다시 시도해 주세요.')})}
@@ -83,17 +85,22 @@ if(l)l.className='lgb'+(on?' spin':'')+(UPD.found?' new':'')}
 
 /*----- 상단 업데이트 배너 -----*/
 function updBanner(){var el=document.getElementById('ub');if(!el)return;
-if(UPD.found){el.className='ub on';
-el.innerHTML='<span>🔄 <b>최신 버전이 아닙니다.</b> 최신 버전으로 새로고침 해주세요. (v'+APPV+' → v'+UPD.newv+')</span>'
+if(UPD.found){el.className='ub on';document.body.classList.add('ubon');
+el.innerHTML='<span>🔄 <b>최신 버전이 아닙니다.</b> 최신 버전으로 새로고침 해주세요.'+(UPD.newv&&UPD.newv!=='최신'?' (v'+APPV+' → v'+UPD.newv+')':'')+'</span>'
 +'<button onclick="updForce()">새로고침</button>'}
-else{el.className='ub';el.innerHTML=''}
+else{el.className='ub';el.innerHTML='';document.body.classList.remove('ubon')}
 updSpin(false)}
 
 /*----- 앱 시작 시 조용히 확인 (6시간마다) -----*/
 function updAuto(){if(navigator.onLine===false)return;
+/* 앱을 열 때마다 확인한다. 2분 내 재확인만 건너뛴다(연속 새로고침 방지) */
 var last=+UPD.last||0;
-if(Date.now()-last < 6*36e5)return;
-setTimeout(function(){updCheck(true)},2500)}
+if(Date.now()-last < 12e4)return;
+setTimeout(function(){updCheck(true)},1200)}
+/* 화면으로 돌아올 때·온라인 복귀 때도 확인 — 배너가 상시 최신 상태를 반영한다 */
+document.addEventListener('visibilitychange',function(){
+if(document.visibilityState==='visible')updAuto()});
+window.addEventListener('online',function(){setTimeout(function(){updAuto()},800)});
 
 /*----- Service Worker 가 새 버전을 감지했을 때 -----*/
 function updSWHook(){if(!('serviceWorker' in navigator))return;
@@ -105,4 +112,4 @@ r.addEventListener('updatefound',function(){
 var nw=r.installing;if(!nw)return;
 nw.addEventListener('statechange',function(){
 if(nw.state==='installed'&&navigator.serviceWorker.controller){
-UPD.found=true;UPD.newv='최신';updBanner()}})})})})}
+UPD.found=true;UPD.newv=UPD.newv||'최신';updSaveF();updBanner()}})})})})}
