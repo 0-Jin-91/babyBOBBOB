@@ -3,7 +3,7 @@
 /* ===== 버전 단일 출처 =====
    여기만 고치면 update.js 의 APPV 가 따라옵니다.
    배포 시 bump.py 를 쓰면 index.html 의 ?v= 와 sw.js 의 VER 까지 한 번에 맞춰집니다. */
-window.APPV='49';
+window.APPV='51';
 
 /* ===== 전역 오류 핸들러 =====
    스크립트 20개가 전역 스코프를 공유하므로, 한 곳에서 예외가 나면
@@ -315,6 +315,17 @@ body.navdrw header#hdr{padding-left:52px}
 .mlk button{padding:11px 0;border-radius:11px;background:#EEF4FB;color:#4B7CB5;font-weight:800;font-size:13px}
 .gc{width:100%;height:auto;display:block;background:#fff;border-radius:12px}
 .pill2{display:inline-block;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:800}
+/* 통과 체크리스트 상단 마일스톤 축 */
+.ckml{padding:15px 13px 13px}
+.ckmw{position:relative;padding:0 2px}
+.ckmt{position:absolute;left:calc(100%/10);top:13px;height:3px;width:calc(100% - 100%/5);background:#F0E6DF;border-radius:2px}
+.ckmt.on{background:linear-gradient(90deg,#2E9E7A,#3E3A38);height:5px;top:12px;opacity:.85;max-width:calc(100% - 100%/5)}
+.ckmr{position:relative;display:flex;justify-content:space-between}
+.ckmi{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0}
+.ckmi u{width:28px;height:28px;border-radius:50%;border:2.5px solid;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;text-decoration:none;background:#fff;transition:transform .12s}
+.ckmi.sel u{transform:scale(1.18)}
+.ckmi b{font-size:10.5px;font-weight:800;white-space:nowrap}
+.ckmi s{font-size:9px;color:var(--sub);text-decoration:none;white-space:nowrap}
 .hd{display:none!important}
 code{background:#F2EDE8;padding:1px 4px;border-radius:5px;font-size:11.5px}
 @media(max-width:360px){:root{--nw:52px}nav button{width:46px;font-size:8.5px}nav button i{font-size:17px}}
@@ -476,27 +487,27 @@ body.ubon{padding-top:56px}
 <div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=49"></script>
-<script src="core.js?v=49"></script>
-<script src="update.js?v=49"></script>
-<script src="ui.js?v=49"></script>
-<script src="dash.js?v=49"></script>
-<script src="combo.js?v=49"></script>
-<script src="mix.js?v=49"></script>
-<script src="find.js?v=49"></script>
-<script src="home.js?v=49"></script>
-<script src="today.js?v=49"></script>
-<script src="stock.js?v=49"></script>
-<script src="calc.js?v=49"></script>
-<script src="plan.js?v=49"></script>
-<script src="menu.js?v=49"></script>
-<script src="edit.js?v=49"></script>
-<script src="food.js?v=49"></script>
-<script src="grow.js?v=49"></script>
-<script src="log.js?v=49"></script>
-<script src="info.js?v=49"></script>
-<script src="cloud.js?v=49"></script>
-<script src="boot.js?v=49"></script>
+<script src="data.js?v=51"></script>
+<script src="core.js?v=51"></script>
+<script src="update.js?v=51"></script>
+<script src="ui.js?v=51"></script>
+<script src="dash.js?v=51"></script>
+<script src="combo.js?v=51"></script>
+<script src="mix.js?v=51"></script>
+<script src="find.js?v=51"></script>
+<script src="home.js?v=51"></script>
+<script src="today.js?v=51"></script>
+<script src="stock.js?v=51"></script>
+<script src="calc.js?v=51"></script>
+<script src="plan.js?v=51"></script>
+<script src="menu.js?v=51"></script>
+<script src="edit.js?v=51"></script>
+<script src="food.js?v=51"></script>
+<script src="grow.js?v=51"></script>
+<script src="log.js?v=51"></script>
+<script src="info.js?v=51"></script>
+<script src="cloud.js?v=51"></script>
+<script src="boot.js?v=51"></script>
 <script>
 /* 시트 아래로 스와이프해서 닫기 */
 (function(){var md=document.getElementById('md'),sh=document.getElementById('sh');

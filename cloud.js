@@ -151,6 +151,57 @@ function clLogout(){
   });
 }
 
+/*───────── Firestore 안전 변환 (중첩 배열 우회) ─────────*/
+/* Firestore 는 '배열 안의 배열'을 저장하지 못한다 (invalid-argument).
+   그런데 주간 식단 plan.d 는 [7일][끼니] 2차원 배열이라 그대로 보내면
+   문서 전체가 거부되고, 하필 그 검증이 동기 throw 라서
+   setDoc().catch() 가 실행되지 않아 '백업 중…'이 영구히 멈춘다.
+   → 보낼 때 중첩 배열만 객체로 바꾸고(fbEnc), 받을 때 되돌린다(fbDec).
+   객체는 중첩에 제한이 없으므로 이 우회는 Firestore 규격 안에서 안전하다.
+   undefined 도 Firestore 가 거부하므로 여기서 함께 걸러낸다. */
+function fbEnc(v){
+  if(v===undefined||v===null) return null;
+  if(typeof v!=='object') return v;
+  if(v instanceof Date) return v.getTime();
+  if(Object.prototype.toString.call(v)==='[object Array]'){
+    var i, nest=0;
+    for(i=0;i<v.length;i++){
+      if(Object.prototype.toString.call(v[i])==='[object Array]'){ nest=1; break }
+    }
+    if(!nest){
+      var a=[]; for(i=0;i<v.length;i++) a.push(fbEnc(v[i]));
+      return a;
+    }
+    /* 중첩 → {_na:1, n:길이, i0:…, i1:…} 형태의 객체로 */
+    var o={_na:1, n:v.length};
+    for(i=0;i<v.length;i++) o['i'+i]=fbEnc(v[i]);
+    return o;
+  }
+  var r={};
+  for(var k in v){
+    if(!Object.prototype.hasOwnProperty.call(v,k)) continue;
+    if(v[k]===undefined) continue;              /* undefined 키는 아예 보내지 않는다 */
+    r[k]=fbEnc(v[k]);
+  }
+  return r;
+}
+function fbDec(v){
+  if(v===null||typeof v!=='object') return v;
+  if(Object.prototype.toString.call(v)==='[object Array]'){
+    var a=[]; for(var i=0;i<v.length;i++) a.push(fbDec(v[i]));
+    return a;
+  }
+  if(v._na===1 && typeof v.n==='number'){       /* 인코딩된 중첩 배열 되돌리기 */
+    var b=[]; for(var j=0;j<v.n;j++) b.push(fbDec(v['i'+j]));
+    return b;
+  }
+  var r={};
+  for(var k in v){
+    if(Object.prototype.hasOwnProperty.call(v,k)) r[k]=fbDec(v[k]);
+  }
+  return r;
+}
+
 /*───────── 데이터 묶기 / 풀기 ─────────*/
 /* 기록 뭉치 — 사진 제외. schemaVersion 을 넣어 나중에 구조가 바뀌어도 읽을 수 있게. */
 function clPack(){
@@ -224,7 +275,7 @@ function clFirst(){
 
 function clPull(remote){
   try{
-    clApply(remote);
+    clApply(fbDec(remote));                       /* 인코딩된 중첩 배열을 원래 모양으로 */
     CL.lastDown=Date.now(); CL.err=''; clSave(); clPaint();
     if(typeof boot==='function') boot(); else if(typeof render==='function') render();
     clPhPull();
@@ -237,12 +288,19 @@ function clPush(now){
   if(!navigator.onLine){ CL.pend=1; clSave(); clPaint(); return }
   CLBUSY=1; clPaint();
   var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
-  F.D.setDoc(ref, clPack()).then(function(){
-    CLBUSY=0; CL.lastUp=Date.now(); CL.pend=0; CL.err=''; clSave(); clPaint();
-    clPhPush();                                   /* 기록이 끝난 뒤 사진 */
-  }).catch(function(e){
+  /* setDoc 은 데이터가 규격에 안 맞으면 Promise 를 만들기 전에 '동기적으로' throw 한다.
+     그때 .catch() 는 실행되지 않으므로 CLBUSY 가 1로 남아 '백업 중…'이 영구히 멈춘다.
+     → 호출 자체를 try 로 감싸 어떤 경로로 실패해도 반드시 CLBUSY 를 0으로 되돌린다. */
+  try{
+    F.D.setDoc(ref, fbEnc(clPack())).then(function(){
+      CLBUSY=0; CL.lastUp=Date.now(); CL.pend=0; CL.err=''; clSave(); clPaint();
+      clPhPush();                                 /* 기록이 끝난 뒤 사진 */
+    }).catch(function(e){
+      CLBUSY=0; CL.pend=1; clErr('push',e);
+    });
+  }catch(e){
     CLBUSY=0; CL.pend=1; clErr('push',e);
-  });
+  }
 }
 
 /* 기록이 바뀌면 3초 뒤 자동 전송 — 연달아 입력할 때 과다 전송 방지 */
