@@ -106,9 +106,10 @@ var MLG=[
 {f:1,t:2,per:[90,120],cnt:[7,9],lb:'1~2개월'},
 {f:2,t:4,per:[120,150],cnt:[6,8],lb:'2~3개월'},
 {f:4,t:6,per:[150,180],cnt:[5,6],lb:'4~5개월'},
-{f:6,t:9,per:[180,210],cnt:[4,5],lb:'6~8개월'},
-{f:9,t:12,per:[200,240],cnt:[3,4],lb:'9~11개월'},
-{f:12,t:99,per:[200,240],cnt:[2,3],lb:'12개월+'}];
+{f:6,t:9,per:[170,175],cnt:[3,4],lb:'6~8개월'},
+{f:9,t:12,per:[170,200],cnt:[3,3],lb:'9~11개월'},
+{f:12,t:99,per:[200,250],cnt:[2,2],lb:'12개월+'}];
+/* 6개월+ 는 이유식 병행 기준(하루 총량 6~8개월 500~700 · 9~11개월 500~600 · 12개월+ 400~500ml). 4~5개월은 이유식 시작 전이라 수유 위주 기준 유지 */
 function mlGuide(){var m=ageM();
 for(var i=0;i<MLG.length;i++)if(m>=MLG[i].f&&m<MLG[i].t)return MLG[i];
 return MLG[MLG.length-1]}
@@ -206,8 +207,44 @@ return Object.keys(s)}
 function score(r,acc,tg,used){var n=nutOf(r),nu=n.t,sc=0,W={p:1.4,fe:1.5,ca:1.2,zn:1.3};
 NK.forEach(function(k){var need=Math.max(0,tg[k]-(acc[k]||0));sc+=Math.min(nu[k],need)/Math.max(.01,tg[k])*W[k]});
 var mk=mainKeys(r),dup=0;mk.forEach(function(k){if(used[k])dup++});
-return sc-dup*.45}
-function pool(si){return RCP().filter(function(r){return r.s===si&&r.y!=='f'&&(r.g||[]).length&&(r.sv||1)<5})}
+/* 큐브 우선: 보유 큐브로 커버되는 재료가 많은 레시피에 가산 */
+var st=stkOf(r),cubeBonus=st.cube*0.35;
+return sc-dup*.45+cubeBonus}
+/*========== 재고 연동 (추천을 보유 재고 안에서) ==========*/
+/* 물·모유·분유 등 재고관리 대상이 아닌 재료 */
+function isPantry(nm,key){return !key||key===''||nm==='물'||key==='물'}
+/* 원재료(STK) 보유 g */
+function rawGramOf(key,nm){if(typeof STK==='undefined')return 0;
+var tot=0;STK.forEach(function(x){if((key&&x.key===key)||(nm&&x.n===nm)){
+tot+=(typeof u2g==='function')?u2g(x,Math.max(0,x.left)):Math.max(0,x.left)}});return tot}
+/* 큐브 보유 g */
+function cubeGram(key,nm){if(typeof cubes==='undefined')return 0;
+return cubes.filter(function(c){return c.q>0&&((key&&c.key===key)||(nm&&c.n===nm))})
+.reduce(function(a,c){return a+c.q*c.g},0)}
+/* 레시피 재고 판정: {ok:모두보유, cube:큐브로 커버되는 재료수, need:관리대상 재료수, lack:[부족재료명]} */
+function stkOf(r){var need=0,ok=0,cube=0,lack=[];
+(r.g||[]).forEach(function(x){var nm=x[0],key=x[3];
+if(isPantry(nm,key))return;                 /* 물 등은 판정 제외 */
+need++;
+var g=(typeof gOf==='function')?gOf(x):(+x[1]||0);
+var cg=cubeGram(key,nm),rg=rawGramOf(key,nm);
+if(cg>0)cube++;                             /* 큐브로 일부라도 커버 */
+if(cg+rg>=g-0.01)ok++;else lack.push(nm)});
+return {ok:ok>=need,cube:cube,need:need,have:ok,lack:lack}}
+function canMake(r){return stkOf(r).ok}
+/* 추천 카드용 재고 배지 HTML */
+function stkBadge(r){if(!stkReady())return '';var st=stkOf(r);
+if(st.need===0)return '';
+if(st.cube>0&&st.ok)return ' · <span style="color:#2E86C1;font-weight:700">🧊 큐브 가능</span>';
+if(st.ok)return ' · <span style="color:var(--ok);font-weight:700">📦 재고 보유</span>';
+return ' · <span style="color:var(--warn)">🛒 '+st.lack.slice(0,2).join(',')+(st.lack.length>2?' 외':'')+' 부족</span>'}
+function poolAll(si){return RCP().filter(function(r){return r.s===si&&r.y!=='f'&&(r.g||[]).length&&(r.sv||1)<5})}
+/* 재고로 만들 수 있는 것만. 없으면(재고 미등록/전부 부족) 전체로 fallback해 빈 화면 방지 */
+function stkReady(){return (typeof STK!=='undefined'&&STK.length)||(typeof cubes!=='undefined'&&cubes.filter(function(c){return c.q>0}).length)}
+function pool(si){var all=poolAll(si);
+if(!stkReady())return all;                       /* 재고 자체를 안 쓰면 기존대로 */
+var ok=all.filter(function(r){return canMake(r)});
+return ok.length?ok:all}
 function recommend(si,seed,mealN,pre){var P=pool(si);if(!P.length)return [];
 var T=TG(),tgt={};NK.forEach(function(k){tgt[k]=T.solid[k]});
 var acc={p:0,fe:0,ca:0,zn:0},used={},out=[];

@@ -139,6 +139,7 @@ save();closeM();render()}
 
 /*========== 모달 공통 ==========*/
 function closeM(){var md=document.getElementById('md'),sh=document.getElementById('sh');
+if(window.updStop)updStop();          /* 자동 새로고침 카운트다운이 돌고 있으면 중단 */
 md.classList.remove('on');document.body.style.overflow='';
 /* 스와이프 중 남은 인라인 스타일까지 완전히 초기화 — 안 지우면 회색 영역이 남는다 */
 if(window.shReset)shReset();

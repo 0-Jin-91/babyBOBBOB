@@ -35,7 +35,7 @@ return '<div class="rw" style="justify-content:flex-end;margin-bottom:7px"><butt
 +dualGoal()},1,(T.use?'체중 기준':'표준 기준'))
 
 /*----- ③ 수유 -----*/
-+sec('h_milk','🍼','오늘 수유','권장 '+DY.lo+'~'+DY.hi+'ml ('+G.lb+')',milkCard,1,D.ml+'ml')
++sec('h_milk','🍼','오늘 수유','권장 '+DY.lo+'~'+DY.hi+'ml ('+G.lb+(ageM()>=6?' · 이유식 병행':'')+')',milkCard,1,D.ml+'ml')
 
 /*----- ④ 영양 현황 -----*/
 +sec('h_nut','📊','영양 현황','일일 · 주간 · 월간 · 재료별 섭취',function(){

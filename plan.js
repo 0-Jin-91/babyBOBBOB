@@ -171,10 +171,10 @@ return '<div class="cd"><b>🧊 냉동 큐브 재고</b><p class="mu" style="mar
 +'<div class="st">보유 중 ('+act.length+'종)</div>'
 +(act.length?'<div class="cd">'+act.map(function(c){var d=dLeft(c);
 return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+ART('cube')+'</div><div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b><div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div><div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button><button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'}).join('')
-+'<div class="mu" style="font-size:10.5px;margin-top:8px">− 버튼으로 사용한 개수를 차감하세요.</div></div>':'<div class="cd mu">등록된 큐브가 없어요. 메뉴 > 토핑 > [준비] 큐브 만들기를 참고하세요.</div>')
++'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 자동 차감</b>됩니다. − ＋ 는 수동 보정용입니다.</div></div>':'<div class="cd mu">등록된 큐브가 없어요. 메뉴 > 토핑 > [준비] 큐브 만들기를 참고하세요.</div>')
 +'<div class="cd" style="background:#F3FAF7;font-size:12px"><b>보관 팁</b><ul style="margin:5px 0 0;padding-left:16px;color:var(--sub)"><li>완전히 식힌 뒤 뚜껑을 덮어 냉동.</li><li>지퍼백에 재료명·날짜를 적어두세요.</li><li>실온 방치·재냉동은 피하세요.</li></ul><div style="margin-top:6px">'+sT('mfds')+'</div></div>'}
 function addCube(){var n=document.getElementById('cN').value.trim(),q=+document.getElementById('cQ').value,g=+document.getElementById('cG').value||10,dt=document.getElementById('cD').value;
 if(!n)return alert('재료명을 입력해 주세요');if(!q)return alert('개수를 입력해 주세요');
-cubes.push({id:'c'+Date.now(),n:n,q:q,g:g,dt:dt});save();render()}
+cubes.push({id:'c'+Date.now(),n:n,key:(typeof NUT!=='undefined'&&NUT[n]?n:n),q:q,g:g,dt:dt});save();render()}
 function cQ2(id,d){cubes.forEach(function(c){if(c.id===id)c.q=Math.max(0,c.q+d)});save();render()}
 function cD2(id){cubes=cubes.filter(function(c){return c.id!==id});save();render()}

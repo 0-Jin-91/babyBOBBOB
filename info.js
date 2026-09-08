@@ -1,6 +1,10 @@
 /*========== 정보 · 설정 탭 ==========*/
 function vInfo(){var T=TG(),dri=T.dri;
 return '<div class="cd" style="background:#F3F6FA"><b>⚙️ 탭 순서·표시</b><p class="mu" style="margin:5px 0 9px">필요한 탭만 남기고 순서를 바꿀 수 있어요. 왼쪽 메뉴 맨 아래 <b>⚙️ 탭설정</b>에서도 열립니다.</p><button class="btn g s" onclick="navCfgOpen()">⚙️ 탭 설정 열기</button></div>'
++'<div class="cd" style="background:#F3F6FA"><b>🔄 업데이트</b><p class="mu" style="margin:5px 0 9px">새 버전이 올라오면 알려드립니다. <b>자동 새로고침</b>을 켜두면 안내 후 '+UCD+'초 뒤 알아서 최신 버전으로 바뀝니다(데이터는 그대로).</p>'
++'<div class="tcf" style="margin:0 0 9px"><div style="flex:1"><b style="font-size:12.5px">자동 새로고침</b><div class="mu" style="font-size:10.5px">'+(UAUTO?'켜짐 · 새 버전 발견 시 자동 적용':'꺼짐 · 안내만 표시')+'</div></div><div class="tsw '+(UAUTO?'on':'')+'" onclick="updAutoSet('+(UAUTO?0:1)+');render()"><i></i></div></div>'
++'<div class="ir"><span>현재 버전</span><b>v'+APPV+'</b></div><div class="ir"><span>최종 업데이트</span><b class="mu">'+updWhen()+'</b></div>'
++'<button class="btn g s" style="margin-top:9px" onclick="updCheck()">🍼 지금 업데이트 확인</button></div>'
 +'<div class="cd"><b>⚙️ 식사·수유 설정</b>'
 +'<div class="fd" style="margin:10px 0 0"><label>하루 이유식 끼니 수</label><select onchange="baby.meals=+this.value;todaySel=null;plan=null;save();render()">'+[1,2,3].map(function(n){return '<option value="'+n+'" '+(MEALS()===n?'selected':'')+'>'+n+'끼</option>'}).join('')+'</select></div>'
 +'<div class="fd" style="margin:10px 0 0"><label>수유 방식 (영양 계산 기준)</label><select onchange="baby.feed=this.value;todaySel=null;plan=null;save();render()">'+[['f','분유 위주'],['b','모유 위주'],['m','혼합']].map(function(x){return '<option value="'+x[0]+'" '+(baby.feed===x[0]?'selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'

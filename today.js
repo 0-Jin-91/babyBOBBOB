@@ -78,7 +78,7 @@ return '<div class="cd" style="padding:10px;border-left:4px solid '+(done?'var(-
 +'<span>'+(done?'<span class="mu" style="font-size:10.5px">🕐 '+(hit.tm||'--:--')+(hit.a?' · '+hit.a+'g':'')+' '+(hit.rx||'')+'</span>'
 :'<button class="mu" style="font-weight:700;color:var(--bl)" onclick="openAlt('+i+')">🔄 대안</button>')+'</span></div>'
 +'<div class="rw" style="align-items:center;gap:8px"><div style="flex:0 0 44px;height:34px;border-radius:8px;overflow:hidden">'+thumb(r)+'</div>'
-+'<div style="flex:1" onclick="openR(\''+r.i+'\')"><b style="font-size:13px">'+esc(r.n)+'</b><div class="mu" style="font-size:10px">'+lvIco(sc)+' 1끼 영양 '+sc+'%</div></div></div>'
++'<div style="flex:1" onclick="openR(\''+r.i+'\')"><b style="font-size:13px">'+esc(r.n)+'</b><div class="mu" style="font-size:10px">'+lvIco(sc)+' 1끼 영양 '+sc+'%'+stkBadge(r)+'</div></div></div>'
 +(done?'<div class="rw" style="margin-top:8px"><button class="btn g s" onclick="openAteFor(\''+hit.id+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+hit.id+'\')">↩︎ 취소</button></div>'
 +(hit.a?'':'<div class="mu" style="font-size:10px;margin-top:5px;color:var(--warn)">⚠️ 먹은 양 미입력 — 레시피 1회분으로 계산 중</div>')
 :'<div class="rw" style="margin-top:8px"><button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요 (양 입력)</button><button class="btn y s" onclick="qFast(\''+r.i+'\')">⚡ 바로 기록</button></div>')

@@ -38,10 +38,7 @@ function navList(){return navNorm().filter(function(t){return !NAVC.off[t]})}
 /* nav 버튼 그리기 */
 function navRender(){var w=document.getElementById('nvb');if(!w)return;
 w.innerHTML=navList().map(function(t){var T=TABD[t];
-return '<button data-t="'+t+'" class="'+(t===tab?'on':'')+'"><i>'+T.i+'</i><span class="nl">'+T.n+'</span><em class="nd">'+T.d+'</em></button>'}).join('');
-var cb=document.getElementById('cbtn');
-if(cb)cb.innerHTML=navList().slice(0,5).map(function(t){var T=TABD[t];
-return '<button data-t="'+t+'" class="'+(t===tab?'on':'')+'"><i>'+T.i+'</i>'+T.n+'</button>'}).join('')}
+return '<button data-t="'+t+'" class="'+(t===tab?'on':'')+'" title="'+T.d+'"><i>'+T.i+'</i>'+T.n+'</button>'}).join('')}
 
 /*========== 탭 설정 모달 ==========*/
 function navCfgOpen(){navNorm();navCfgDraw();
@@ -99,7 +96,9 @@ document.getElementById('mv').classList.add('hd');document.getElementById('nv').
 B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
-migLogs();updMark();navApply();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook()}
+migLogs();updMark();if(typeof perSync==='function')perSync();navApply();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook();
+/* 이전 실행에서 이미 새 버전을 찾아뒀다면(오프라인 포함) 바로 안내 */
+if(UPD.found)setTimeout(function(){updNag()},900)}
 
 /*========== 렌더 ==========*/
 var VIEW={home:vHome,today:vToday,stock:vStock,shop:vShopTab,calc:vCalc,combo:vCombo,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
@@ -123,10 +122,6 @@ b.innerHTML=isOnline()?'':'📡 오프라인 — 기록·계산은 정상 작동
 /*========== 이벤트 ==========*/
 document.getElementById('nv').addEventListener('click',function(e){var b=e.target.closest('button');
 if(b&&b.dataset.t){tab=b.dataset.t;navClose();render()}});
-/* 하단 빠른탭 */
-var _cb=document.getElementById('cbtn');
-if(_cb)_cb.addEventListener('click',function(e){var b=e.target.closest('button');
-if(b&&b.dataset.t){tab=b.dataset.t;render()}});
 /* 드로어 배경 클릭·ESC 로 닫기 */
 var _sc=document.getElementById('nvsc');
 if(_sc)_sc.addEventListener('click',navClose);

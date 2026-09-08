@@ -37,33 +37,126 @@ function stkLow(){return STK.filter(function(s){return stkPct(s)<=20}).sort(func
 function stkExpLeft(s){if(!s.exp)return null;return Math.ceil((d0(s.exp)-TD())/864e5)}
 
 /*----- 사용량 차감 (먹었어요 / 기록 저장 시 호출) -----*/
+/* 차감 순서: 🧊 큐브(유통기한 임박 순) → 원재료(STK).
+   큐브는 개수 단위이므로 필요 g 을 c.g 로 나눠 올림한 개수만큼 뺀다.
+   큐브 사용분은 cbUse 로그(b6.cbuse)에 남겨 기록 취소 시 되돌린다. */
+var CBU=LS('b6.cbuse',[]);
+function cbuSave(){localStorage.setItem('b6.cbuse',JSON.stringify(CBU))}
+/* 큐브에서 g 만큼 차감 → 실제로 차감한 g 반환 */
+function cubeTake(key,nm,g,why,logId){
+if(typeof cubes==='undefined'||g<=0)return 0;
+var pool=cubes.filter(function(c){return c.q>0&&((key&&c.key===key)||(nm&&c.n===nm))});
+if(!pool.length)return 0;
+/* 기한 임박한 것부터 소진 */
+pool.sort(function(a,b){return (typeof dLeft==='function'?dLeft(a)-dLeft(b):0)});
+var rest=g,tookG=0;
+pool.forEach(function(c){if(rest<=0.01)return;
+var per=+c.g||1;
+var wantN=Math.ceil((rest-0.01)/per);      /* 필요한 개수(올림) */
+var useN=Math.min(c.q,wantN);
+if(useN<=0)return;
+c.q=c.q-useN;
+var gUsed=useN*per;
+rest-=gUsed;tookG+=gUsed;
+CBU.push({cid:c.id,n:c.n,key:c.key||c.n,q:useN,g:per,lid:logId||'',why:why||'사용',d:fmt(TD()),t:nowHM()})});
+if(CBU.length>200)CBU=CBU.slice(-200);
+return tookG}
 function stkUse(gs,why,logId){if(!gs||!gs.length)return 0;
-var n=0;
+var n=0,cbHit=0;
 gs.forEach(function(x){var key=x[3]||x[0],nm=x[0];
-var s=stkFind(key)||stkFind(nm);if(!s)return;
 var g=gOf(x);
 if(g<=0)return;
+if(typeof isPantry==='function'&&isPantry(nm,key))return;   /* 물 등은 차감 제외 */
+/* ① 큐브 우선 차감 */
+var took=cubeTake(key,nm,g,why,logId);
+if(took>0){cbHit++;n++}
+var rem=g-took;
+if(rem<=0.01)return;
+/* ② 남은 필요량은 원재료에서 차감 */
+var s=stkFind(key)||stkFind(nm);if(!s)return;
 /* 레시피는 항상 g 기준 → 개수 단위 재고면 1개당 g 으로 나눠 개수로 환산해 차감 */
-var d=g2u(s,g);
+var d=g2u(s,rem);
 s.left=Math.round((s.left-d)*100)/100;
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:-d,why:why||'사용',lid:logId||''});
 if(s.hist.length>60)s.hist=s.hist.slice(-60);
 n++});
 if(n)stkSave();
+if(cbHit){cbuSave();if(typeof save==='function')save()}
 return n}
 /*----- 되돌리기 (기록 취소 시) -----*/
 function stkUndo(logId){if(!logId)return 0;var n=0;
+/* ① 원재료 복원 */
 STK.forEach(function(s){var keep=[],back=0;
 (s.hist||[]).forEach(function(h){if(h.lid===logId&&h.g<0){back+=-h.g}else keep.push(h)});
 if(back){s.left=Math.round((s.left+back)*100)/100;s.hist=keep;n++}});
-if(n)stkSave();return n}
+if(n)stkSave();
+/* ② 큐브 복원 — 같은 lid 의 사용 기록만큼 개수를 되돌린다 */
+if(typeof cubes!=='undefined'){var keepU=[],cb=0;
+CBU.forEach(function(u){if(u.lid!==logId){keepU.push(u);return}
+var hit=null;cubes.forEach(function(c){if(c.id===u.cid)hit=c});
+if(hit)hit.q=hit.q+u.q;
+else cubes.push({id:u.cid,n:u.n,key:u.key,q:u.q,g:u.g,dt:ymd(TD()),from:'undo'});
+cb++});
+if(cb){CBU=keepU;cbuSave();if(typeof save==='function')save();n+=cb}}
+return n}
+
+/*========== 🧊 큐브 (원재료 ↔ 큐브 이원화) ==========*/
+var CUBE_G=15;   /* 큐브 1개 기본 규격(g) — 수정 가능 */
+function cubeGDefault(){return CUBE_G}
+/* 특정 key/이름의 큐브 총 보유 g */
+function cubeGramOf(key,nm){if(typeof cubes==='undefined')return 0;
+return cubes.filter(function(c){return c.q>0&&((key&&(c.key===key))||(nm&&c.n===nm))})
+.reduce(function(a,c){return a+c.q*c.g},0)}
+/* 원재료 재고를 큐브화: gEach g 짜리 qty 개 → 큐브 등록 + 원재료 차감 */
+function cubeify(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
+var leftG=u2g(s,Math.max(0,s.left));
+var ge=prompt('「'+s.n+'」 큐브화\n\n큐브 1개를 몇 g 으로 만들까요?\n(현재 원재료 남은 양 약 '+rnd(leftG)+'g)',CUBE_G);
+if(ge===null)return;ge=+ge;if(!ge||ge<=0)return alert('0보다 큰 g 을 넣어 주세요');
+var maxN=Math.floor(leftG/ge);
+var q=prompt('큐브 몇 개를 만들까요?\n\n'+ge+'g 짜리 · 남은 양으로 최대 '+maxN+'개 가능','+'+maxN);
+if(q===null)return;q=+q;if(!q||q<=0)return alert('1개 이상 넣어 주세요');
+var usedG=ge*q;
+if(usedG>leftG+0.5&&!confirm('만들 큐브('+rnd(usedG)+'g)가 남은 원재료('+rnd(leftG)+'g)보다 많아요.\n그래도 진행할까요?'))return;
+/* 큐브 등록 (기존 cubes 시스템과 공유) */
+if(typeof cubes==='undefined')cubes=[];
+cubes.push({id:'c'+Date.now(),n:s.n,key:s.key||s.n,q:q,g:ge,dt:ymd(TD()),from:'raw'});
+/* 원재료 차감 — 실제 남은 g 을 물어 보정(자투리 반영) */
+var rem=prompt('큐브화 완료! 🧊 '+ge+'g × '+q+'개 = '+rnd(usedG)+'g 사용\n\n원재료가 실제로 얼마나 남았나요? (g)\n자투리를 정확히 반영합니다. 비우면 사용분만 차감('+rnd(Math.max(0,leftG-usedG))+'g 남김)',rnd(Math.max(0,leftG-usedG)));
+var newLeftG;
+if(rem===null||rem.trim()==='')newLeftG=Math.max(0,leftG-usedG);
+else{newLeftG=+rem;if(isNaN(newLeftG)||newLeftG<0)newLeftG=Math.max(0,leftG-usedG)}
+s.left=g2u(s,newLeftG);
+s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:-(g2u(s,usedG)),why:'큐브화 '+ge+'g×'+q+'개'});
+if(typeof save==='function')save();else stkSave();
+sTab='cube';render()}
+/* 재고 등록 화면에서 '큐브로 바로 등록' — 장보기 후 이미 큐브화한 것 */
+function cubeAddDirect(){if(!SE)return alert('재료를 선택해 주세요');
+var ge=prompt('「'+SE.n+'」 큐브 1개 용량 (g)',CUBE_G);if(ge===null)return;ge=+ge;if(!ge||ge<=0)return alert('0보다 큰 g');
+var q=prompt('큐브 개수',7);if(q===null)return;q=+q;if(!q||q<=0)return alert('1개 이상');
+if(typeof cubes==='undefined')cubes=[];
+cubes.push({id:'c'+Date.now(),n:SE.n,key:(SE.key&&NUT[SE.key]?SE.key:SE.n),q:q,g:ge,dt:ymd(TD()),from:'direct'});
+if(typeof save==='function')save();
+SE=null;ISQ.SE='';sTab='cube';render()}
 
 /*========== 뷰 ==========*/
 var sTab='list',sQ='',sCat='전체',SE=null;
-function vStock(){return '<div class="tt"><button class="'+(sTab==='list'?'on':'')+'" onclick="sTab=\'list\';render()">📦 재고 ('+STK.length+')</button>'
+function vStock(){var cn=(typeof cubes!=='undefined')?cubes.filter(function(c){return c.q>0}).length:0;
+return '<div class="tt"><button class="'+(sTab==='list'?'on':'')+'" onclick="sTab=\'list\';render()">🥩 원재료 ('+STK.length+')</button>'
++'<button class="'+(sTab==='cube'?'on':'')+'" onclick="sTab=\'cube\';render()">🧊 큐브 ('+cn+')</button>'
 +'<button class="'+(sTab==='add'?'on':'')+'" onclick="sTab=\'add\';render()">＋ 등록</button>'
 +'<button class="'+(sTab==='hist'?'on':'')+'" onclick="sTab=\'hist\';render()">🕐 이력</button></div>'
-+(sTab==='list'?vStkList():sTab==='add'?vStkAdd():vStkHist())}
++(sTab==='list'?vStkList():sTab==='cube'?vStkCube():sTab==='add'?vStkAdd():vStkHist())}
+/*----- 🧊 큐브 재고 목록 (재고화면 안에서 관리, plan.js cubes 공유) -----*/
+function vStkCube(){var act=(typeof cubes!=='undefined')?cubes.filter(function(c){return c.q>0}):[];
+var head='<div class="cd" style="background:#F3FAF7"><b style="font-size:13.5px">🧊 냉동 큐브 재고</b><div class="mu" style="font-size:10.5px;margin-top:4px">원재료를 큐브화하거나(원재료 탭의 <b>🧊 큐브화</b>), 장보기 후 이미 큐브로 만든 것은 <b>등록 탭 › 🧊 큐브로 바로 등록</b>. 만든 날 기준 14일까지 권장 사용기한.</div></div>';
+if(!act.length)return head+'<div class="cd mu">보유 중인 큐브가 없어요. 원재료 탭에서 <b>🧊 큐브화</b> 하거나 등록 탭에서 <b>큐브로 바로 등록</b>해 보세요.</div>';
+act.sort(function(a,b){return (typeof dLeft==='function'?dLeft(a)-dLeft(b):0)});
+return head+'<div class="cd">'+act.map(function(c){var d=(typeof dLeft==='function')?dLeft(c):null;
+return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+(typeof ART==='function'?ART('cube'):'🧊')+'</div>'
++'<div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b>'+(c.from==='raw'?' <span class="tg">원재료화</span>':c.from==='direct'?' <span class="tg p">장보기</span>':'')
++'<div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d==null?'':d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div>'
++'<div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button><button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'}).join('')
++'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 큐브가 자동으로 차감</b>됩니다(기한 임박한 것부터). 기록을 취소하면 되돌아옵니다. − ＋ 는 수동 보정용입니다.</div></div>'}
 
 /*----- 재고 목록 -----*/
 function vStkList(){var low=stkLow(),exp=STK.filter(function(s){var d=stkExpLeft(s);return d!=null&&d<=3});
@@ -94,7 +187,8 @@ return '<div class="cd" style="padding:10px;border-left:4px solid '+(lv==='bad'?
 +(isCnt(s.unit)?'<div class="mu" style="font-size:9.5px;margin-top:3px">📦 <b>'+stkPer(s)+'g</b> 짜리 · 현재 '+stkSpecFull(s,Math.max(0,s.left))+' · <span style="color:var(--bl);font-weight:700" onclick="stkPerEdit(\''+s.id+'\')">규격 수정 ›</span></div>':'')
 +(s.memo?'<div class="mu" style="font-size:10.5px;margin-top:4px">'+esc(s.memo)+'</div>':'')
 +'<div class="rw" style="margin-top:8px"><button class="btn g s" onclick="stkRefill(\''+s.id+'\')">🔄 충전</button>'
-+'<button class="btn y s" onclick="stkAdj(\''+s.id+'\')">✏️ 조정</button></div>'
++'<button class="btn y s" onclick="stkAdj(\''+s.id+'\')">✏️ 조정</button>'
++'<button class="btn s" style="background:#E8F4FF;color:var(--bl)" onclick="cubeify(\''+s.id+'\')">🧊 큐브화</button></div>'
 +(function(){var q=isCnt(s.unit)?[-0.5,-1,-2]:[-10,-20,-50];
 return '<div class="rw" style="margin-top:6px">'+q.map(function(v){
 return '<button class="mu" style="flex:1;font-weight:700;color:var(--bl);font-size:11px" onclick="stkQuick(\''+s.id+'\','+v+')">'+v+s.unit+'</button>'}).join('')})()
@@ -103,7 +197,11 @@ return '<button class="mu" style="flex:1;font-weight:700;color:var(--bl);font-si
 function stkPerEdit(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 var v=prompt('「'+s.n+'」 1'+s.unit+'의 용량(g)\n\n예) 소고기 200g 짜리 → 200 / 달걀 1개 → 50 / 두부 1팩 → 300\n\n레시피 사용량(g)을 이 값으로 나눠 '+s.unit+' 수를 차감합니다.',stkPer(s));
 if(v===null)return;v=+v;if(!v||v<=0)return alert('0보다 큰 숫자를 넣어 주세요');
-s.per=v;stkSave();render()}
+s.per=v;stkSave();
+/* 이 규격을 쓰는 레시피들의 1개당 g 도 함께 갱신 */
+var n=(typeof perSync==='function')?perSync():0;
+if(n)alert('「'+s.n+'」 규격을 1'+s.unit+'='+v+'g 으로 바꿨어요.\n\n이 재료를 개수로 쓰는 레시피 '+n+'곳의 중량도 자동으로 다시 계산했습니다.');
+render()}
 
 /*----- 등록 -----*/
 function vStkAdd(){return '<div class="cd"><b style="font-size:13.5px">＋ 재고 등록</b><div class="mu" style="font-size:10.5px;margin:3px 0 9px">재료도감에서 <b>검색해 선택</b>하거나 없는 것은 직접 입력하세요.</div>'
@@ -122,7 +220,9 @@ function vStkAdd(){return '<div class="cd"><b style="font-size:13.5px">＋ 재�
 +'<div id="skcalc" style="margin-top:9px">'+skCalcHTML()+'</div></div>'
 +'<div class="rw" style="margin-top:10px"><div class="fd" style="flex:1;margin:0"><label>유통기한 (선택)</label><input id="skE" type="date"></div>'
 +'<div class="fd" style="flex:1;margin:0"><label>메모 (선택)</label><input id="skM" placeholder="냉동실 2번칸"></div></div>'
-+'<button class="btn" style="margin-top:10px" onclick="stkAdd()">＋ 등록</button>'
++'<div class="rw" style="margin-top:10px"><button class="btn" style="flex:1.4" onclick="stkAdd()">＋ 원재료로 등록</button>'
++'<button class="btn s" style="flex:1;background:#E8F4FF;color:var(--bl)" onclick="cubeAddDirect()">🧊 큐브로 바로 등록</button></div>'
++'<div class="mu" style="font-size:10px;margin-top:5px;color:var(--sub)">장보기 후 바로 큐브로 만들었다면 <b>🧊 큐브로 바로 등록</b>을 누르세요. 원재료 재고를 거치지 않고 큐브 재고로 들어갑니다.</div>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">등록하면 <b>먹었어요·기록 저장 시 자동 차감</b>됩니다. 남은 양이 충전량의 <b>20% 이하 ⚠️ · 10% 이하 🚨</b>가 되면 장보기 목록에 자동으로 올라갑니다.</div></div>'
 :'<div class="cd mu">위에서 재료를 검색해 선택해 주세요.</div>')}
 /*----- 등록 폼 실시간 계산 (입력창 재생성 금지 — 한글·숫자 입력 유지) -----*/
@@ -183,6 +283,7 @@ if(!per||per<=0)return alert('1개 용량(예: 200)을 입력해 주세요');
 if(!cnt||cnt<=0)return alert('개수를 입력해 주세요');
 STK.push({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:u,per:per,spec:per+pu,full:cnt,left:cnt,dt:fmt(TD()),exp:exp,memo:memo,
 hist:[{d:fmt(TD()),t:nowHM(),g:cnt,why:'최초 등록 ('+per+pu+'×'+rnd2(cnt)+u+')'}]});
+if(typeof perSync==='function')perSync();   /* 등록한 규격을 기존 레시피에도 반영 */
 stkSave();SE=null;ISQ.SE='';SU=CNTU[0];sTab='list';render()}
 
 /*----- 충전 · 조정 -----*/

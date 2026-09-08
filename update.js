@@ -1,7 +1,12 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='30';                     /* index.html 의 ?v= 와 같은 값 */
+var APPV='37';                     /* index.html 의 ?v= 와 같은 값 */
 var UPDS=LS('b6.updfound',null)||{};
-var UPD={found:!!(UPDS.v&&UPDS.v!==APPV),checking:false,last:LS('b6.updchk',0),newv:(UPDS.v&&UPDS.v!==APPV)?UPDS.v:''};
+var UPD={found:!!(UPDS.v&&UPDS.v!==APPV),checking:false,last:LS('b6.updchk',0),newv:(UPDS.v&&UPDS.v!==APPV)?UPDS.v:'',asked:'',timer:0};
+/* 자동 새로고침 사용 여부 (기본 켜짐). 끄면 안내만 뜨고 직접 눌러야 한다 */
+var UAUTO=LS('b6.updauto',1);
+function updAutoSet(v){UAUTO=v?1:0;localStorage.setItem('b6.updauto',JSON.stringify(UAUTO));
+if(!UAUTO)updStop();
+if(document.getElementById('mb')&&UPD.found)updAsk(1)}
 function updSaveF(){localStorage.setItem('b6.updfound',JSON.stringify({v:UPD.found?UPD.newv:''}))}
 /* 업데이트 이력 — 실제로 버전이 올라간 순간만 기록한다.
    최신 상태에서 확인만 한 것은 '업데이트'가 아니므로 절대 갱신하지 않는다. */
@@ -31,7 +36,8 @@ var m=t.match(/\?v=(\d+)/);
 UPD.checking=false;updSpin(false);
 UPD.last=Date.now();localStorage.setItem('b6.updchk',JSON.stringify(UPD.last));
 if(m&&m[1]!==APPV){UPD.found=true;UPD.newv=m[1];updSaveF();updBanner();
-if(!silent)updAsk()}
+if(!silent)updAsk();
+else updNag()}
 else{UPD.found=false;UPD.newv='';updSaveF();updBanner();
 if(!silent)updOk()}
 }).catch(function(){UPD.checking=false;updSpin(false);
@@ -53,14 +59,39 @@ function updOk(){document.getElementById('mb').innerHTML='<div class="mt2">🍼 
 +'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>';
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 
-/*----- 업데이트 발견 -----*/
-function updAsk(){document.getElementById('mb').innerHTML='<div class="mt2">🎉 새 버전이 있어요</div>'
+/*----- 업데이트 발견 안내 (auto=1 이면 자동 감지로 뜬 것) -----*/
+var UCD=10;                        /* 자동 새로고침 카운트다운(초) */
+function updAsk(auto){var au=auto&&UAUTO;
+document.getElementById('mb').innerHTML='<div class="mt2">'+(auto?'🔄 업데이트가 있습니다':'🎉 새 버전이 있어요')+'</div>'
 +'<div class="alert mid" style="margin-top:10px"><span class="ic">🔄</span><div><b>최신 버전이 아닙니다.</b><br>현재 v'+APPV+' → 새 버전 <b>v'+UPD.newv+'</b><br>최신 버전으로 새로고침 해주세요.</div></div>'
++(au?'<div class="ucd" id="ucdbox"><b id="ucd">'+UCD+'</b><div><b>초 후 자동으로 새로고침합니다</b><div class="mu" style="font-size:11px;margin-top:2px">기다리지 않으려면 아래 버튼을 누르세요.</div></div></div>':'')
 +updInfoCard()
 +'<div class="cd" style="background:#F3FAF7;font-size:11.5px"><b>안심하세요</b><div class="mu" style="font-size:11px;margin-top:5px;line-height:1.6">새로고침해도 <b>아기 정보·기록·재고·성장 데이터는 모두 그대로</b>입니다. 앱 화면과 기능만 최신으로 바뀝니다.</div></div>'
 +'<button class="btn" onclick="updForce()">🔄 지금 최신 버전으로 새로고침</button>'
-+'<button class="btn y" style="margin-top:8px" onclick="closeM()">나중에</button>';
-document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
++'<button class="btn y" style="margin-top:8px" onclick="updLater()">나중에</button>'
++('<div class="cd" style="background:#FBF6F2;margin-top:10px"><div class="tcf" style="margin:0;border:0;padding:4px 0"><div style="flex:1"><b style="font-size:12.5px">자동 새로고침</b><div class="mu" style="font-size:10.5px">새 버전을 찾으면 '+UCD+'초 뒤 자동 적용</div></div><div class="tsw '+(UAUTO?'on':'')+'" onclick="updAutoSet('+(UAUTO?0:1)+')"><i></i></div></div></div>');
+document.getElementById('md').classList.add('on');document.body.style.overflow='hidden';
+updStop();
+if(au)updTick()}
+/*----- 카운트다운 -----*/
+function updTick(){var n=UCD;
+UPD.timer=setInterval(function(){n--;
+var e=document.getElementById('ucd');
+if(!e){updStop();return}                     /* 모달이 닫혔으면 중단 */
+e.textContent=n;
+if(n<=0){updStop();updForce()}},1000)}
+function updStop(){if(UPD.timer){clearInterval(UPD.timer);UPD.timer=0}}
+/*----- 나중에: 이 버전은 이번 실행 동안 다시 띄우지 않는다 (배너는 유지) -----*/
+function updLater(){updStop();UPD.asked=UPD.newv;closeM()}
+
+/*----- 자동 감지 시 안내 띄우기 -----*/
+function updNag(){
+if(!UPD.found)return;
+if(UPD.asked===UPD.newv)return;                             /* 이미 안내했다 */
+var md=document.getElementById('md');
+if(md&&md.classList.contains('on'))return;                  /* 작업 중인 모달을 덮지 않는다 */
+if(document.body.classList.contains('solo'))return;         /* 온보딩 중이면 방해하지 않는다 */
+UPD.asked=UPD.newv;updAsk(1)}
 
 /*----- 강제 새로고침 (SW 캐시 비우고 재로드) -----*/
 function updForce(){
@@ -87,6 +118,7 @@ if(l)l.className='lgb'+(on?' spin':'')+(UPD.found?' new':'')}
 function updBanner(){var el=document.getElementById('ub');if(!el)return;
 if(UPD.found){el.className='ub on';document.body.classList.add('ubon');
 el.innerHTML='<span>🔄 <b>최신 버전이 아닙니다.</b> 최신 버전으로 새로고침 해주세요.'+(UPD.newv&&UPD.newv!=='최신'?' (v'+APPV+' → v'+UPD.newv+')':'')+'</span>'
++'<button onclick="updAsk(1)" style="background:#fff;color:var(--pd);margin-right:5px">안내</button>'
 +'<button onclick="updForce()">새로고침</button>'}
 else{el.className='ub';el.innerHTML='';document.body.classList.remove('ubon')}
 updSpin(false)}
@@ -112,4 +144,4 @@ r.addEventListener('updatefound',function(){
 var nw=r.installing;if(!nw)return;
 nw.addEventListener('statechange',function(){
 if(nw.state==='installed'&&navigator.serviceWorker.controller){
-UPD.found=true;UPD.newv=UPD.newv||'최신';updSaveF();updBanner()}})})})})}
+UPD.found=true;UPD.newv=UPD.newv||'최신';updSaveF();updBanner();updNag()}})})})})}
