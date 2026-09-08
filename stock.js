@@ -177,15 +177,49 @@ return '<div class="tt"><button class="'+(sTab==='list'?'on':'')+'" onclick="sTa
 +(sTab==='list'?vStkList():sTab==='cube'?vStkCube():sTab==='add'?vStkAdd():vStkHist())}
 /*----- 🧊 큐브 재고 목록 (재고화면 안에서 관리, plan.js cubes 공유) -----*/
 function vStkCube(){var act=(typeof cubes!=='undefined')?cubes.filter(function(c){return c.q>0}):[];
-var head='<div class="cd" style="background:#F3FAF7"><b style="font-size:13.5px">🧊 냉동 큐브 재고</b><div class="mu" style="font-size:10.5px;margin-top:4px">원재료를 큐브화하거나(원재료 탭의 <b>🧊 큐브화</b>), 장보기 후 이미 큐브로 만든 것은 <b>등록 탭 › 🧊 큐브로 바로 등록</b>. 만든 날 기준 14일까지 권장 사용기한.</div></div>';
+var head='<div class="cd" style="background:#F3FAF7"><b style="font-size:13.5px">🧊 냉동 큐브 재고</b><div class="mu" style="font-size:10.5px;margin-top:4px">원재료를 큐브화하거나(원재료 탭의 <b>🧊 큐브화</b>), 장보기 후 이미 큐브로 만든 것은 <b>등록 탭 › 🧊 큐브로 바로 등록</b>. 만든 날 기준 14일까지 권장 사용기한이며, 각 큐브의 <b>✏️</b> 로 <b>만든 날짜·보관기한·개수·규격</b>을 고칠 수 있습니다.</div></div>';
 if(!act.length)return head+cubeLowAlert()+'<div class="cd mu">보유 중인 큐브가 없어요. 원재료 탭에서 <b>🧊 큐브화</b> 하거나 등록 탭에서 <b>큐브로 바로 등록</b>해 보세요.</div>';
 act.sort(function(a,b){return (typeof dLeft==='function'?dLeft(a)-dLeft(b):0)});
 return head+cubeLowAlert()+'<div class="cd">'+act.map(function(c){var d=(typeof dLeft==='function')?dLeft(c):null;
 return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+(typeof ART==='function'?ART('cube'):'🧊')+'</div>'
 +'<div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b>'+(c.from==='raw'?' <span class="tg">원재료화</span>':c.from==='direct'?' <span class="tg p">장보기</span>':'')
 +'<div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d==null?'':d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div>'
-+'<div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button><button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'}).join('')
-+'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 큐브가 자동으로 차감</b>됩니다(기한 임박한 것부터). 기록을 취소하면 되돌아옵니다. − ＋ 는 수동 보정용입니다.</div></div>'}
++'<div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button>'
++'<button style="padding:0 4px" onclick="cubeEdit(\''+c.id+'\')" title="수정">✏️</button>'
++'<button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'
++(CE.id===c.id?cubeEditForm(c):'')}).join('')
++'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 큐브가 자동으로 차감</b>됩니다(기한 임박한 것부터). 기록을 취소하면 되돌아옵니다. − ＋ 는 수동 보정용, ✏️ 는 <b>만든 날짜·개수·규격 수정</b>입니다.</div></div>'}
+
+/*----- ✏️ 큐브 수정 (만든 날짜·이름·개수·규격·보관기한) -----*/
+var CE={id:''};
+function cubeEdit(id){CE.id=(CE.id===id?'':id);render()}
+function cubeFind(id){var h=null;if(typeof cubes!=='undefined')cubes.forEach(function(c){if(c.id===id)h=c});return h}
+/* 보관기한은 큐브별 keep(일) 을 우선 쓰고, 없으면 기본 14일 */
+function cubeKeep(c){return (c&&+c.keep>0)?+c.keep:14}
+function cubeEditForm(c){var k=cubeKeep(c),d=(typeof dLeft==='function')?dLeft(c):null;
+return '<div class="cd" style="background:#F3FAF7;padding:10px;margin:0 0 9px">'
++'<div class="mu" style="font-size:11px;font-weight:800;margin-bottom:7px">✏️ '+esc(c.n)+' 큐브 수정</div>'
++'<div class="fd" style="margin-bottom:9px"><label>재료명</label><input id="ceN" value="'+esc(c.n)+'"></div>'
++'<div class="rw" style="margin-bottom:9px"><div class="fd" style="flex:1.3;margin:0"><label>만든 날짜</label><input id="ceD" type="date" value="'+esc(c.dt||ymd(TD()))+'"></div>'
++'<div class="fd" style="flex:1;margin:0"><label>보관기한(일)</label><input id="ceK" type="number" min="1" max="180" value="'+k+'"></div></div>'
++'<div class="rw" style="margin-bottom:9px"><div class="fd" style="flex:1;margin:0"><label>개수</label><input id="ceQ" type="number" min="0" step="1" value="'+(+c.q||0)+'"></div>'
++'<div class="fd" style="flex:1;margin:0"><label>1개 규격(g)</label><input id="ceG" type="number" min="1" step="1" value="'+(+c.g||CUBE_G)+'"></div></div>'
++'<div class="mu" style="font-size:10.5px;margin-bottom:9px">만든 날짜를 바꾸면 <b>D-표시와 소진 순서</b>가 함께 바뀝니다(기한 임박한 큐브부터 차감). 현재 '+(d==null?'-':(d>0?'D-'+d:'기한 초과'))+'.</div>'
++'<div class="rw"><button class="btn s" style="flex:1" onclick="cubeEditSave(\''+c.id+'\')">저장</button>'
++'<button class="btn y s" style="flex:1" onclick="CE.id=\'\';render()">취소</button></div></div>'}
+function cubeEditSave(id){var c=cubeFind(id);if(!c)return;
+var g=function(x){var e=document.getElementById(x);return e?e.value:''};
+var n=(g('ceN')||'').trim(),dt=g('ceD'),kp=+g('ceK'),q=+g('ceQ'),ge=+g('ceG');
+if(!n)return alert('재료명을 입력해 주세요');
+if(!dt)return alert('만든 날짜를 입력해 주세요');
+if(d0(dt)>TD()&&!confirm('만든 날짜가 미래예요. 그대로 저장할까요?'))return;
+if(!(ge>0))return alert('1개 규격(g)은 1 이상이어야 해요');
+if(!(q>=0))return alert('개수는 0 이상이어야 해요');
+var f=null;if(typeof FD!=='undefined')FD.forEach(function(x){if(x[0]===n)f=x});
+c.n=n;c.dt=dt;c.q=Math.round(q);c.g=Math.round(ge);
+c.keep=(kp>0?Math.round(kp):14);
+if(f&&f[4])c.key=f[4];               /* 이름을 바꿨으면 영양 key 도 다시 맞춘다 */
+CE.id='';save();render()}
 
 /*----- 재고 목록 -----*/
 function vStkList(){var low=stkLow(),exp=STK.filter(function(s){var d=stkExpLeft(s);return d!=null&&d<=3});

@@ -221,30 +221,59 @@ tot+=(typeof u2g==='function')?u2g(x,Math.max(0,x.left)):Math.max(0,x.left)}});r
 function cubeGram(key,nm){if(typeof cubes==='undefined')return 0;
 return cubes.filter(function(c){return c.q>0&&((key&&c.key===key)||(nm&&c.n===nm))})
 .reduce(function(a,c){return a+c.q*c.g},0)}
-/* 레시피 재고 판정: {ok:모두보유, cube:큐브로 커버되는 재료수, need:관리대상 재료수, lack:[부족재료명]} */
-function stkOf(r){var need=0,ok=0,cube=0,lack=[];
+/* 레시피 재고 판정 — 큐브 기준을 먼저 본다.
+   반환 {ok, need, have, cube, cubeAll, raw:[{n,key,g,rg}], lack:[재료명], mode}
+   · cube    : 큐브로 (일부라도) 커버되는 재료 수
+   · cubeAll : 필요한 모든 재료가 큐브만으로 충족 → 바로 조리 가능
+   · raw     : 큐브는 없거나 부족하지만 원재료가 있어 큐브화/직접조리로 가능한 재료
+   · lack    : 큐브도 원재료도 없는 재료 (장보기 필요)
+   · mode    : 'cube'(큐브만으로 OK) / 'raw'(원재료 손질 필요) / 'buy'(장보기 필요) / 'none' */
+function stkOf(r){var need=0,ok=0,cube=0,cubeAll=0,raw=[],lack=[];
 (r.g||[]).forEach(function(x){var nm=x[0],key=x[3];
 if(isPantry(nm,key))return;                 /* 물 등은 판정 제외 */
 need++;
 var g=(typeof gOf==='function')?gOf(x):(+x[1]||0);
 var cg=cubeGram(key,nm),rg=rawGramOf(key,nm);
-if(cg>0)cube++;                             /* 큐브로 일부라도 커버 */
-if(cg+rg>=g-0.01)ok++;else lack.push(nm)});
-return {ok:ok>=need,cube:cube,need:need,have:ok,lack:lack}}
+if(cg>0)cube++;
+if(cg>=g-0.01){cubeAll++;ok++}                       /* 큐브만으로 충족 */
+else if(cg+rg>=g-0.01){ok++;raw.push({n:nm,key:key||nm,g:g,rg:rg,cg:cg})}  /* 원재료 보충 필요 */
+else if(rg>0){raw.push({n:nm,key:key||nm,g:g,rg:rg,cg:cg,short:1});lack.push(nm)}
+else lack.push(nm)});
+var mode=need===0?'none':(lack.length?'buy':(raw.length?'raw':'cube'));
+return {ok:ok>=need,need:need,have:ok,cube:cube,cubeAll:cubeAll,raw:raw,lack:lack,mode:mode}}
 function canMake(r){return stkOf(r).ok}
+/* 큐브만으로 전부 되는가 */
+function canMakeCube(r){var st=stkOf(r);return st.need>0&&st.mode==='cube'}
+/* 원재료는 있어 큐브화·직접조리로 가능한가 */
+function canMakeRaw(r){var st=stkOf(r);return st.ok&&st.mode==='raw'}
 /* 추천 카드용 재고 배지 HTML */
 function stkBadge(r){if(!stkReady())return '';var st=stkOf(r);
 if(st.need===0)return '';
-if(st.cube>0&&st.ok)return ' · <span style="color:#2E86C1;font-weight:700">🧊 큐브 가능</span>';
-if(st.ok)return ' · <span style="color:var(--ok);font-weight:700">📦 재고 보유</span>';
+if(st.mode==='cube')return ' · <span style="color:#2E86C1;font-weight:700">🧊 큐브로 바로</span>';
+if(st.mode==='raw')return ' · <span style="color:#1F7A5F;font-weight:700">🥩 원재료 보유</span><span class="mu" style="font-size:9.5px"> · '+st.raw.slice(0,2).map(function(x){return x.n}).join(',')+' 손질 필요</span>';
 return ' · <span style="color:var(--warn)">🛒 '+st.lack.slice(0,2).join(',')+(st.lack.length>2?' 외':'')+' 부족</span>'}
+/* 재고 안내문 — "큐브가 없으면 이렇게 하세요" 문장을 만든다 */
+function stkHowto(r){var st=stkOf(r);if(st.need===0||!stkReady())return '';
+if(st.mode==='cube')return '<div class="alert ok"><span class="ic">🧊</span><div><b>보유 큐브만으로 만들 수 있어요.</b><br>큐브를 꺼내 해동하면 바로 조리 가능합니다.</div></div>';
+if(st.mode==='raw')return '<div class="alert mid"><span class="ic">🥩</span><div><b>큐브는 없지만 원재료가 있어요.</b> 아래 재료는 두 가지 방법 중 하나로 진행하세요.'
++st.raw.map(function(x){var s=(typeof stkFind==='function')?(stkFind(x.key)||stkFind(x.n)):null;
+return '<div class="mu" style="font-size:11px;margin-top:5px">· <b>'+esc(x.n)+'</b> — 필요 약 '+rnd(x.g)+'g / 원재료 '+rnd(x.rg)+'g 보유'
++(s&&typeof cubeify==='function'?' <button class="btn g s" style="padding:2px 8px;margin-left:3px" onclick="cubeify(\''+s.id+'\')">🧊 큐브화</button>':'')
++'<br>&nbsp;&nbsp;① <b>큐브화</b>해 두면 다음에도 편해요 ② 이번만이면 <b>바로 손질해 함께 조리</b>하세요.</div>'}).join('')
++'</div></div>';
+return '<div class="alert bad"><span class="ic">🛒</span><div><b>'+st.lack.slice(0,3).join(', ')+(st.lack.length>3?' 외 '+(st.lack.length-3)+'종':'')+'</b>은 큐브도 원재료도 없어요.<br>장보기 목록에 담아 주세요.'
++(st.raw.length?'<div class="mu" style="font-size:11px;margin-top:4px">나머지 '+st.raw.map(function(x){return esc(x.n)}).join(', ')+'은 원재료로 준비할 수 있어요.</div>':'')+'</div></div>'}
 function poolAll(si){return RCP().filter(function(r){return r.s===si&&r.y!=='f'&&(r.g||[]).length&&(r.sv||1)<5})}
-/* 재고로 만들 수 있는 것만. 없으면(재고 미등록/전부 부족) 전체로 fallback해 빈 화면 방지 */
-function stkReady(){return (typeof STK!=='undefined'&&STK.length)||(typeof cubes!=='undefined'&&cubes.filter(function(c){return c.q>0}).length)}
+/* 재고 사용 여부: 원재료·큐브 중 하나라도 있으면 재고 기준으로 추천한다 */
+function stkReady(){return (typeof STK!=='undefined'&&STK.filter(function(s){return s.left>0}).length>0)||(typeof cubes!=='undefined'&&cubes.filter(function(c){return c.q>0}).length>0)}
+/* 추천 풀 — ① 큐브만으로 되는 것 ② 원재료로 되는 것(큐브화 안내) ③ 전체 fallback */
 function pool(si){var all=poolAll(si);
 if(!stkReady())return all;                       /* 재고 자체를 안 쓰면 기존대로 */
-var ok=all.filter(function(r){return canMake(r)});
-return ok.length?ok:all}
+var cb=all.filter(function(r){return canMakeCube(r)});
+var rw=all.filter(function(r){return canMakeRaw(r)});
+if(cb.length>=3)return cb.concat(rw);            /* 큐브 우선, 원재료분은 뒤에 */
+if(cb.length+rw.length)return cb.concat(rw);
+return all}
 function recommend(si,seed,mealN,pre){var P=pool(si);if(!P.length)return [];
 var T=TG(),tgt={};NK.forEach(function(k){tgt[k]=T.solid[k]});
 var acc={p:0,fe:0,ca:0,zn:0},used={},out=[];

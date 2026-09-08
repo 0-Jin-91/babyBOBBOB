@@ -163,7 +163,9 @@ if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert('�
 else prompt('복사하세요',t)}
 
 /*========== 큐브 ==========*/
-function dLeft(c){return 14-Math.floor((TD()-d0(c.dt))/864e5)}
+/* 큐브 남은 보관일. 큐브별 keep(일)을 수정했으면 그것을 쓰고, 없으면 기본 14일 */
+function dLeft(c){var k=(typeof cubeKeep==='function')?cubeKeep(c):((c&&+c.keep>0)?+c.keep:14);
+return k-Math.floor((TD()-d0(c.dt))/864e5)}
 function vCube(){var act=cubes.filter(function(c){return c.q>0});
 return ((typeof cubeLowAlert==='function')?cubeLowAlert():'')
 +'<div class="cd"><b>🧊 냉동 큐브 재고</b><p class="mu" style="margin:5px 0 10px">만든 날 기준 14일까지를 권장 사용기한으로 계산하고 장보기에서 자동 차감합니다.</p>'
@@ -171,7 +173,7 @@ return ((typeof cubeLowAlert==='function')?cubeLowAlert():'')
 +'<div class="fd" style="margin:10px 0 0"><label>만든 날</label><input id="cD" type="date" value="'+ymd(TD())+'"></div><button class="btn" style="margin-top:10px" onclick="addCube()">＋ 큐브 등록</button></div>'
 +'<div class="st">보유 중 ('+act.length+'종)</div>'
 +(act.length?'<div class="cd">'+act.map(function(c){var d=dLeft(c);
-return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+ART('cube')+'</div><div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b><div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div><div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button><button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'}).join('')
+return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+ART('cube')+'</div><div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b><div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div><div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button>'+((typeof cubeEdit==='function')?'<button style="padding:0 4px" onclick="cubeEdit(\''+c.id+'\')" title="수정">✏️</button>':'')+'<button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'+((typeof CE!=='undefined'&&CE.id===c.id&&typeof cubeEditForm==='function')?cubeEditForm(c):'')}).join('')
 +'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 자동 차감</b>됩니다. − ＋ 는 수동 보정용입니다.</div></div>':'<div class="cd mu">등록된 큐브가 없어요. 메뉴 > 토핑 > [준비] 큐브 만들기를 참고하세요.</div>')
 +'<div class="cd" style="background:#F3FAF7;font-size:12px"><b>보관 팁</b><ul style="margin:5px 0 0;padding-left:16px;color:var(--sub)"><li>완전히 식힌 뒤 뚜껑을 덮어 냉동.</li><li>지퍼백에 재료명·날짜를 적어두세요.</li><li>실온 방치·재냉동은 피하세요.</li></ul><div style="margin-top:6px">'+sT('mfds')+'</div></div>'}
 function addCube(){var n=document.getElementById('cN').value.trim(),q=+document.getElementById('cQ').value,g=+document.getElementById('cG').value||10,dt=document.getElementById('cD').value;

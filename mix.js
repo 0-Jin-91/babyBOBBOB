@@ -11,17 +11,40 @@ if(i>=0)CMIX.splice(i,1);else{if(CMIX.length>=12)return alert('한 번에 12가�
 cmSave();render()}
 function cmClear(){if(!CMIX.length)return;if(!confirm('담은 재료를 모두 비울까요?'))return;CMIX=[];cmSave();render()}
 
-/*----- 재고에서 쓸 수 있는 재료 -----*/
-/* 반환: [{n,key,left,unit,per,g}] — g = 보유 총 그램 */
-function stkAvail(){if(typeof STK==='undefined')return [];
-return STK.filter(function(s){return s.left>0}).map(function(s){
-return {n:s.n,key:s.key||'',left:s.left,unit:s.unit,per:(+s.per||1),g:s.left*(+s.per||1),id:s.id}})}
+/*----- 재고에서 쓸 수 있는 재료 (원재료 + 🧊 큐브) -----*/
+/* 반환: [{n,key,left,unit,per,g,cg,rg,src}]
+   g   = 보유 총 그램(원재료 + 큐브 합산)
+   cg  = 큐브 보유 g, rg = 원재료 보유 g
+   src = 'cube'(큐브만) / 'raw'(원재료만) / 'both' */
+function stkAvail(){var M={},out=[];
+/* ① 원재료 */
+if(typeof STK!=='undefined')STK.filter(function(s){return s.left>0}).forEach(function(s){
+var k=(s.key&&NUT[s.key])?s.key:(s.key||s.n),rg=(typeof u2g==='function')?u2g(s,Math.max(0,s.left)):Math.max(0,s.left);
+var o=M[k]||(M[k]={n:s.n,key:s.key||'',left:s.left,unit:s.unit,per:(+s.per||1),rg:0,cg:0,cq:0,id:s.id});
+o.rg+=rg});
+/* ② 🧊 큐브 — 원재료가 없어도 재고로 인정한다 (기존 버그: 큐브를 아예 안 봤음) */
+if(typeof cubes!=='undefined')cubes.filter(function(c){return c.q>0}).forEach(function(c){
+var k=(c.key&&NUT[c.key])?c.key:(c.key||c.n);
+var o=M[k]||(M[k]={n:c.n,key:(c.key&&NUT[c.key])?c.key:'',left:0,unit:'개',per:(+c.g||10),rg:0,cg:0,cq:0,id:''});
+o.cg+=(+c.q||0)*(+c.g||0);o.cq+=(+c.q||0);
+if(!o.left){o.left=o.cq;o.unit='큐브';o.per=(+c.g||10)}});
+for(var k in M){var o=M[k];o.key=o.key||(NUT[k]?k:'');o.g=o.rg+o.cg;
+o.src=o.cg>0&&o.rg>0?'both':(o.cg>0?'cube':'raw');
+if(o.g>0)out.push(o)}
+return out}
 /* 영양 연동되는(NUT 에 있는) 재고만 */
 function stkAvailNut(){return stkAvail().filter(function(x){return x.key&&NUT[x.key]})}
+/* 재고 표시용 남은 양 문구 — 큐브/원재료를 나눠 보여준다 */
+function stkAvailTxt(x){var a=[];
+if(x.cg>0)a.push('🧊 '+rnd2(x.cq)+'개');
+if(x.rg>0)a.push('🥩 '+rnd(x.rg)+'g');
+return a.join(' · ')}
 
 /*----- 재고 기반 조합 추천 -----*/
 /* 보유 재고 중에서 조합점수 + 영양점수가 높은 4~5가지 세트를 만든다 */
 function stkCombo(seed){var A=stkAvailNut();if(A.length<2)return null;
+/* 🧊 큐브 보유분을 먼저 쓴다 — 같은 조건이면 큐브가 우선 선택되게 정렬 */
+A=A.slice().sort(function(a,b){return (b.cg>0?1:0)-(a.cg>0?1:0)});
 var keys=A.map(function(x){return x.key});
 /* 곡류 1 + 단백 1 + 채소 1~2 + 비타민C 1 순으로 뼈대를 잡는다 */
 function pick(gn,ex){var G=CGRP[gn]||[];
@@ -41,20 +64,27 @@ if(c.sc>=70)out.push(k)});
 if(out.length<2)return null;
 return out}
 function cmFromStock(){var o=stkCombo(Math.floor(Math.random()*7));
-if(!o)return alert('영양 연동되는 재고가 2가지 이상 필요해요.\n\n재고 탭에서 재료를 등록해 주세요.');
+if(!o)return alert('영양 연동되는 재고가 2가지 이상 필요해요.\n\n재고 탭에서 원재료나 🧊 큐브를 등록해 주세요.');
 CMIX=o;cmSave();render()}
 
 /*----- 재고 활용 패널 (조합 탭·편집 화면 공용) -----*/
-/* mode: 'mix'(조합 탭에 담기) / 'edit'(편집 중 레시피에 추가) */
+/* mode: 'mix'(조합 탭에 담기) / 'edit'(편집 중 레시피에 추가)
+   🧊 큐브 보유분을 먼저 보여주고, 큐브가 없는 원재료는 큐브화 안내를 함께 띄운다 */
 function stkPanel(mode){var A=stkAvail();
-if(!A.length)return '<div class="cd" style="background:#FFF6EC;font-size:12px"><b>📦 보유 재고가 없어요</b><div class="mu" style="font-size:11px;margin-top:4px">재고 탭에서 재료를 등록하면 <b>가지고 있는 것으로 만들 수 있는 조합</b>을 추천해 드립니다.</div>'
+if(!A.length)return '<div class="cd" style="background:#FFF6EC;font-size:12px"><b>📦 보유 재고가 없어요</b><div class="mu" style="font-size:11px;margin-top:4px">재고 탭에서 <b>원재료</b>나 <b>🧊 큐브</b>를 등록하면 <b>가지고 있는 것으로 만들 수 있는 조합</b>을 추천해 드립니다.</div>'
 +'<button class="btn g s" style="margin-top:8px" onclick="closeM();tab=\'stock\';sTab=\'add\';render()">📦 재고 등록하러 가기</button></div>';
 var N=A.filter(function(x){return x.key&&NUT[x.key]}),X=A.filter(function(x){return !(x.key&&NUT[x.key])});
+var CB=N.filter(function(x){return x.cg>0}),RW=N.filter(function(x){return !(x.cg>0)});
 var fn=mode==='edit'?'edAddStk':'cmToggle';
-return '<div class="cd" style="background:#F3FAF7"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">📦 지금 가지고 있는 재료</b><span class="mu" style="font-size:10.5px">'+A.length+'종 보유</span></div>'
-+'<div class="mu" style="font-size:10.5px;margin:3px 0 8px">눌러서 '+(mode==='edit'?'레시피에 추가':'조합에 담기')+'. 괄호는 남은 양입니다.</div>'
-+(N.length?'<div class="ch">'+N.map(function(x){var on=(mode!=='edit'&&cmHas(x.key));
-return '<button class="'+(on?'on':'')+'" style="'+(on?'':'background:#DFF4EC;color:#1F7A5F')+'" onclick="'+fn+'(\''+x.key+'\')">'+(on?'✓ ':'＋ ')+esc(x.n)+'<span class="mu" style="font-weight:600"> · '+rnd2(x.left)+x.unit+'</span></button>'}).join('')+'</div>':'<div class="mu" style="font-size:11px">영양 연동되는 재고가 없어요.</div>')
+function chip(x){var on=(mode!=='edit'&&cmHas(x.key)),ic=x.cg>0?'🧊 ':'🥩 ';
+return '<button class="'+(on?'on':'')+'" style="'+(on?'':(x.cg>0?'background:#E3F0FB;color:#2E86C1':'background:#DFF4EC;color:#1F7A5F'))+'" onclick="'+fn+'(\''+x.key+'\')">'+(on?'✓ ':'＋ ')+ic+esc(x.n)+'<span class="mu" style="font-weight:600"> · '+stkAvailTxt(x)+'</span></button>'}
+return '<div class="cd" style="background:#F3FAF7"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13px">📦 지금 가지고 있는 재료</b><span class="mu" style="font-size:10.5px">🧊 '+CB.length+'종 · 🥩 '+RW.length+'종</span></div>'
++'<div class="mu" style="font-size:10.5px;margin:3px 0 8px">눌러서 '+(mode==='edit'?'레시피에 추가':'조합에 담기')+'. 🧊는 큐브 보유, 🥩는 원재료만 보유입니다.</div>'
++(CB.length?'<div class="mu" style="font-size:10.5px;font-weight:700;margin-bottom:3px">🧊 큐브로 바로 쓸 수 있어요</div><div class="ch">'+CB.map(chip).join('')+'</div>':'')
++(RW.length?'<div class="mu" style="font-size:10.5px;font-weight:700;margin:8px 0 3px">🥩 원재료만 있어요 — 큐브화하거나 바로 손질해 조리</div><div class="ch">'+RW.map(chip).join('')+'</div>'
++'<div class="mu" style="font-size:10px;margin-top:5px">위 재료는 큐브 재고가 없습니다. <b>큐브화</b>해 두면 다음 끼니부터 바로 쓸 수 있고, 이번 한 번이면 <b>그대로 손질해 함께 조리</b>해도 됩니다.'
++'<button class="btn g s" style="margin-top:5px" onclick="closeM();tab=\'stock\';sTab=\'list\';render()">🧊 재고 탭에서 큐브화하기</button></div>':'')
++(!N.length?'<div class="mu" style="font-size:11px">영양 연동되는 재고가 없어요.</div>':'')
 +(X.length?'<div class="mu" style="font-size:10px;margin-top:7px">※ 영양 미연동(직접 입력한 재료): '+X.map(function(x){return esc(x.n)}).join(', ')+'</div>':'')
 +(N.length>=2?'<button class="btn g s" style="margin-top:9px" onclick="'+(mode==='edit'?'edFromStock()':'cmFromStock()')+'">🎲 보유 재고로 조합 추천</button>':'')+'</div>'}
 
@@ -109,6 +139,9 @@ if(S.length)h+='<div class="hr"></div><b style="font-size:12.5px">＋ 더하면 
 h+='<div class="hr"></div><b style="font-size:12.5px">🍀 참고 · 이 재료들의 영양</b><div class="mu" style="font-size:10px;margin:2px 0 6px">각 재료를 표준량('+CMIX.map(function(k){return k+' '+(QG[k]||10)+qUnit(k)}).slice(0,3).join(', ')+(CMIX.length>3?' …':'')+')으로 담았을 때</div>'
 +'<div class="g4">'+NK.map(function(k){var pc=Math.round(nu.t[k]/Math.max(.01,T.meal[k])*100);
 return '<div style="text-align:center;background:#FBF6F2;border-radius:9px;padding:7px 2px"><div class="mu" style="font-size:9.5px">'+NL[k][0]+'</div><b style="color:'+lvCol(pc)+';font-size:14px">'+pc+'%</b></div>'}).join('')+'</div>';
+/* 재고 상태 — 담은 재료를 큐브/원재료 기준으로 판정하고 큐브화 안내 */
+if(typeof stkHowto==='function'){var hw=stkHowto(cmR());
+if(hw)h+='<div class="hr"></div><b style="font-size:12.5px">📦 지금 재고로 만들 수 있나요?</b><div style="margin-top:6px">'+hw+'</div>'}
 return h+'<button class="btn" style="margin-top:11px" onclick="cmToEdit()">✏️ 이 조합으로 메뉴 만들기</button>'
 +'<div class="mu" style="font-size:10.5px;margin-top:6px;text-align:center">담은 재료가 그대로 들어간 새 메뉴 만들기 화면이 열립니다.</div></div>'}
 
@@ -119,10 +152,13 @@ else if(cmCat==='재고'){var av=stkAvailNut().map(function(x){return x.key});
 L=FD.filter(function(f){return av.indexOf(f[4])>=0})}
 else L=FD.filter(function(f){return f[4]&&NUT[f[4]]&&(cmCat==='전체'||f[2]===cmCat)});
 L=L.sort(function(a,b){return a[3]-b[3]});
-if(!L.length)return '<div class="cd mu">'+(cmCat==='재고'?'영양 연동되는 재고가 없어요. 재고 탭에서 등록해 주세요.':'해당하는 재료가 없어요.')+'</div>';
+if(!L.length)return '<div class="cd mu">'+(cmCat==='재고'?'영양 연동되는 재고가 없어요. 재고 탭에서 원재료나 🧊 큐브를 등록해 주세요.':'해당하는 재료가 없어요.')+'</div>';
 var m=ageM();
-return '<div class="g4">'+L.map(function(f){var on=cmHas(f[4]),lk=m<f[3];
-return '<button class="ig '+(lk?'lk':'')+'" style="'+(on?'border-color:var(--pc);background:#FFEDE4':'')+'" onclick="cmToggle(\''+f[4]+'\')"><div class="e">'+f[1]+'</div><div class="n">'+f[0]+'</div><div class="m">'+f[3]+'개월+</div>'+(on?'<div class="ok">✓ 담음</div>':'')+'</button>'}).join('')+'</div>'}
+/* 재고 보유 표시 — 🧊 큐브 있음 / 🥩 원재료만 있음 */
+var SA={};stkAvailNut().forEach(function(x){SA[x.key]=x});
+return '<div class="g4">'+L.map(function(f){var on=cmHas(f[4]),lk=m<f[3],av=SA[f[4]];
+var mk=av?(av.cg>0?'<div class="m" style="color:#2E86C1;font-weight:700">🧊 큐브 '+rnd2(av.cq)+'개</div>':'<div class="m" style="color:#1F7A5F;font-weight:700">🥩 원재료 '+rnd(av.rg)+'g</div>'):'';
+return '<button class="ig '+(lk?'lk':'')+'" style="'+(on?'border-color:var(--pc);background:#FFEDE4':(av?'border-color:#BFE3F5':''))+'" onclick="cmToggle(\''+f[4]+'\')"><div class="e">'+f[1]+'</div><div class="n">'+f[0]+'</div><div class="m">'+f[3]+'개월+</div>'+mk+(on?'<div class="ok">✓ 담음</div>':'')+'</button>'}).join('')+'</div>'}
 /* 입력창을 재생성하지 않는다 — 한글 조합 유지 */
 function cmSearch(){var e=document.getElementById('cmq');if(e)CMQ=e.value;
 var g=document.getElementById('cmg');if(g)g.innerHTML=cmGrid()}
