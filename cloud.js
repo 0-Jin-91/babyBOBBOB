@@ -313,22 +313,33 @@ function clQueue(){
 
 /*───────── 사진 (기록과 분리, 한 장씩) ─────────*/
 /* 사진은 문서 1MiB 한도가 있어 한 장 = 한 문서로 나눠 담는다. */
+var CLPHB=0;                          /* 남은 사진 장수 — 화면 표시용 */
 function clPhPush(){
-  if(!clOn() || !navigator.onLine) return;
+  if(!clOn() || !navigator.onLine){ CLPHB=0; return }
   var keys=Object.keys(ph||{});
-  if(!keys.length) return;
+  if(!keys.length){ CLPHB=0; clPaint(); return }
   var done = LS('b6.phup',{}) || {};
-  var todo = keys.filter(function(k){ return done[k]!==(ph[k]||'').length });
-  if(!todo.length) return;
-  var F=FB, i=0;
+  /* 900KB 초과분은 문서 1MiB 한도에 걸려 올릴 수 없다 — 애초에 목록에서 뺀다 */
+  var todo = keys.filter(function(k){
+    var d=ph[k]||'';
+    return d.length<=900*1024 && done[k]!==d.length;
+  });
+  if(!todo.length){ CLPHB=0; saveKey('b6.phup',done); clPaint(); return }
+  CLPHB=todo.length; clPaint();
+  var F=FB, i=0, n=0;
   (function step(){
-    if(i>=todo.length || i>=5){ saveKey('b6.phup',done); return }   /* 한 번에 5장까지 */
-    var k=todo[i++], d=ph[k]||'';
-    if(d.length > 900*1024){ step(); return }                        /* 너무 큰 건 건너뜀 */
+    if(i>=todo.length || n>=5){                    /* 한 묶음 5장 */
+      saveKey('b6.phup',done);
+      CLPHB=todo.length-i; clPaint();
+      /* ★ 예전엔 5장에서 끊긴 뒤 다시 부르는 곳이 없어 나머지가 영구히 안 올라갔다 */
+      if(i<todo.length) setTimeout(clPhPush, 1200);
+      return;
+    }
+    var k=todo[i++], d=ph[k]||''; n++;
     F.D.setDoc(F.D.doc(F.db,'users',CLUSER.uid,'photos',encodeURIComponent(k)),
       {d:d, at:Date.now()})
-     .then(function(){ done[k]=d.length; step() })
-     .catch(function(){ saveKey('b6.phup',done) });
+     .then(function(){ done[k]=d.length; CL.lastPh=Date.now(); clSave(); step() })
+     .catch(function(e){ CLPHB=0; saveKey('b6.phup',done); clErr('photo',e) });
   })();
 }
 function clPhPull(){
@@ -345,43 +356,108 @@ function clPhPull(){
   }).catch(function(){});
 }
 
-/*───────── 상태 표시 ─────────*/
-function clWhen(){
-  var t=CL.lastUp; if(!t) return '아직 없음';
-  var s=Math.floor((Date.now()-t)/1000);
-  if(s<60) return '방금';
-  if(s<3600) return Math.floor(s/60)+'분 전';
+/*───────── 용량 계산 ─────────*/
+/* localStorage 한도를 알려주는 표준 API 는 없다. 실측상 5MB 안팎이 표준이므로
+   그 값을 기준선으로 삼고, navigator.storage.estimate() 가 알려주면 함께 보여준다. */
+var LSCAP = 5*1024*1024;
+function fmtB(n){
+  n=+n||0;
+  if(n<1024) return n+'B';
+  if(n<1048576) return (n/1024).toFixed(n<102400?1:0)+'KB';
+  return (n/1048576).toFixed(2)+'MB';
+}
+/* 사진이 이 폰에서 실제로 차지하는 바이트 */
+function phBytes(){ try{ var s=localStorage.getItem(KY.p); return s?s.length:0 }catch(e){ return 0 } }
+/* 이 폰 전체 localStorage 사용량 (키 이름 포함) */
+function lsBytes(){
+  var t=0;
+  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+        t += (k||'').length + ((localStorage.getItem(k)||'').length) } }catch(e){}
+  return t;
+}
+/* 클라우드에 올라간 사진 — 장수·바이트, 못 올리는 큰 사진 수까지 */
+function phUpStat(){
+  var d=LS('b6.phup',{})||{}, n=0, b=0, big=0, tot=0, tb=0, k, len;
+  for(k in ph){
+    if(!Object.prototype.hasOwnProperty.call(ph,k)) continue;
+    len=(ph[k]||'').length; tot++; tb+=len;
+    if(len>900*1024){ big++; continue }
+    if(d[k]===len){ n++; b+=len }
+  }
+  return {n:n, b:b, big:big, tot:tot, tb:tb};
+}
+/* 브라우저가 알려주는 이 사이트 전체 할당량 (지원할 때만) */
+var CLQ=null;
+function clQuota(){
+  if(CLQ!==null || !(navigator.storage && navigator.storage.estimate)) return;
+  CLQ=0;
+  navigator.storage.estimate().then(function(e){
+    CLQ={u:e.usage||0, q:e.quota||0}; clPaint();
+  }).catch(function(){ CLQ=0 });
+}
+
+/*───────── 시각 표시 ─────────*/
+function p2(n){ return (n<10?'0':'')+n }
+/* ★ 초까지 보여준다 — '방금'만 뜨면 백업이 실제로 됐는지 확인할 수 없다 */
+function clStamp(t){
+  if(!t) return '아직 없음';
+  var d=new Date(t);
+  return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '
+        +p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds());
+}
+function clAgo(t){
+  if(!t) return '';
+  var s=Math.floor((Date.now()-t)/1000); if(s<0) s=0;
+  if(s<60)    return s+'초 전';
+  if(s<3600)  return Math.floor(s/60)+'분 '+(s%60)+'초 전';
   if(s<86400) return Math.floor(s/3600)+'시간 전';
   return Math.floor(s/86400)+'일 전';
 }
+function clWhen(){ return CL.lastUp?clAgo(CL.lastUp):'아직 없음' }
+
+/*───────── 상태 표시 ─────────*/
 function clState(){
   if(!clReady()) return {t:'off',  s:'', c:'#8C8480'};
   if(!clOn()){
-    /* 로그인 이력이 있고 SDK 가 아직 로드 중이면 '로그인하세요'로 겁주지 않는다 */
     if(CL.on && !FB) return {t:'chk', s:'백업 확인 중…', c:'#7FA8D9'};
     return {t:'out', s:'백업 안 됨 · 로그인하세요', c:'#E08A00'};
   }
-  if(CLBUSY)     return {t:'sync', s:'백업 중…', c:'#7FA8D9'};
+  if(CLBUSY)            return {t:'sync', s:'백업 중…', c:'#7FA8D9'};
   if(!navigator.onLine) return {t:'off2', s:'인터넷 없음 · 연결되면 자동 백업', c:'#E08A00'};
-  if(CL.err)     return {t:'err',  s:'백업 실패 · 눌러서 다시 시도', c:'#EF6A4C'};
-  if(CL.pend)    return {t:'wait', s:'백업 대기 중…', c:'#7FA8D9'};
+  if(CL.err)            return {t:'err',  s:'백업 실패 · 눌러서 다시 시도', c:'#EF6A4C'};
+  if(CLPHB)             return {t:'sync', s:'사진 백업 중… '+CLPHB+'장 남음', c:'#7FA8D9'};
+  if(CL.pend)           return {t:'wait', s:'백업 대기 중…', c:'#7FA8D9'};
   return {t:'ok', s:clWhen()+' 백업됨', c:'#2E9C7D'};
 }
-/* 화면 상단 작은 배지 — 눈으로 확인돼야 마음을 놓는다 */
+/* 배지 + 설정 카드를 함께 갱신한다.
+   ★ 예전엔 배지(#cb)만 갱신해서, '지금 백업하기'로 실제 백업이 끝나도
+     정보 탭 카드의 시각이 그대로였다 → "전혀 변화가 없다"의 진짜 원인. */
 function clPaint(){
-  var b=document.getElementById('cb'); if(!b) return;
   var S=clState();
-  if(S.t==='off'){ b.style.display='none'; return }
-  b.style.display='block';
-  b.style.color=S.c;
-  b.innerHTML=(S.t==='ok'?'☁️ ':(S.t==='sync'||S.t==='wait'||S.t==='chk')?'🔄 ':'⚠️ ')+S.s;
-  b.onclick=function(){
-    if(!clOn()) clLogin();
-    else if(CL.err||CL.pend) clPush(1);
-    else if(typeof go==='function') go('info');
-  };
+  var b=document.getElementById('cb');
+  if(b){
+    /* 정상일 때는 아무것도 띄우지 않는다.
+       백업은 당연한 동작이고, 최근 백업시각·지금 백업하기는 정보 탭에 있다.
+       손볼 것이 있을 때(로그인 필요·백업 실패)만 나타난다. */
+    var show = (S.t==='out' || S.t==='err');
+    if(!show){ b.style.display='none'; b.innerHTML=''; b.onclick=null }
+    else{
+      b.style.display='block';
+      b.style.color=S.c;
+      b.innerHTML='⚠️ '+S.s;
+      b.onclick=function(){ if(!clOn()) clLogin(); else clPush(1) };
+    }
+  }
+  var c=document.getElementById('clbody');
+  if(c) c.innerHTML=clBody();
 }
 setInterval(clPaint, 15000);
+/* 초를 표시하므로 1초마다 — 설정 카드가 화면에 있을 때만 일한다 */
+setInterval(function(){
+  if(document.hidden) return;
+  var c=document.getElementById('clbody'); if(!c) return;
+  c.innerHTML=clBody();
+}, 1000);
 
 /* 인터넷이 돌아오면 밀린 것을 자동 전송 */
 window.addEventListener('online', function(){
@@ -394,6 +470,20 @@ document.addEventListener('visibilitychange', function(){
   if(!document.hidden && clOn() && CL.pend) clPush(1);
 });
 
+/*───────── 지금 백업하기 (버튼 전용) ─────────*/
+/* 눌렀을 때 무슨 일이 일어났는지 반드시 화면·안내로 남긴다 */
+function clPushNow(){
+  if(!clReady()) return;
+  if(!clOn()){ clLogin(); return }
+  if(!navigator.onLine){
+    CL.pend=1; clSave(); clPaint();
+    alert('인터넷에 연결되어 있지 않아요.\n연결되면 자동으로 백업됩니다.');
+    return;
+  }
+  CLBUSY=1; clPaint();
+  clPush(1);
+}
+
 /*───────── 설정 화면 카드 (info.js 에서 호출) ─────────*/
 function clCard(){
   if(!clReady()){
@@ -401,31 +491,68 @@ function clCard(){
      +'<p class="mu" style="margin:0">클라우드 설정이 아직 등록되지 않았습니다. '
      +'등록하면 구글 계정으로 로그인해 자동 백업할 수 있어요.</p></div>';
   }
+  clQuota();
+  return '<div class="st">☁️ 클라우드 백업</div><div class="cd" id="clbody">'+clBody()+'</div>';
+}
+
+/* 용량 막대 */
+function clBar(used, cap, col){
+  var r=cap>0?Math.min(100,Math.round(used/cap*1000)/10):0;
+  return '<div style="height:7px;border-radius:4px;background:#E7E3DF;overflow:hidden;margin:5px 0 2px">'
+    +'<i style="display:block;height:100%;width:'+r+'%;background:'+col+'"></i></div>'
+    +'<div class="mu" style="font-size:10px">'+fmtB(used)+' / '+fmtB(cap)+' ('+r+'%)</div>';
+}
+
+function clBody(){
   var S=clState();
-  var h='<div class="st">☁️ 클라우드 백업</div><div class="cd">';
   if(!clOn()){
-    h+='<p class="mu" style="margin:0 0 10px">구글 계정으로 로그인하면 <b>기록할 때마다 자동으로 백업</b>됩니다. '
-      +'폰을 바꿔도 로그인만 하면 그대로 이어서 쓸 수 있어요. 비밀번호를 새로 만들 필요는 없습니다.</p>'
+    return '<p class="mu" style="margin:0 0 10px">구글 계정으로 로그인하면 <b>기록할 때마다 자동으로 백업</b>됩니다. '
+      +'폰을 바꿔도 로그인만 하면 그대로 이어서 쓸 수 있어요.</p>'
       +'<button class="btn p" onclick="clLogin()">'+(CL.on?'구글 계정으로 다시 로그인':'구글 계정으로 로그인')+'</button>'
       +(CL.on?('<p class="mu" style="margin:9px 0 0;font-size:10.5px">이전에 <b>'+esc(CL.email||'구글 계정')
         +'</b>으로 로그인한 기록이 있습니다. 세션이 만료됐을 수 있으니 위 버튼을 한 번 더 눌러 주세요.</p>'
         +'<button class="btn y s" style="margin-top:8px" onclick="clForget()">로그인 정보 지우기</button>'):'')
-      +'<p class="mu" style="margin:9px 0 0;font-size:10.5px">로그인하지 않아도 앱은 지금처럼 모두 동작합니다. '
-      +'다만 폰을 바꾸거나 사파리 기록을 지우면 데이터가 사라질 수 있어요.</p>'
-      +(CL.emsg?('<p class="mu" style="margin:9px 0 0;font-size:10px;color:#EF6A4C;word-break:break-all">'
-        +'마지막 오류('+esc(CL.err||'')+'): '+esc(CL.emsg)+'</p>'):'');
-  }else{
-    h+='<div class="ir"><span>계정</span><b style="font-size:12px">'+esc(CL.email||'로그인됨')+'</b></div>'
-      +'<div class="ir"><span>상태</span><b style="color:'+S.c+'">'+(S.s||'-')+'</b></div>'
-      +'<div class="ir"><span>사진</span><b class="mu">'+Object.keys(ph||{}).length+'장 · '+phSize()+'KB</b></div>'
-      +'<button class="btn g s" style="margin-top:10px" onclick="clPush(1)">지금 백업하기</button>'
-      +'<button class="btn g s" style="margin-top:8px" onclick="clRestore()">클라우드에서 되돌리기</button>'
-      +'<button class="btn y s" style="margin-top:8px" onclick="clLogout()">로그아웃</button>'
+      +'<p class="mu" style="margin:9px 0 0;font-size:10.5px">로그인하지 않아도 앱은 지금처럼 모두 동작합니다.</p>'
       +(CL.emsg?('<p class="mu" style="margin:9px 0 0;font-size:10px;color:#EF6A4C;word-break:break-all">'
         +'마지막 오류('+esc(CL.err||'')+'): '+esc(CL.emsg)+'</p>'):'');
   }
-  h+='</div>';
-  return h;
+
+  var U=phUpStat(), pb=phBytes(), lb=lsBytes();
+  return '<div class="ir"><span>계정</span><b style="font-size:12px">'+esc(CL.email||'로그인됨')+'</b></div>'
+   +'<div class="ir"><span>상태</span><b style="color:'+S.c+'">'+(S.s||'-')+'</b></div>'
+   /* ── 시각: 초까지 ── */
+   +'<div class="ir"><span>최근 백업</span><b style="font-size:11.5px">'+clStamp(CL.lastUp)
+     +(CL.lastUp?(' <span class="mu">· '+clAgo(CL.lastUp)+'</span>'):'')+'</b></div>'
+   +(CL.lastPh?('<div class="ir"><span>최근 사진 백업</span><b style="font-size:11.5px">'+clStamp(CL.lastPh)
+     +' <span class="mu">· '+clAgo(CL.lastPh)+'</span></b></div>'):'')
+   +(CL.lastDown?('<div class="ir"><span>최근 내려받기</span><b class="mu" style="font-size:11.5px">'+clStamp(CL.lastDown)+'</b></div>'):'')
+
+   /* ── 사진 용량 ── */
+   +'<div class="st" style="margin:12px 0 6px;font-size:12px">📷 사진 용량</div>'
+   +'<div class="ir"><span>이 폰의 사진</span><b>'+U.tot+'장 · '+fmtB(pb)+'</b></div>'
+   +'<div class="ir"><span>클라우드에 백업됨</span><b style="color:'+((U.tot-U.big-U.n)===0?'#2E9C7D':'#E08A00')+'">'
+     +U.n+'장 · '+fmtB(U.b)+'</b></div>'
+   +'<div class="ir"><span>아직 안 올라간 사진</span><b>'+Math.max(0,U.tot-U.big-U.n)+'장</b></div>'
+   +(U.big?('<div class="ir"><span>용량초과로 못 올림</span><b style="color:#EF6A4C">'+U.big+'장</b></div>'
+     +'<div class="mu" style="font-size:10px">사진 한 장이 900KB 를 넘으면 클라우드 문서 한도(1MB)에 걸립니다.</div>'):'')
+   +(U.tot?('<div class="mu" style="font-size:10.5px;margin:6px 0 0">클라우드 백업 진행률</div>'
+     +clBar(U.b, pb||1, '#7FA8D9')):'')
+
+   /* ── 폰 저장공간 ── */
+   +'<div class="st" style="margin:12px 0 6px;font-size:12px">💾 이 폰 저장공간</div>'
+   +'<div class="mu" style="font-size:10.5px">앱 전체(기록+사진) · 브라우저 한도는 보통 '+fmtB(LSCAP)+'입니다.</div>'
+   +clBar(lb, LSCAP, lb>LSCAP*0.8?'#EF6A4C':'#2E9C7D')
+   +'<div class="mu" style="font-size:10.5px;margin-top:3px">그중 사진 '+fmtB(pb)
+     +' ('+(lb?Math.round(pb/lb*100):0)+'%)</div>'
+   +((CLQ&&CLQ.q)?('<div class="mu" style="font-size:10.5px;margin-top:6px">브라우저가 알려준 이 사이트 할당량: <b>'
+     +fmtB(CLQ.q)+'</b> 중 '+fmtB(CLQ.u)+' 사용</div>'):'')
+
+   +'<button class="btn g s" style="margin-top:12px" onclick="clPushNow()">'
+     +((CLBUSY||CLPHB)?'🔄 백업 중…':'지금 백업하기')+'</button>'
+   +'<button class="btn g s" style="margin-top:8px" onclick="clRestore()">클라우드에서 되돌리기</button>'
+   +'<button class="btn y s" style="margin-top:8px" onclick="clLogout()">로그아웃</button>'
+   +(CL.emsg?('<p class="mu" style="margin:9px 0 0;font-size:10px;color:#EF6A4C;word-break:break-all">'
+     +'마지막 오류('+esc(CL.err||'')+'): '+esc(CL.emsg)+'</p>'):'');
 }
 
 /* 되돌리기 — 명시적으로 한 번 더 확인 */

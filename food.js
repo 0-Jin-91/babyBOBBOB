@@ -321,28 +321,77 @@ var dots=ORD.map(function(b,i){
  +'<b style="color:'+(b.sig==='gray'?'#B5ABA4':'var(--ink)')+'">'+b.g.n+'</b>'
  +'<s>'+b.g.lb.replace('만 ','').replace('개월','M')+'</s></div>'}).join('');
 var sel=null;ORD.forEach(function(b){if(b.g.id===CK.sel)sel=b});
-return '<div class="cd ckml"><div class="ckmw">'
+return '<div class="cd ckml" id="ckmile"><div class="ckmw">'
 +'<div class="ckmt"></div><div class="ckmt on" style="width:'+doneW+'%"></div>'
 +'<div class="ckmr">'+dots+'</div></div>'
 +(sel?ckMileDet(sel):'<div class="mu" style="font-size:10.5px;margin-top:9px;text-align:center">동그라미를 누르면 그 시기에 무엇이 남았는지 볼 수 있어요</div>')
 +'</div>'}
-function ckMileDet(b){var K=CKSIG[b.sig],L=b.over.concat(b.todo);
-var body;
-if(L.length)body='<div class="rw" style="flex-wrap:wrap;gap:5px;margin-top:6px">'
- +L.slice(0,14).map(function(f){var s=ckSt(f),C=s==='over'?CKC.over:CKC.todo;
-  return '<span class="pill2" onclick="openF(\''+f[0]+'\')" style="background:'+C.bg+';color:'+C.c+';cursor:pointer">'+f[1]+' '+esc(f[0])+'</span>'}).join('')
- +(L.length>14?'<span class="pill2" style="background:#F2EAE4;color:#8C8480">+'+(L.length-14)+'</span>':'')+'</div>'
- +'<button class="btn y s" style="margin-top:8px" onclick="ckGo(\''+b.g.id+'\')">'+b.g.n+' 카드로 이동 ↓</button>';
-else if(b.sig==='gray')body='<div class="mu" style="font-size:11.5px;margin-top:5px">아직 오지 않은 시기예요. 만 '+b.g.f+'개월부터 '+b.soon.length+'가지를 시작하게 돼요.</div>';
-else body='<div class="mu" style="font-size:11.5px;margin-top:5px">이 시기에 해야 할 재료는 모두 정리했어요'+(b.test.length?' (관찰 진행 중 '+b.test.length+'가지)':'')+'.</div>';
+function ckMileDet(b){var K=CKSIG[b.sig];
+/* 그 시기의 세부 내역 — 상태별로 전부 보여준다(마일스톤 자리에서 바로 확인) */
+function grp(lb,L,C,cl){if(!L.length)return '';
+ return '<div style="margin-top:8px">'
+ +'<div class="mu" style="font-size:10.5px;font-weight:800;margin-bottom:4px">'+lb+' '+L.length+'</div>'
+ +'<div class="rw" style="flex-wrap:wrap;gap:5px">'
+ +L.map(function(f){return '<span class="pill2" onclick="openF(\''+f[0].replace(/'/g,"\\'")+'\')" style="background:'+C.bg+';color:'+C.c+(C.bd?';border:'+C.bd:'')+';cursor:pointer">'+f[1]+' '+esc(f[0])+'</span>'}).join('')
+ +'</div></div>'}
+var undone=b.over.length+b.todo.length;
+var body='<div class="rw" style="gap:5px;flex-wrap:wrap;margin-top:7px">'
+ +'<span class="pill2" style="background:'+CKC.ok.bg+';color:'+CKC.ok.c+'">✅ 통과 '+b.ok.length+'</span>'
+ +'<span class="pill2" style="background:'+CKC.test.bg+';color:'+CKC.test.c+'">🟠 진행중 '+b.test.length+'</span>'
+ +'<span class="pill2" style="background:'+CKC.todo.bg+';color:'+CKC.todo.c+'">🟡 해야할것 '+b.todo.length+'</span>'
+ +'<span class="pill2" style="background:'+CKC.over.bg+';color:'+CKC.over.c+'">🟣 기간지남 '+b.over.length+'</span>'
+ +'<span class="pill2" style="background:'+CKC.bad.bg+';color:'+CKC.bad.c+'">🔴 반응 '+b.bad.length+'</span>'
+ +(b.soon.length?'<span class="pill2" style="background:transparent;color:'+CKC.soon.c+';border:'+CKC.soon.bd+'">⚪️ 기간미도래 '+b.soon.length+'</span>':'')
+ +'</div>'
+ +'<div class="bar" style="height:7px;border-radius:4px;margin-top:8px">'
+ +(b.ok.length?'<div style="width:'+(b.ok.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.ok.g+'"></div>':'')
+ +(b.test.length?'<div style="width:'+(b.test.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.test.g+'"></div>':'')
+ +(b.over.length?'<div style="width:'+(b.over.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.over.g+'"></div>':'')
+ +(b.bad.length?'<div style="width:'+(b.bad.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.bad.g+'"></div>':'')
+ +(b.todo.length?'<div style="width:'+(b.todo.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.todo.g+'"></div>':'')
+ +'</div>'
+ +grp('🟣 기간이 지났어요',b.over,CKC.over)
+ +grp('🟡 지금 해야 해요',b.todo,CKC.todo)
+ +grp('🟠 관찰 진행 중',b.test,CKC.test)
+ +grp('🔴 알레르기 반응 있었어요',b.bad,CKC.bad)
+ +grp('⚪️ 아직 기간이 오지 않았어요',b.soon,CKC.soon)
+ +grp('✅ 통과한 재료',b.ok,CKC.ok);
+if(b.tot===0)body+='<div class="mu" style="font-size:11.5px;margin-top:7px">이 분류에 해당하는 재료가 없어요. 위 분류 탭을 바꿔 보세요.</div>';
+else if(!undone)body+='<div class="mu" style="font-size:11.5px;margin-top:7px">'+(b.sig==='gray'?'아직 오지 않은 시기예요. 만 '+b.g.f+'개월부터 시작하게 돼요.':'이 시기에 해야 할 재료는 모두 정리했어요.')+'</div>';
+body+='<div class="rw" style="gap:6px;margin-top:9px">'
+ +'<button class="btn y s" style="flex:1" onclick="ckGo(\''+b.g.id+'\')">'+b.g.n+' 카드 열기 ↓</button>'
+ +'<button class="btn s" style="flex:0 0 auto;background:#F2EAE4;color:#8C8480" onclick="ckClose()">닫기</button></div>';
 return '<div style="margin-top:11px;padding-top:10px;border-top:1px dashed var(--ln)">'
-+'<b style="font-size:13px">'+b.g.n+' <span class="mu" style="font-weight:600;font-size:11px">'+b.g.lb+'</span></b> '
-+'<span class="pill2" style="background:'+K.bg+';color:'+K.c+(K.bd?';border:'+K.bd:'')+'">'+K.lb+'</span>'
++'<div class="rw" style="justify-content:space-between;align-items:flex-start">'
++'<div style="min-width:0"><b style="font-size:13px">'+b.g.n+' <span class="mu" style="font-weight:600;font-size:11px">'+b.g.lb+'</span></b> '
++'<span class="pill2" style="background:'+K.bg+';color:'+K.c+(K.bd?';border:'+K.bd:'')+'">'+K.lb+'</span></div>'
++'<div style="text-align:right;flex-shrink:0;padding-left:8px"><div style="font-size:17px;font-weight:900;line-height:1;color:var(--mt)">'+(b.tot?Math.round(b.ok.length/b.tot*100):0)+'%</div>'
++'<div class="mu" style="font-size:9.5px">'+b.ok.length+' / '+b.tot+' 통과</div></div></div>'
 +body+'</div>'}
-function ckJump(id){CK.sel=CK.sel===id?'':id;if(CK.sel)CK.open[id]=1;render()}
-function ckGo(id){CK.open[id]=1;render();
-setTimeout(function(){var e=document.getElementById('ckstg-'+id);
-if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth',block:'center'})},80)}
+/* 동그라미를 누르면 그 시기 카드를 펼치고 그 자리로 실제로 이동한다.
+   ★ render() 는 마지막에 window.scrollTo(0,0) 로 맨 위로 되돌린다.
+     그래서 스크롤은 반드시 render() 가 끝난 뒤(다음 프레임)에 해야 하고,
+     smooth 로 하면 그 강제 리셋과 경합해 '안 넘어간다'. instant 로 직접 옮긴다. */
+function ckJump(id){var same=CK.sel===id;
+if(same){CK.sel='';render();ckScroll('mile');return}
+CK.sel=id;render();ckScroll('mile')}
+function ckClose(){CK.sel='';render();ckScroll('mile')}
+function ckGo(id){CK.sel=id;CK.open[id]=1;render();ckScroll(id)}
+function ckScroll(id){
+var go=function(tries){
+ var e=document.getElementById(id==='mile'?'ckmile':'ckstg-'+id);
+ if(!e){if(tries>0)return setTimeout(function(){go(tries-1)},50);return}
+ /* 헤더(고정 아님)와 여유 8px 만큼 위를 남긴다 */
+ var y=e.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop||0)-8;
+ if(y<0)y=0;
+ window.scrollTo(0,y);
+ document.documentElement.scrollTop=y;document.body.scrollTop=y;
+ /* 어디로 갔는지 눈에 보이게 살짝 강조 */
+ e.classList.remove('ckhit');void e.offsetWidth;e.classList.add('ckhit');
+ setTimeout(function(){e.classList.remove('ckhit')},1200)};
+/* render() 의 scrollTo(0,0) 이 끝난 다음 프레임에 실행 */
+if(window.requestAnimationFrame)requestAnimationFrame(function(){requestAnimationFrame(function(){go(6)})});
+else setTimeout(function(){go(6)},60)}
 /*----- 상태별 재료 그룹 -----*/
 function ckGrp(title,L,st,g){if(!L.length)return '';
 if(st==='ok'&&!CK.showOk&&L.length>6){
