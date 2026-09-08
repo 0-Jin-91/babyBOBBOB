@@ -104,7 +104,16 @@ if(UPD.found)setTimeout(function(){updNag()},900)}
 var VIEW={home:vHome,today:vToday,stock:vStock,shop:vShopTab,calc:vCalc,combo:vCombo,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
 function render(){var s=curS(),T=TG();
 document.getElementById('hdr').innerHTML='<button class="rfb'+(UPD.found?' new':'')+'" id="rfb" onclick="updCheck()" title="새로고침 · 업데이트 확인">🍼</button><div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:12px;font-weight:600;color:var(--sub)">아빠의 이유식 레시피</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
-document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)();
+/* 한 탭의 오류가 앱 전체(내비게이션 포함)를 멈추지 않게 감싼다.
+   예전에는 vCombo 안의 오류로 조합 탭이 '아무 화면도 안 나오는' 상태가 됐다. */
+try{document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)()}
+catch(err){
+document.getElementById('vw').innerHTML='<div class="cd" style="background:#FFECEC;border-left:4px solid var(--rd)"><b style="font-size:14px">⚠️ 이 화면을 그리는 중 문제가 생겼어요</b>'
++'<div class="mu" style="font-size:11.5px;margin-top:6px;line-height:1.7">탭 <b>'+esc((TABD[tab]||{}).n||tab)+'</b> 에서 오류가 발생했습니다. 다른 탭은 정상적으로 쓸 수 있습니다.'
++'<br>기록·재고 데이터는 안전하게 보관돼 있습니다.</div>'
++'<div class="cd" style="background:#fff;font-size:11px;margin-top:8px;word-break:break-all"><b>오류 내용</b><div class="mu" style="margin-top:3px">'+esc(err&&err.message||String(err))+'</div></div>'
++'<button class="btn g s" style="margin-top:8px" onclick="tab=\'home\';render()">🏠 홈으로</button></div>';
+if(window.console&&console.error)console.error('render('+tab+')',err)}
 window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;
 var bs=document.querySelectorAll('#nvb button');
 for(var i=0;i<bs.length;i++)bs[i].className=bs[i].dataset.t===tab?'on':''}

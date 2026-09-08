@@ -100,7 +100,7 @@ return '<div class="cd"><b style="font-size:14px">🧩 재료 조합 실험실</
 return '<button class="on" onclick="cmToggle(\''+k+'\')">'+(f?f[1]+' ':'')+esc(k)+' ✕</button>'}).join('')+'</div>'
 :'<div class="mu" style="font-size:11.5px;margin-top:8px">아래에서 재료를 눌러 담아 주세요. 2가지 이상 담으면 조합을 판정합니다.</div>')+'</div>'
 /* --- 점수 --- */
-+(CMIX.length>=2?cmScore(C,S,nu,T):'')
++(CMIX.length>=2?cmScore(C,S,nu,T,R):'')
 /* --- 재고 패널 --- */
 +stkPanel('mix')
 /* --- 재료 고르기 --- */
@@ -111,7 +111,10 @@ return '<button class="on" onclick="cmToggle(\''+k+'\')">'+(f?f[1]+' ':'')+esc(k
 +'<p class="mu" style="text-align:center;font-size:10.5px;margin:14px 6px 0">조합 판정은 일반적인 소화·흡수 원리에 근거한 참고 정보이며 금지 조합이 아닙니다. 아기 반응이 우선입니다.</p>'}
 
 /*----- 점수 카드 -----*/
-function cmScore(C,S,nu,T){var m=ageM();
+/* R = cmR() 로 만든 판정용 레시피 객체. 예전에는 이 인자가 없어 전역 R 을 참조해
+   ReferenceError 가 났고, 재료를 2개 담는 순간 조합 탭 전체가 렌더되지 않았다. */
+function cmScore(C,S,nu,T,R){var m=ageM();
+if(!R)R=cmR();
 var h='<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:14px">🧩 조합 판정</b><span class="badge '+cLv(C.sc)+'" style="font-size:13px;padding:6px 12px">'+cIco(C.sc)+' '+cTxt(C.sc)+' '+C.sc+'점</span></div>'
 +'<div class="bar" style="height:20px"><i class="solid" style="width:'+C.sc+'%;background:'+cCol(C.sc)+'"></i><span class="goal" style="left:calc(85% - 3px)"></span></div>'
 +'<div class="mu" style="font-size:10px;margin-top:4px">100점에서 주의마다 차감(심각 −22 · 주의 −11), 좋은 조합마다 +5(최대 +15) · 85점 이상이 권장 구간</div>';

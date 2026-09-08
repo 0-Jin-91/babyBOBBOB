@@ -1,26 +1,42 @@
 /*========== 재료 도감 · 알레르기 관찰 ==========*/
 function dObs(o){return Math.floor((TD()-d0(o.dt))/864e5)+1}
-var fTab='obs';
+var fTab='dict';
 function vFood(){if(fTab==='dash')return vFoodDash();
 if(fTab==='chk')return vFoodChk();
-var m=ageM(),cats=['전체','곡류','육류','어패류','채소','과일','콩·유제품','기타'];
+if(fTab==='obs')return vFoodObs();
+return vFoodDict()}
+
+/*----- 🥕 도감 (도감만) -----*/
+function vFoodDict(){var m=ageM(),cats=['전체','곡류','육류','어패류','채소','과일','콩·유제품','기타'];
 var list=FD.filter(function(f){return fCat==='전체'||f[2]===fCat}).sort(function(a,b){return a[3]-b[3]});
-var act=obs.filter(function(o){return !o.done});
 return fTabBar()
-+'<div class="cd" style="background:#FFF6EC"><b>🔔 알레르기 3일 관찰 타이머</b><p class="mu" style="margin:5px 0 8px">새 재료는 <b>오전에 소량</b>으로 먹이고 3일간 지켜봅니다.</p>'
++'<div class="cd" style="font-size:12px"><b>🥕 재료 도감 <span class="mu" style="font-weight:600">· 만 '+Math.floor(m)+'개월 기준</span></b>'
++'<p class="mu" style="margin:5px 0 0">흐린 재료는 아직 이른 시기. 시기는 일반적 기준이며 아기마다 다릅니다. '+sT('ppibbo')+sT('niaid')+'</p></div>'
++'<div class="tab">'+cats.map(function(c){return '<button class="'+(c===fCat?'on':'')+'" onclick="fCat=\''+c+'\';render()">'+c+'</button>'}).join('')+'</div>'
++'<div class="g4">'+list.map(function(f){var lk=m<f[3],t=tried[f[0]],nv=NUT[f[4]],ob=ckObs(f[0]);
+return '<button class="ig '+(lk?'lk':'')+'" onclick="openF(\''+f[0]+'\')"><div class="e">'+f[1]+'</div><div class="n">'+f[0]+'</div><div class="m">'+f[3]+'개월+</div>'+(nv&&nv[6]==='h'?'<div class="ok" style="color:var(--rd)">헴철</div>':nv&&nv[5]>=30?'<div class="ok" style="color:#B07C13">비타민C</div>':'')+(t==='ok'?'<div class="ok">✓ 통과</div>':'')+(t==='bad'?'<div class="ok" style="color:#E0563C">⚠ 반응</div>':'')+(!t&&ob?'<div class="ok" style="color:#B07C13">🔄 관찰중</div>':'')+'</button>'}).join('')+'</div>'}
+
+/*----- 🔔 관찰 타이머 (도감과 분리) -----*/
+function vFoodObs(){var act=obs.filter(function(o){return !o.done});
+var dn=obs.filter(function(o){return o.done}).slice().reverse();
+return fTabBar()
++'<div class="cd" style="background:#FFF6EC"><b>🔔 알레르기 3일 관찰 타이머</b><p class="mu" style="margin:5px 0 8px">새 재료는 <b>오전에 소량</b>으로 먹이고 3일간 지켜봅니다. 무엇을 남겨뒀는지는 <b>✅ 체크리스트</b> 탭에서 한눈에 봐요.</p>'
 +obsPicker()
 +'<button class="btn y s" style="margin-top:7px" onclick="askNoti()">🔔 브라우저 알림 허용</button></div>'
++'<div class="st">⏱ 지금 관찰 중 <span class="mu" style="font-weight:600">· '+act.length+'건</span></div>'
 +(act.length?act.map(function(o,i){var d=dObs(o);
 return '<div class="cd" style="border-left:4px solid '+(o.lv===2?'var(--rd)':o.lv===1?'var(--warn)':(d<=3?'var(--sn)':'var(--mt)'))+'"><div class="rw" style="justify-content:space-between"><b>'+esc(o.n)+(o.lv===2?' <span class="tg r">특별주의</span>':o.lv===1?' <span class="tg v">주의</span>':'')+'</b><span class="mu">'+o.dt+(o.tm?' '+o.tm:'')+' · '+d+'일차</span></div>'
 +'<div class="ch" style="margin-top:8px">'+[0,1,2].map(function(x){return '<button class="'+(o.c[x]?'on':'')+'" onclick="obsChk('+i+','+x+')">D+'+x+' '+(o.c[x]?'✓':'확인')+'</button>'}).join('')+'</div>'
 +'<div class="fd" style="margin:9px 0 0"><label>증상 메모</label><input type="text" value="'+esc(o.m||'')+'" oninput="obsMemo('+i+',this.value)" placeholder="발진·설사·보챔 등"></div>'
 +'<div class="rw" style="margin-top:9px"><button class="btn g s" onclick="obsDone('+i+',1)">😊 안전 확인</button><button class="btn y s" onclick="obsDone('+i+',0)">😖 반응 있었음</button></div>'
-+(d>=3&&o.c[0]&&o.c[1]&&o.c[2]?'<div class="tp" style="margin-top:8px">3일 관찰이 끝났어요. 이상이 없으면 안전 확인을 눌러주세요.</div>':'')+'</div>'}).join(''):'<div class="cd mu">관찰 중인 재료가 없어요.</div>')
-+'<div class="st">🥕 재료 도감 (만 '+Math.floor(m)+'개월 기준)</div>'
-+'<div class="cd" style="font-size:12px"><p class="mu" style="margin:0">흐린 재료는 아직 이른 시기. 시기는 일반적 기준이며 아기마다 다릅니다. '+sT('ppibbo')+sT('niaid')+'</p></div>'
-+'<div class="tab">'+cats.map(function(c){return '<button class="'+(c===fCat?'on':'')+'" onclick="fCat=\''+c+'\';render()">'+c+'</button>'}).join('')+'</div>'
-+'<div class="g4">'+list.map(function(f){var lk=m<f[3],t=tried[f[0]],nv=NUT[f[4]];
-return '<button class="ig '+(lk?'lk':'')+'" onclick="openF(\''+f[0]+'\')"><div class="e">'+f[1]+'</div><div class="n">'+f[0]+'</div><div class="m">'+f[3]+'개월+</div>'+(nv&&nv[6]==='h'?'<div class="ok" style="color:var(--rd)">헴철</div>':nv&&nv[5]>=30?'<div class="ok" style="color:#B07C13">비타민C</div>':'')+(t==='ok'?'<div class="ok">✓ 확인</div>':'')+(t==='bad'?'<div class="ok" style="color:#E0563C">⚠ 반응</div>':'')+'</button>'}).join('')+'</div>'}
++(d>=3&&o.c[0]&&o.c[1]&&o.c[2]?'<div class="tp" style="margin-top:8px">3일 관찰이 끝났어요. 이상이 없으면 안전 확인을 눌러주세요.</div>':'')+'</div>'}).join(''):'<div class="cd mu">관찰 중인 재료가 없어요. 위에서 재료를 골라 시작하세요.</div>')
++(dn.length?'<div class="st">📖 지난 관찰 기록 <span class="mu" style="font-weight:600">· '+dn.length+'건</span></div>'
++'<div class="cd" style="padding:10px">'+dn.slice(0,20).map(function(o){
+return '<div class="cb"><div style="flex:1;min-width:0"><b style="font-size:12.5px">'+esc(o.n)+'</b><div class="mu" style="font-size:10.5px">'+o.dt+(o.m?' · '+esc(o.m):'')+'</div></div>'
++'<span class="pill2" style="background:'+(o.ok?'#E8F6F0':'#FDF0EC')+';color:'+(o.ok?'#1F7A5F':'#C0350F')+'">'+(o.ok?'✅ 통과':'⚠️ 반응')+'</span></div>'}).join('')
++(dn.length>20?'<div class="mu" style="font-size:10.5px;margin-top:6px">최근 20건만 표시</div>':'')+'</div>':'')
++'<button class="btn y" style="margin-top:12px" onclick="fTab=\'chk\';render()">✅ 통과 체크리스트로 이동</button>'}
+
 /*========== 관찰 시작 — 재료 선택형 ==========*/
 var OB={sel:'',free:'',cat:'추천'};
 function obsCats(){return ['🔎 검색','추천','미확인','곡류','육류','어패류','채소','과일','콩·유제품','기타','직접입력']}
@@ -72,9 +88,11 @@ return '<div class="cd" style="background:'+P.bg+';padding:10px;margin-bottom:0"
 +'<div style="margin-top:7px">'+sT('niaid')+'</div></div>'}
 
 /*========== 재료 탭 하위탭 ==========*/
-function fTabBar(){return '<div class="tt"><button class="'+(fTab==='obs'?'on':'')+'" onclick="fTab=\'obs\';render()">🔔 관찰 · 도감</button>'
-+'<button class="'+(fTab==='chk'?'on':'')+'" onclick="fTab=\'chk\';render()">✅ 통과 체크리스트</button>'
-+'<button class="'+(fTab==='dash'?'on':'')+'" onclick="fTab=\'dash\';render()">📊 섭취 분석</button></div>'}
+function fTabBar(){var act=obs.filter(function(o){return !o.done}).length,pd=ckPending();
+return '<div class="tt" style="flex-wrap:wrap"><button class="'+(fTab==='dict'?'on':'')+'" onclick="fTab=\'dict\';render()">🥕 도감</button>'
++'<button class="'+(fTab==='obs'?'on':'')+'" onclick="fTab=\'obs\';render()">🔔 관찰'+(act?' '+act:'')+'</button>'
++'<button class="'+(fTab==='chk'?'on':'')+'" onclick="fTab=\'chk\';render()">✅ 체크리스트'+(pd?' '+pd:'')+'</button>'
++'<button class="'+(fTab==='dash'?'on':'')+'" onclick="fTab=\'dash\';render()">📊 분석</button></div>'}
 function vFoodDash(){var A=dAgg(),L=ingRank(A),R=A.R;
 var nv=L.filter(function(x){return x.key&&NUT[x.key]});
 return fTabBar()
@@ -139,91 +157,154 @@ OB.sel='';OB.free='';
 save();askNoti();closeM();tab='food';render()}
 function setF(n,s){tried[n]=tried[n]===s?null:s;if(!tried[n])delete tried[n];save();openF(n);render()}
 
-/*========== ✅ 알레르기 통과 체크리스트 ==========*/
-/* 재료 하나하나의 상태를 4갈래로 정리한다.
-   ok   통과   — tried[n]==='ok' (3일 관찰 안전 확인 또는 수동 체크)
+/*========== ✅ 알레르기 통과 체크리스트 — 시기별 신호등 ==========*/
+/* 상태 판정 (관찰 목록 obs · 재료 상태 tried 를 그대로 공유한다)
+   ok   통과   — tried[n]==='ok'
    test 진행중 — obs 에 미완료 관찰이 있거나 tried[n]==='watch'
    bad  반응   — tried[n]==='bad'
-   todo 해야함 — 먹여도 되는 시기인데 아직 손 안 댄 것
-   soon 아직   — 권장 개월수가 안 된 것 (해야할 일에서 분리) */
-var CK={cat:'주요 알레르겐',only:0};
-/* 주요 알레르겐 — 국내 표시대상 + LEAP 근거로 조기도입 권장되는 것들 */
+   todo 해야함 — 먹여도 되는 시기인데 미시도
+   soon 이른시기 */
 var ALG8=['달걀 노른자','달걀 흰자','달걀(전란)','우유','플레인 요거트','치즈','밀','밀가루','땅콩','땅콩버터','호두','아몬드','대두','두부','새우','게','생선','연어','대구','고등어','메밀','복숭아','토마토','키위','참깨'];
+var CK={cat:'주요 알레르겐',open:{},showOk:0};
 function ckObs(n){var a=null;obs.forEach(function(o){if(!o.done&&o.n===n)a=o});return a}
 function ckSt(f){var n=f[0],t=tried[n],ob=ckObs(n),m=ageM();
 if(t==='ok')return 'ok';
 if(t==='bad')return 'bad';
 if(ob||t==='watch')return 'test';
-if(m<f[3])return 'soon';
-return 'todo'}
-var CKM={ok:{t:'통과',ic:'✅',c:'#1F7A5F',bg:'#F3FAF7'},
-test:{t:'진행 중',ic:'🔄',c:'#B07C13',bg:'#FFF9EC'},
-bad:{t:'반응 있었음',ic:'⚠️',c:'#C0350F',bg:'#FDF3F0'},
-todo:{t:'해야 할 것',ic:'⬜',c:'#6B5FC7',bg:'#F4F2FD'},
-soon:{t:'아직 이른 시기',ic:'⏳',c:'#8C8480',bg:'#F7F4F1'}};
-
-function ckPool(){var m=ageM();
-if(CK.cat==='주요 알레르겐')return FD.filter(function(f){return (f[6]||0)>0||ALG8.indexOf(f[0])>=0});
-if(CK.cat==='전체')return FD.slice();
-return FD.filter(function(f){return f[2]===CK.cat})}
+return m<f[3]?'soon':'todo'}
+/*----- 시기 버킷: 재료 시작 개월수를 STG 구간에 넣는다 -----*/
+function ckStages(){return STG.filter(function(g){return g.id!=='ready'})}
+function ckStgOf(f){var S=ckStages(),mo=f[3];
+for(var i=0;i<S.length;i++)if(mo>=S[i].f&&mo<S[i].t)return S[i];
+return S[S.length-1]}
 function ckCats(){return ['주요 알레르겐','전체','곡류','육류','어패류','채소','과일','콩·유제품','기타']}
-
-function vFoodChk(){var m=ageM(),L=ckPool(),G={ok:[],test:[],bad:[],todo:[],soon:[]};
-L.forEach(function(f){G[ckSt(f)].push(f)});
-/* 진도는 '지금 시도 가능한 것' 기준 — 아직 이른 재료를 분모에 넣으면 영원히 안 채워진다 */
-var doable=G.ok.length+G.test.length+G.bad.length+G.todo.length;
-var pct=doable?Math.round(G.ok.length/doable*100):0;
-var ord=['test','todo','ok','bad','soon'];
+function ckPool(){
+if(CK.cat==='전체')return FD.slice();
+if(CK.cat==='주요 알레르겐')return FD.filter(function(f){return (f[6]||0)>0||ALG8.indexOf(f[0])>=0});
+return FD.filter(function(f){return f[2]===CK.cat})}
+/* 탭 배지 — 지금 해야 할(먹여도 되는데 미시도) 재료 수. 주요 알레르겐 기준 */
+function ckPending(){var m=ageM();
+return FD.filter(function(f){return ((f[6]||0)>0||ALG8.indexOf(f[0])>=0)&&m>=f[3]&&ckSt(f)==='todo'}).length}
+/*----- 시기별 신호등 판정 -----*/
+/* sig: 'blue' 지난 시기 전부 정리됨 / 'red' 지난 시기인데 안 한 게 남음
+        'now' 지금 진행 중인 시기 / 'gray' 아직 오지 않은 시기 */
+function ckStgSig(g,B){var m=ageM();
+var past=m>=g.t, cur=m>=g.f&&m<g.t;
+if(past)return B.todo.length?'red':'blue';
+if(cur)return B.todo.length?'now':'blue';
+return 'gray'}
+var CKSIG={red:{c:'#E0563C',bg:'#FDF0EC',lb:'🔴 안 한 게 남았어요'},
+blue:{c:'#1F7A5F',bg:'#E8F6F0',lb:'🔵 이 시기 완료'},
+now:{c:'#B07C13',bg:'#FFF6EC',lb:'🟠 지금 이 시기'},
+gray:{c:'#9A8F88',bg:'#F6F1ED',lb:'⚪️ 아직 이른 시기'}};
+/* 정렬 우선순위 — 지난 시기 미완료 → 지금 시기 → 미래 → 완료 */
+var CKORD={red:0,now:1,gray:2,blue:3};
+function vFoodChk(){var m=ageM(),L=ckPool(),S=ckStages();
+/* 시기별 버킷 */
+var BK=S.map(function(g){return {g:g,ok:[],test:[],bad:[],todo:[],soon:[]}});
+L.forEach(function(f){var g=ckStgOf(f),b=null;
+BK.forEach(function(x){if(x.g.id===g.id)b=x});
+if(b)b[ckSt(f)].push(f)});
+BK.forEach(function(b){b.sig=ckStgSig(b.g,b);
+b.done=b.ok.length;b.tot=b.ok.length+b.test.length+b.bad.length+b.todo.length;});
+/* 전체 진도 — 지금 먹여도 되는 재료만 분모 */
+var AV=L.filter(function(f){return m>=f[3]}),OKn=0,TSn=0,BDn=0,TDn=0,SOn=L.length-AV.length;
+AV.forEach(function(f){var s=ckSt(f);if(s==='ok')OKn++;else if(s==='test')TSn++;else if(s==='bad')BDn++;else TDn++});
+var pct=AV.length?Math.round(OKn/AV.length*100):0;
+/* 정렬: 신호등 우선순위 → 시기 순서 */
+var ORD=BK.slice().sort(function(a,b){var d=CKORD[a.sig]-CKORD[b.sig];
+if(d)return d;return a.g.f-b.g.f});
+var red=BK.filter(function(b){return b.sig==='red'});
 return fTabBar()
-+'<div class="cd" style="background:linear-gradient(135deg,#FFF6EC,#F3FAF7)"><div class="rw" style="justify-content:space-between;align-items:center">'
-+'<b style="font-size:14px">✅ 알레르기 통과 현황</b><span class="pill2" style="background:#fff;color:var(--pd)">'+CK.cat+'</span></div>'
-+'<div class="bar" style="margin:10px 0 6px"><i class="solid" style="width:'+pct+'%;background:var(--ok)"></i><span class="txt">'+G.ok.length+' / '+doable+' 통과 ('+pct+'%)</span></div>'
-+'<div class="ch">'+ord.map(function(k){var K=CKM[k];
-return '<button style="background:'+K.bg+';color:'+K.c+';font-weight:800">'+K.ic+' '+K.t+' '+G[k].length+'</button>'}).join('')+'</div>'
-+'<div class="mu" style="font-size:10.5px;margin-top:8px">진도율은 <b>지금 먹여도 되는 재료</b>만 분모로 셉니다. 관찰을 끝내고 <b>😊 안전 확인</b>을 누르면 통과로 넘어갑니다. '+sT('niaid')+'</div></div>'
-+'<div class="tab">'+ckCats().map(function(c){return '<button class="'+(CK.cat===c?'on':'')+'" onclick="CK.cat=\''+c.replace(/'/g,'')+'\';render()">'+c+'</button>'}).join('')+'</div>'
-+(G.test.length?ckSec('test',G.test):'')
-+(G.todo.length?ckSec('todo',G.todo):'')
-+(G.bad.length?ckSec('bad',G.bad):'')
-+(G.ok.length?ckSec('ok',G.ok):'')
-+(G.soon.length?ckSec('soon',G.soon):'')
-+(doable===0?'<div class="cd mu">이 분류에 지금 시도할 재료가 없어요.</div>':'')}
-
-function ckSec(k,L){var K=CKM[k];
-var hint={test:'3일 관찰이 돌고 있거나 관찰 중으로 표시한 재료입니다. 관찰 탭에서 D+0·1·2 를 체크하고 마무리하세요.',
-todo:'먹여도 되는 시기인데 아직 시도하지 않은 재료입니다. 주의도가 높은 것(⚠️🚨)은 오전에 소량부터 시작하세요.',
-ok:'3일 관찰을 통과한 안전 재료입니다. 메뉴 추천·조합 실험에서 자유롭게 씁니다.',
-bad:'반응이 있었던 재료입니다. 재도전은 담당 소아과와 상의한 뒤에 하세요.',
-soon:'권장 개월수가 아직 안 된 재료입니다. 시기가 되면 자동으로 해야 할 것으로 올라옵니다.'}[k];
-return '<div class="st">'+K.ic+' '+K.t+' <span class="mu" style="font-weight:600">· '+L.length+'개</span></div>'
-+'<div class="cd" style="background:'+K.bg+';padding:10px"><div class="mu" style="font-size:10.5px;margin-bottom:9px">'+hint+'</div>'
-+L.map(function(f){return ckRow(f,k)}).join('')+'</div>'}
-
-function ckRow(f,k){var n=f[0],ob=ckObs(n),d=ob?dObs(ob):0,lv=f[6]||0;
-var badge=lv===2?'<span class="tg r">🚨 특별주의</span>':lv===1?'<span class="tg v">⚠️ 주의</span>':'';
-var sub=k==='test'&&ob?(ob.dt+' 시작 · <b>'+d+'일차</b> · '+[0,1,2].map(function(x){return ob.c[x]?'●':'○'}).join('')) 
- :k==='test'?'관찰 중으로 표시됨 — 3일 타이머를 시작해 보세요'
- :k==='soon'?'<b>'+f[3]+'개월</b>부터 · '+fmt(addM(d0(baby.birth),f[3]))+' 이후'
- :k==='todo'?f[3]+'개월+ · 아직 시도 안 함'
- :k==='ok'?'안전 확인 완료'
- :'반응 기록됨';
-return '<div class="cb"><div style="flex:0 0 26px;font-size:20px;text-align:center">'+f[1]+'</div>'
-+'<div style="flex:1;min-width:0"><b style="font-size:13px">'+esc(n)+'</b> '+badge
-+'<div class="mu" style="font-size:10.5px">'+sub+'</div></div>'
-+'<div class="sp">'
-+(k==='todo'?'<button style="font-size:10.5px;padding:5px 8px;background:#fff;font-weight:800;color:var(--pd)" onclick="ckStart(\''+n.replace(/'/g,'')+'\')">🔔 관찰 시작</button>':'')
-+(k==='test'?'<button style="font-size:10.5px;padding:5px 8px;background:#fff;font-weight:800;color:#1F7A5F" onclick="ckPass(\''+n.replace(/'/g,'')+'\')">😊 통과</button>':'')
-+(k==='ok'||k==='bad'?'<button style="font-size:10.5px;padding:5px 8px;background:#fff;font-weight:800;color:var(--sub)" onclick="ckReset(\''+n.replace(/'/g,'')+'\')">↩︎ 해제</button>':'')
-+'<button style="color:var(--sub);padding:0 4px" onclick="openF(\''+n.replace(/'/g,'')+'\')">›</button></div></div>'}
-
-/* 체크리스트에서 바로 조작 — 관찰 목록·tried 를 같은 규칙으로 건드린다 */
++'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:flex-start"><div><b>✅ 알레르기 통과 체크리스트</b><div class="mu" style="font-size:11px;margin-top:3px">만 '+Math.floor(m)+'개월 · '+CK.cat+'</div></div>'
++'<div style="text-align:right"><div style="font-size:22px;font-weight:900;color:var(--mt);line-height:1">'+pct+'%</div><div class="mu" style="font-size:10.5px">'+OKn+' / '+AV.length+' 통과</div></div></div>'
++'<div class="bar" style="margin-top:9px">'+(OKn?'<div style="width:'+(OKn/Math.max(1,AV.length)*100)+'%;background:linear-gradient(90deg,#3FBF95,#2E9E7A)"></div>':'')
++(TSn?'<div style="width:'+(TSn/Math.max(1,AV.length)*100)+'%;background:#FFC861"></div>':'')
++(BDn?'<div style="width:'+(BDn/Math.max(1,AV.length)*100)+'%;background:#E0563C"></div>':'')+'</div>'
++'<div class="rw" style="gap:6px;margin-top:8px;flex-wrap:wrap">'
++ckB('⬜ 해야 할 것',TDn,'#8A7F78','#F6F1ED')+ckB('🔄 진행 중',TSn,'#B07C13','#FFF6EC')
++ckB('✅ 통과',OKn,'#1F7A5F','#E8F6F0')+ckB('⚠️ 반응',BDn,'#C0350F','#FDF0EC')+ckB('⏳ 이른 시기',SOn,'#9A8F88','#F6F1ED')+'</div></div>'
++(red.length?'<div class="alert bad"><span class="ic">🔴</span><div><b>지난 시기에 안 한 게 '+red.reduce(function(a,b){return a+b.todo.length},0)+'가지 있어요</b><br><span style="font-size:11.5px">'+red.map(function(b){return b.g.n+' '+b.todo.length+'가지'}).join(' · ')+' — 아래 빨간 시기를 펼쳐 확인하세요.</span></div></div>':'')
++'<div class="tab">'+ckCats().map(function(c){return '<button class="'+(c===CK.cat?'on':'')+'" onclick="CK.cat=\''+c+'\';CK.open={};render()">'+c+'</button>'}).join('')+'</div>'
++'<div class="st">📅 시기별 현황 <span class="mu" style="font-weight:600">· 급한 시기부터</span></div>'
++ORD.map(function(b){return ckStgCard(b)}).join('')
++'<div class="cd mu" style="font-size:11px">· 파란 시기는 그 시기 재료를 모두 정리한 상태예요. 빨간 시기는 이미 지났는데 아직 안 해 본 재료가 남아 있다는 뜻입니다.<br>· 알레르기 시도를 <b>늦추는 것이 예방에 도움이 되지 않습니다.</b> 만 6개월 이후 소량씩 3일 관찰로 진행하세요. '+sT('niaid')+sT('ppibbo')+'</div>'}
+function ckB(l,n,c,bg){return '<span class="pill2" style="background:'+bg+';color:'+c+'">'+l+' '+n+'</span>'}
+/*----- 시기 카드 (접기/펼치기) -----*/
+function ckStgCard(b){var g=b.g,K=CKSIG[b.sig],m=ageM();
+var open=CK.open[g.id]!==undefined?CK.open[g.id]:(b.sig==='red'||b.sig==='now');
+CKST[g.id]=open;
+var pct=b.tot?Math.round(b.done/b.tot*100):0;
+var body='';
+if(open){
+ body='<div style="margin-top:10px">'
+ +ckGrp('⬜ 아직 안 했어요',b.todo,'todo',g)
+ +ckGrp('🔄 관찰 진행 중',b.test,'test',g)
+ +ckGrp('⚠️ 반응 있었어요',b.bad,'bad',g)
+ +ckGrp('⏳ 아직 이른 시기',b.soon,'soon',g)
+ +ckGrp('✅ 통과한 재료',b.ok,'ok',g)
+ +(b.tot+b.soon.length===0?'<div class="mu" style="font-size:11.5px">이 분류에 해당하는 재료가 없어요.</div>':'')
+ +'</div>'}
+return '<div class="cd" style="border-left:5px solid '+K.c+';background:'+(b.sig==='blue'?'#FCFFFD':'var(--cd)')+'">'
++'<div onclick="ckTog(\''+g.id+'\')" style="cursor:pointer">'
++'<div class="rw" style="justify-content:space-between;align-items:center">'
++'<div style="min-width:0"><b style="font-size:14px">'+g.n+' <span class="mu" style="font-weight:600;font-size:11px">'+g.lb+'</span></b>'
++'<div style="margin-top:5px"><span class="pill2" style="background:'+K.bg+';color:'+K.c+'">'+K.lb+'</span>'
++(b.todo.length?' <span class="pill2" style="background:#F6F1ED;color:#8A7F78">안 한 것 '+b.todo.length+'</span>':'')
++(b.test.length?' <span class="pill2" style="background:#FFF6EC;color:#B07C13">관찰 '+b.test.length+'</span>':'')
++'</div></div>'
++'<div style="text-align:right;flex-shrink:0;padding-left:8px"><div style="font-size:17px;font-weight:900;color:'+K.c+';line-height:1">'+b.done+'<span class="mu" style="font-size:11px;font-weight:700">/'+b.tot+'</span></div>'
++'<div class="mu" style="font-size:15px;line-height:1.1">'+(open?'▾':'▸')+'</div></div></div>'
++'<div class="bar" style="height:8px;border-radius:4px;margin-top:8px">'+(b.done?'<div style="width:'+pct+'%;background:'+K.c+'"></div>':'')+'</div>'
++'</div>'+body+'</div>'}
+/* 현재 화면에 실제로 펼쳐져 있는 상태를 기억해 두고 그것을 뒤집는다
+   (기본 펼침 여부가 신호등에 따라 달라지므로 undefined 를 그냥 false 로 두면
+    빨간 시기는 첫 클릭이 먹지 않는다) */
+var CKST={};
+function ckTog(id){CK.open[id]=!CKST[id];render()}
+/*----- 상태별 재료 그룹 -----*/
+function ckGrp(title,L,st,g){if(!L.length)return '';
+if(st==='ok'&&!CK.showOk&&L.length>6){
+ return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">'+title+' '+L.length+'</div>'
+ +'<div class="rw" style="flex-wrap:wrap;gap:5px">'+L.slice(0,6).map(function(f){return ckOkChip(f)}).join('')
+ +'<span class="pill2" style="background:#E8F6F0;color:#1F7A5F;cursor:pointer" onclick="CK.showOk=1;render()">+'+(L.length-6)+' 더보기</span></div></div>'}
+if(st==='ok'){
+ return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">'+title+' '+L.length+'</div>'
+ +'<div class="rw" style="flex-wrap:wrap;gap:5px">'+L.map(function(f){return ckOkChip(f)}).join('')+'</div></div>'}
+var sorted=L.slice().sort(function(a,b){
+ if(st==='todo'||st==='soon'){if(a[3]!==b[3])return a[3]-b[3];return (b[6]||0)-(a[6]||0)}
+ return 0});
+return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">'+title+' '+L.length+'</div>'
++sorted.map(function(f){return ckRow(f,st)}).join('')+'</div>'}
+/* 통과 재료 — 초록 알약으로 확 띄운다 */
+function ckOkChip(f){return '<span onclick="openF(\''+f[0]+'\')" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:14px;background:linear-gradient(135deg,#3FBF95,#2E9E7A);color:#fff;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 3px rgba(46,158,122,.35)">✓ '+f[1]+' '+esc(f[0])+'</span>'}
+/* 그 외 재료 — 한 줄 */
+function ckRow(f,st){var n=f[0],ob=ckObs(n),m=ageM();
+var C={todo:['#F6F1ED','#8A7F78'],test:['#FFF6EC','#B07C13'],bad:['#FDF0EC','#C0350F'],soon:['#F6F1ED','#9A8F88']}[st];
+var right='';
+if(st==='todo')right='<button class="btn g s" style="padding:5px 10px;font-size:11px;white-space:nowrap" onclick="ckStart(\''+n+'\')">🔔 시작</button>';
+else if(st==='test'){
+ if(ob){var d=dObs(ob),p=[0,1,2].map(function(x){return ob.c[x]?'●':'○'}).join('');
+  right='<span class="mu" style="font-size:10.5px;white-space:nowrap">'+d+'일차 '+p+'</span><button class="btn g s" style="padding:5px 9px;font-size:11px;white-space:nowrap" onclick="ckPass(\''+n+'\')">😊 통과</button>'}
+ else right='<button class="btn g s" style="padding:5px 10px;font-size:11px;white-space:nowrap" onclick="ckPass(\''+n+'\')">😊 통과</button>'}
+else if(st==='bad')right='<span class="mu" style="font-size:10.5px">재도전은 소아과 상의</span>';
+else if(st==='soon')right='<span class="mu" style="font-size:10.5px;white-space:nowrap">'+fmt(addM(d0(baby.birth),f[3]))+'~</span>';
+var sub='';
+if(st==='test'&&ob)sub=ob.dt+' 시작'+(ob.m?' · '+esc(ob.m):'');
+else if(st==='todo')sub='만 '+f[3]+'개월+ 가능'+((f[6]||0)>0?(f[6]===2?' · 특별주의':' · 주의'):'');
+else if(st==='soon')sub='만 '+f[3]+'개월부터';
+else if(st==='bad')sub='반응 기록됨';
+return '<div class="cb" style="background:'+C[0]+';border-radius:9px;border-bottom:0;padding:8px 10px;margin-bottom:5px">'
++'<span style="font-size:17px;flex-shrink:0">'+f[1]+'</span>'
++'<div style="flex:1;min-width:0"><b style="font-size:12.5px;color:'+C[1]+'" onclick="openF(\''+n+'\')">'+esc(n)+'</b>'
++(sub?'<div class="mu" style="font-size:10.5px">'+sub+'</div>':'')+'</div>'
++'<div class="rw" style="gap:5px;flex-shrink:0">'+right+'</div></div>'}
+/*----- 체크리스트에서 바로 조작 -----*/
 function ckStart(n){var f=null;FD.forEach(function(x){if(x[0]===n)f=x});
-if(ckObs(n))return alert('이미 관찰 중인 재료예요.');
-if(f&&ageM()<f[3]&&!confirm(n+'은 만 '+f[3]+'개월부터 권장돼요. 그래도 시작할까요?'))return;
+if(obs.filter(function(o){return !o.done&&o.n===n}).length)return alert('이미 관찰 중인 재료예요.');
 obs.push({id:'o'+Date.now(),n:n,dt:ymd(TD()),tm:nowHM(),c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0});
 save();askNoti();render()}
-function ckPass(n){var ob=ckObs(n);
-if(ob&&dObs(ob)<3&&!confirm('아직 '+dObs(ob)+'일차예요. 3일 관찰을 마치기 전인데 통과로 기록할까요?'))return;
-if(ob){ob.done=1;ob.ok=1}
+function ckPass(n){var a=null;obs.forEach(function(o){if(!o.done&&o.n===n)a=o});
+if(a){a.done=1;a.ok=1}
 tried[n]='ok';save();render()}
 function ckReset(n){delete tried[n];save();render()}
