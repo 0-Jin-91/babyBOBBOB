@@ -1,7 +1,12 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='37';                     /* index.html 의 ?v= 와 같은 값 */
+var APPV='38';                     /* index.html 의 ?v= 와 같은 값 */
 var UPDS=LS('b6.updfound',null)||{};
-var UPD={found:!!(UPDS.v&&UPDS.v!==APPV),checking:false,last:LS('b6.updchk',0),newv:(UPDS.v&&UPDS.v!==APPV)?UPDS.v:'',asked:'',timer:0};
+/* 저장된 '발견 버전'은 숫자이고 APPV 보다 클 때만 유효하다.
+   과거 버그로 '최신' 같은 비숫자나 이미 지나간 버전이 저장돼 있으면 버린다
+   (그대로 두면 앱을 열 때마다 업데이트 알림이 무한 반복된다). */
+var _uv=(UPDS.v&&/^\d+$/.test(UPDS.v)&&(+UPDS.v)>(+APPV))?UPDS.v:'';
+if(UPDS.v&&!_uv)localStorage.setItem('b6.updfound',JSON.stringify({v:''}));
+var UPD={found:!!_uv,checking:false,last:LS('b6.updchk',0),newv:_uv,asked:'',timer:0};
 /* 자동 새로고침 사용 여부 (기본 켜짐). 끄면 안내만 뜨고 직접 눌러야 한다 */
 var UAUTO=LS('b6.updauto',1);
 function updAutoSet(v){UAUTO=v?1:0;localStorage.setItem('b6.updauto',JSON.stringify(UAUTO));
@@ -32,13 +37,16 @@ if(UPD.checking)return;
 UPD.checking=true;updSpin(true);
 var url='./index.html?_=' + Date.now();
 fetch(url,{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+/* 서버 index.html 에서 ?v= 를 읽는다. 못 읽으면 판정하지 않는다(오탐 방지) */
 var m=t.match(/\?v=(\d+)/);
 UPD.checking=false;updSpin(false);
 UPD.last=Date.now();localStorage.setItem('b6.updchk',JSON.stringify(UPD.last));
-if(m&&m[1]!==APPV){UPD.found=true;UPD.newv=m[1];updSaveF();updBanner();
+/* 새 버전 판정은 '서버 v > 내 v' 일 때만. 같거나 오히려 낮으면 최신으로 본다.
+   (구버전이 캐시로 돌아왔을 때 알림이 반복되는 것을 막는다) */
+if(m&&(+m[1])>(+APPV)){UPD.found=true;UPD.newv=m[1];updSaveF();updBanner();
 if(!silent)updAsk();
 else updNag()}
-else{UPD.found=false;UPD.newv='';updSaveF();updBanner();
+else{UPD.found=false;UPD.newv='';UPD.asked='';updSaveF();updBanner();
 if(!silent)updOk()}
 }).catch(function(){UPD.checking=false;updSpin(false);
 if(!silent)alert('업데이트 확인에 실패했어요. 잠시 뒤 다시 시도해 주세요.')})}
@@ -144,4 +152,7 @@ r.addEventListener('updatefound',function(){
 var nw=r.installing;if(!nw)return;
 nw.addEventListener('statechange',function(){
 if(nw.state==='installed'&&navigator.serviceWorker.controller){
-UPD.found=true;UPD.newv=UPD.newv||'최신';updSaveF();updBanner();updNag()}})})})})}
+/* SW 갱신 자체로 알림을 띄우지 않는다. 예전에는 newv='최신' 을 넣었는데
+   '최신' 은 APPV 와 절대 같아지지 않아 알림이 영구 반복됐다.
+   실제 버전 상승은 updCheck() 의 숫자 비교로만 판정한다. */
+updCheck(true)}})})})})}

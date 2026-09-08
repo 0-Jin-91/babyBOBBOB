@@ -1,5 +1,5 @@
 /* 이유식 노트 — 오프라인 캐시 */
-var VER='bf-v37';
+var VER='bf-v38';
 var CORE=['./','./index.html','./data.js','./core.js','./ui.js','./combo.js','./mix.js','./calc.js','./stock.js','./update.js','./dash.js','./find.js',
 './home.js','./today.js','./plan.js','./menu.js','./edit.js','./food.js','./grow.js',
 './log.js','./info.js','./boot.js','./manifest.json'];
@@ -22,6 +22,11 @@ if(r.method!=='GET')return;
 var u=new URL(r.url);
 /* 외부 도메인(출처 링크·유튜브)은 네트워크로만 */
 if(u.origin!==self.location.origin)return;
+
+/* ★ 버전확인용 요청(?_=타임스탬프)·no-store 요청은 SW 가 절대 가로채지 않는다.
+   ignoreSearch:true 로 캐시를 뒤지면 캐시무효화 쿼리가 무력화돼
+   구버전 index.html 이 반환되고 → 업데이트 알림이 무한 반복된다. */
+if(u.searchParams.has('_')||r.cache==='no-store'||r.cache==='reload')return;
 
 /* 앱 파일: 캐시 우선 + 백그라운드 갱신 */
 e.respondWith(caches.match(r,{ignoreSearch:true}).then(function(hit){
