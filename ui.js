@@ -151,7 +151,11 @@ document.getElementById('mb').innerHTML='<div class="mt2">📎 출처</div><div 
 +(off?netWarn('원문 링크 열기'):'')+'<button class="btn y" onclick="closeM()">닫기</button>';
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function pickPh(k){phT=k;document.getElementById('fi').click()}
-function delPh(k){delete ph[k];save();document.getElementById('mb').innerHTML=rBody();render()}
+/* 사진 삭제 — IndexedDB·localStorage 사본·메모리를 함께 정리한다 */
+function delPh(k){
+ if(typeof phRemove==='function')phRemove(k);
+ else{delete ph[k];saveKey(KY.p,ph)}
+ save();document.getElementById('mb').innerHTML=rBody();render()}
 
 /*========== 📂 섹션 접기/펼치기 ==========*/
 /* SEC: 섹션별 펼침 상태. 기본 펼침(1). id 는 화면 안에서 유일해야 한다. */

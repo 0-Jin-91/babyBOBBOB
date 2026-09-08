@@ -82,9 +82,104 @@ return a[i]+(a[i+1]-a[i])*(m-i)}
 var KY={b:'b6.baby',l:'b6.log',f:'b6.food',m:'b6.my',c:'b6.cube',o:'b6.ov',p:'b6.ph',w:'b6.plan',a:'b6.obs',s:'b6.shop',t:'b6.today',v:'b6.fav',g:'b6.grow',bw:'b6.bowl'};
 function LS(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v===null?d:v}catch(e){return d}}
 var baby=LS(KY.b,null),logs=LS(KY.l,[]),tried=LS(KY.f,{}),myR=LS(KY.m,[]),cubes=LS(KY.c,[]),ov=LS(KY.o,{}),ph=LS(KY.p,{}),plan=LS(KY.w,null),obs=LS(KY.a,[]),shopChk=LS(KY.s,{}),todaySel=LS(KY.t,null),fav=LS(KY.v,{}),grow=LS(KY.g,[]);
-function migLogs(){var ch=0;
-logs.forEach(function(l){if(l.nu){if(l.nu.kcal!=null){delete l.nu.kcal;ch=1}if(l.nu.feAb!=null){delete l.nu.feAb;ch=1}}});
-if(ch)save()}
+/* ===== 기록 슬림화 (용량 3단계) =====
+   localStorage 한도는 늘릴 수 없으므로 '계산으로 되살릴 수 있는 값은 저장하지
+   않는다'는 원칙을 적용한다. 건수만큼 곱해지는 필드라 효과가 크다.
+
+   저장에서 빼는 것
+     · nu   — gs(재료)가 있으면 gsNut(gs) 로 똑같이 나온다
+     · nu   — 수유는 milkNut(ml, mt) 로 나온다
+     · n    — 수유의 이름은 'MILK[mt].n + ml + ml' 로 조립된다
+     · 빈 값 — a:'', gs:[], pre:'', post:'', rid:undefined 등
+   읽을 때 logFull() 이 전부 되살리므로 화면·계산 코드는 손대지 않는다.
+
+   ★ nu 를 지우는 조건은 '지금 다시 계산해도 같은 값이 나올 때'로 한정한다.
+     사용자가 손으로 고친 영양값이 있으면 그대로 보존해야 한다. */
+
+/* 소수점 폭주 방지 — 0.3333333333333333 은 18글자, 0.333 은 5글자 */
+function nRound(v){ return (typeof v==='number' && isFinite(v)) ? Math.round(v*1000)/1000 : v }
+function nuEq(a,b){
+  if(!a||!b) return false;
+  for(var i=0;i<NK.length;i++){
+    var k=NK[i], x=+a[k]||0, y=+b[k]||0;
+    if(Math.abs(x-y) > Math.max(0.005, Math.abs(y)*0.001)) return false;
+  }
+  /* vc 는 NK 에 없지만 저장되므로 함께 본다 */
+  if(Math.abs((+a.vc||0)-(+b.vc||0)) > 0.005) return false;
+  return true;
+}
+function milkName(l){
+  var M=(typeof MILK!=='undefined')?MILK[l.mt||'f']:null;
+  return M ? (M.n+' '+(+l.ml||0)+'ml') : ('수유 '+(+l.ml||0)+'ml');
+}
+
+/* 저장용 — 되살릴 수 있는 것과 빈 것을 뺀다 */
+function logSlim(l){
+  var o={}, k;
+  for(k in l){ if(Object.prototype.hasOwnProperty.call(l,k)) o[k]=l[k] }
+
+  /* 영양값 반올림 */
+  if(o.nu){ var nu2={}, kk; for(kk in o.nu){ nu2[kk]=nRound(o.nu[kk]) } o.nu=nu2 }
+  /* 재료 무게 반올림 */
+  if(o.gs && o.gs.length) o.gs=o.gs.map(function(x){
+    return [x[0], nRound(+x[1]||0), x[2], x[3]||''];
+  });
+
+  /* 수유 — 이름과 영양은 ml·mt 에서 재생된다 */
+  if(o.k==='milk'){
+    if(o.n===milkName(o)) delete o.n;
+    if(o.nu && typeof milkNut==='function' && nuEq(o.nu, milkNut(+o.ml||0, o.mt||'f'))) delete o.nu;
+  }
+  /* 이유식 — gs 가 있고 재계산 결과가 같으면 nu 를 빼도 무손실 */
+  else if(o.nu && o.gs && o.gs.length && typeof gsNut==='function'){
+    if(nuEq(o.nu, gsNut(o.gs))) delete o.nu;
+  }
+
+  /* 빈 값 제거 — 키 이름까지 사라진다 */
+  ['a','pre','post','rid','n','t','tm','rx'].forEach(function(f){
+    if(o[f]==='' || o[f]==null) delete o[f];
+  });
+  if(o.gs && !o.gs.length) delete o.gs;
+  if(o.nu){
+    var empty=true;
+    for(var q in o.nu){ if(+o.nu[q]) { empty=false; break } }
+    if(empty) delete o.nu;
+  }
+  return o;
+}
+
+/* 읽기용 — 뺀 것을 되살린다. 이후 코드는 예전과 똑같은 모양을 본다. */
+function logFull(l){
+  if(!l) return l;
+  if(l.gs===undefined && l.k!=='milk') l.gs=[];
+  if(l.k==='milk'){
+    if(l.n===undefined) l.n=milkName(l);
+    if(l.t===undefined) l.t='수유';
+    if(l.nu===undefined && typeof milkNut==='function') l.nu=milkNut(+l.ml||0, l.mt||'f');
+  }else if(l.nu===undefined && l.gs && l.gs.length && typeof gsNut==='function'){
+    l.nu=gsNut(l.gs)||undefined;
+  }
+  if(l.a===undefined) l.a='';
+  return l;
+}
+
+/* 앱 시작 시 한 번 — 되살리기 + 옛 파생필드 청소.
+   calc.js(gsNut·milkNut)가 load 된 뒤에 불려야 하므로 boot.js 에서 호출한다. */
+function migLogs(){
+  var ch=0;
+  logs.forEach(function(l){
+    if(l.nu){
+      /* 예전 버전이 저장했던 파생 영양값 — 계산으로 나오므로 저장하지 않는다 */
+      if(l.nu.kcal!=null){ delete l.nu.kcal; ch=1 }
+      if(l.nu.feAb!=null){ delete l.nu.feAb; ch=1 }
+    }
+    logFull(l);
+  });
+  obs.forEach(obsFull);
+  grow.forEach(growFull);
+  /* 슬림 형식으로 한 번 다시 써서 기존 사용자도 즉시 용량 이득을 본다 */
+  save();
+}
 /* ===== 저장 =====
    ★ 과거엔 12개 setItem 이 한 함수에 묶여 있고 try/catch 가 사진에만 있었다.
      중간에서 예외가 터지면 앞쪽은 저장·뒤쪽은 미저장인 '부분 저장'이 되고,
@@ -115,23 +210,61 @@ function saveWarn(){
   alert('⚠️ 저장 공간이 부족해 일부 기록이 저장되지 않았어요.\n\n설정에서 백업 내보내기로 데이터를 먼저 보관한 뒤,\n오래된 사진을 정리해 주세요.');
  }
 }
+/* obs/grow 도 기본값을 빼면 건수만큼 줄어든다 */
+function obsSlim(o){
+  var r={},k;
+  for(k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) r[k]=o[k] }
+  if(r.m==='') delete r.m;
+  if(!r.done) delete r.done;
+  if(!r.lv) delete r.lv;
+  if(r.c && r.c.length===3 && !r.c[0] && !r.c[1] && !r.c[2]) delete r.c;
+  return r;
+}
+function obsFull(o){
+  if(!o) return o;
+  if(o.c===undefined) o.c=[0,0,0];
+  if(o.m===undefined) o.m='';
+  if(o.done===undefined) o.done=0;
+  if(o.lv===undefined) o.lv=0;
+  return o;
+}
+function growSlim(g){
+  var r={id:g.id,d:g.d};
+  if(g.w!=null) r.w=g.w;
+  if(g.h!=null) r.h=g.h;
+  if(g.c!=null) r.c=g.c;
+  return r;
+}
+function growFull(g){
+  if(!g) return g;
+  if(g.w===undefined) g.w=null;
+  if(g.h===undefined) g.h=null;
+  if(g.c===undefined) g.c=null;
+  return g;
+}
+
 function save(){
- saveKey(KY.b,baby); saveKey(KY.l,logs);   saveKey(KY.f,tried);
+ saveKey(KY.b,baby); saveKey(KY.l,logs.map(logSlim));   saveKey(KY.f,tried);
  saveKey(KY.m,myR);  saveKey(KY.c,cubes);  saveKey(KY.o,ov);
- saveKey(KY.w,plan); saveKey(KY.a,obs);    saveKey(KY.s,shopChk);
- saveKey(KY.t,todaySel); saveKey(KY.v,fav); saveKey(KY.g,grow);
+ saveKey(KY.w,plan); saveKey(KY.a,obs.map(obsSlim)); saveKey(KY.s,shopChk);
+ saveKey(KY.t,todaySel); saveKey(KY.v,fav); saveKey(KY.g,grow.map(growSlim));
  if(typeof BW!=='undefined')saveKey(KY.bw,BW);
- /* ★ 사진은 맨 마지막. 용량을 가장 많이 쓰므로, 여기서 실패해도
-    위의 기록들은 이미 안전하게 저장돼 있다. */
- saveKey(KY.p,ph);
+ /* ★ 사진은 여기서 저장하지 않는다 — IndexedDB(idb.js)가 장별로 담당한다.
+    localStorage 한도(5MB)를 사진이 잡아먹던 구조를 끊은 것이 1단계의 핵심.
+    IDB 를 못 쓰는 기기에서는 savePh 가 예전 경로로 폴백한다. */
+ if(typeof IDBOK!=='undefined' && IDBOK===false) saveKey(KY.p,ph);
  saveWarn();
  /* 클라우드 백업 예약 (로그인 상태일 때만, 3초 디바운스).
     폰 저장이 먼저 끝난 뒤에 호출한다 — 폰이 원본, 클라우드는 사본. */
  if(typeof clQueue==='function')try{clQueue()}catch(e){}
 }
-/* 사진 저장만 따로 시도 — 실패하면 메모리 상태를 되돌려
-   '화면엔 있는데 저장은 안 된' 유령 사진이 남지 않게 한다. */
+/* 사진 저장 — 실제 저장소는 idb.js 가 결정한다.
+   IndexedDB 가 되면 Blob 으로 IDB 에, 안 되면 예전 localStorage 로 폴백.
+   ★ 어느 경로든 실패 시 메모리 상태를 되돌려 '화면엔 있는데 저장은 안 된'
+     유령 사진이 남지 않게 한다. */
 function savePh(k,dataUrl){
+ if(typeof phStore==='function'){ phStore(k,dataUrl); return true }
+ /* idb.js 가 아직 로드되지 않은 예외 상황 — 예전 방식 */
  var prev=ph[k];
  ph[k]=dataUrl;
  if(saveKey(KY.p,ph))return true;
@@ -140,8 +273,8 @@ function savePh(k,dataUrl){
  saveWarn();
  return false;
 }
-/* 사진이 차지하는 용량(KB) — 설정 화면 표시용 */
 function phSize(){
+ if(typeof phRealBytes==='function')return Math.round(phRealBytes()/1024);
  try{var s=localStorage.getItem(KY.p);return s?Math.round(s.length/1024):0}catch(e){return 0}
 }
 

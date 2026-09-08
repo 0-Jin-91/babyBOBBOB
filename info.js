@@ -40,7 +40,20 @@ return '<div style="padding:8px 0;border-bottom:1px solid var(--ln)"><b style="c
 +'<p class="mu" style="text-align:center;font-size:10.5px;margin:14px 6px 0">본 앱은 의료 행위를 대체하지 않습니다. 영양·알레르기·성장 판단은 담당 소아과와 상의하세요.</p>'}
 
 /*========== 백업 · 아기정보 · 초기화 ==========*/
-function expJ(){dl(new Blob([JSON.stringify({v:7,baby:baby,logs:logs,tried:tried,my:myR,cubes:cubes,ov:ov,ph:ph,plan:plan,obs:obs,fav:fav,grow:grow,stock:(typeof STK!=='undefined'?STK:[]),bowl:(typeof BW!=='undefined'?BW:null),calc:LS('b6.calc',null),nav:(typeof NAVC!=='undefined'?NAVC:null),navm:(typeof NAVM!=='undefined'?NAVM:null),sec:(typeof SEC!=='undefined'?SEC:null),cmix:(typeof CMIX!=='undefined'?CMIX:[])})],{type:'application/json'}),baby.name+'_아빠의이유식_백업.json')}
+/* 백업 내보내기 — 사진은 IndexedDB 의 Blob 을 dataURL 로 되돌려 담는다.
+   ★ 이 파일 하나로 사진까지 전량 복구된다 (1단계 작업 전 보험). */
+function expJ(){
+ var keys=Object.keys(ph||{});
+ var getAll=keys.reduce(function(ch,k){
+  return ch.then(function(acc){
+   var g=(typeof phDurl==='function')?phDurl(k):Promise.resolve(ph[k]);
+   return g.then(function(d){ if(d&&String(d).indexOf('data:')===0)acc[k]=d; return acc });
+  });
+ },Promise.resolve({}));
+ getAll.then(function(phOut){
+  dl(new Blob([JSON.stringify({v:8,baby:baby,logs:logs.map(logSlim),tried:tried,my:myR,cubes:cubes,ov:ov,ph:phOut,plan:plan,obs:obs.map(obsSlim),fav:fav,grow:grow.map(growSlim),stock:(typeof STK!=='undefined'?STK:[]),bowl:(typeof BW!=='undefined'?BW:null),calc:LS('b6.calc',null),nav:(typeof NAVC!=='undefined'?NAVC:null),navm:(typeof NAVM!=='undefined'?NAVM:null),sec:(typeof SEC!=='undefined'?SEC:null),cmix:(typeof CMIX!=='undefined'?CMIX:[])})],{type:'application/json'}),baby.name+'_아빠의이유식_백업.json');
+ });
+}
 function editBaby(){var n=prompt('아기 이름',baby.name);if(n===null)return;
 var b=prompt('생년월일 (YYYY-MM-DD)',baby.birth);if(b===null)return;
 if(isNaN(d0(b)))return alert('날짜 형식 오류');

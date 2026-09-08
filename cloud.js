@@ -207,8 +207,9 @@ function fbDec(v){
 function clPack(){
   return {
     sv:1, v:(window.APPV||''), at:Date.now(),
-    baby:baby, logs:logs, tried:tried, my:myR, cubes:cubes, ov:ov,
-    plan:plan, obs:obs, fav:fav, grow:grow,
+    /* 슬림 형식으로 올린다 — Firestore 문서 1MiB 한도에도 여유가 생긴다 */
+    baby:baby, logs:logs.map(logSlim), tried:tried, my:myR, cubes:cubes, ov:ov,
+    plan:plan, obs:obs.map(obsSlim), fav:fav, grow:grow.map(growSlim),
     stock:(typeof STK!=='undefined'?STK:null),
     bowl :(typeof BW !=='undefined'?BW :null),
     calc : LS('b6.calc',null),
@@ -221,15 +222,15 @@ function clPack(){
 function clApply(d){
   if(!d) return;
   if(d.baby) baby=d.baby;
-  if(d.logs) logs=d.logs;
+  if(d.logs) logs=d.logs.map(logFull);
   if(d.tried)tried=d.tried;
   if(d.my)   myR=d.my;
   if(d.cubes)cubes=d.cubes;
   if(d.ov)   ov=d.ov;
   if(d.plan!==undefined) plan=d.plan;
-  if(d.obs)  obs=d.obs;
+  if(d.obs)  obs=d.obs.map(obsFull);
   if(d.fav)  fav=d.fav;
-  if(d.grow) grow=d.grow;
+  if(d.grow) grow=d.grow.map(growFull);
   if(d.stock&&typeof STK!=='undefined'){ STK=d.stock; if(typeof stkSave==='function')stkSave() }
   if(d.bowl &&typeof BW !=='undefined'){ BW =d.bowl;  if(typeof bwSave ==='function')bwSave()  }
   if(d.calc) saveKey('b6.calc', d.calc);
@@ -246,9 +247,12 @@ function clCount(d){
         +(d.obs?d.obs.length:0)+(d.my?d.my.length:0);
 }
 
-/*───────── 첫 연결 처리 (가장 조심할 부분) ─────────*/
-/* 양쪽에 데이터가 다 있으면 절대 자동 판단하지 않고 사용자에게 묻는다.
-   여기서 잘못 덮어쓰면 기록이 한 번에 사라진다. */
+/*───────── 첫 연결 처리 ─────────*/
+/* 묻는 방향을 하나로 고정한다 — "계정에 있는 백업을 가져올까요?"
+     아니오(기본) → 지금 이 폰의 기록을 올린다 (백업)
+     예            → 클라우드가 더 최근이라는 뜻이므로 이 폰으로 가져온다
+   ★ 예전에는 확인/취소 각각이 어느 쪽을 지우는지 헷갈리는 물음이었다.
+     이제 '예'만이 이 폰을 덮어쓰고, 그 경우 한 번 더 확인한다. */
 var _clfirst = 0;
 function clFirst(){
   if(_clfirst || !clOn()) return;
@@ -258,18 +262,24 @@ function clFirst(){
     var remote = sn.exists() ? sn.data() : null;
     var rn = clCount(remote), ln = clCount(clPack());
 
-    if(!remote || rn===0){ clPush(1); return }          /* 클라우드 비어있음 → 올림 */
-    if(ln===0){ clPull(remote); return }                /* 이 폰 비어있음 → 내림 */
+    if(!remote || rn===0){ clPush(1); return }        /* 클라우드 비어있음 → 올림 */
+    if(ln===0){ clPull(remote); return }              /* 이 폰 비어있음 → 조용히 내림 */
 
-    /* 양쪽에 다 있음 → 묻는다 */
-    var rt = remote.at ? new Date(remote.at).toLocaleString('ko-KR') : '알 수 없음';
-    var msg = '⚠️ 양쪽에 기록이 있습니다.\n\n'
-      +'· 이 폰: '+ln+'건\n'
-      +'· 클라우드: '+rn+'건 (마지막 저장 '+rt+')\n\n'
-      +'[확인] 클라우드 기록을 내려받습니다 (이 폰 기록은 사라집니다)\n'
-      +'[취소] 이 폰 기록을 올립니다 (클라우드 기록이 사라집니다)\n\n'
-      +'헷갈리면 취소를 누르고, 먼저 설정 > 백업 내보내기로 파일을 저장해 두세요.';
-    if(confirm(msg)) clPull(remote); else clPush(1);
+    /* 양쪽에 다 있음 → 가져올지만 묻는다 (기본은 백업) */
+    var rt = remote.at ? clStamp(new Date(remote.at).getTime()) : '알 수 없음';
+    var msg = '이 계정에 백업된 기록이 있습니다.\n\n'
+      +'· 백업 시각: '+rt+'\n'
+      +'· 백업된 기록: '+rn+'건\n'
+      +'· 지금 이 폰: '+ln+'건\n\n'
+      +'이 백업을 폰으로 가져올까요?\n\n'
+      +'[아니오] 지금 이 폰의 기록을 백업합니다 (권장)\n'
+      +'[예] 백업을 내려받아 이 폰 기록을 대체합니다';
+    if(!confirm(msg)){ clPush(1); return }
+
+    /* 이 폰 기록이 사라지는 쪽이므로 한 번 더 */
+    if(!confirm('이 폰의 기록 '+ln+'건이 백업 '+rn+'건으로 바뀝니다.\n\n'
+      +'되돌릴 수 없습니다. 계속할까요?')){ clPush(1); return }
+    clPull(remote);
   }).catch(function(e){ clErr('first',e) });
 }
 
@@ -319,10 +329,16 @@ function clPhPush(){
   var keys=Object.keys(ph||{});
   if(!keys.length){ CLPHB=0; clPaint(); return }
   var done = LS('b6.phup',{}) || {};
-  /* 900KB 초과분은 문서 1MiB 한도에 걸려 올릴 수 없다 — 애초에 목록에서 뺀다 */
+  /* 사진 크기 판단은 실제 바이트(PHN)로 한다 — IDB 시대에는 ph[k] 가
+     objectURL 문자열이라 길이를 재면 의미가 없다.
+     Firestore 문서 1MiB 한도 = base64 로 부풀면 약 900KB 원본이 상한. */
+  function bytesOf(k){
+    if(typeof PHN!=='undefined' && PHN[k]!=null) return PHN[k];
+    return (typeof ph[k]==='string')?ph[k].length:0;
+  }
   var todo = keys.filter(function(k){
-    var d=ph[k]||'';
-    return d.length<=900*1024 && done[k]!==d.length;
+    var n=bytesOf(k);
+    return n>0 && n<=660*1024 && done[k]!==n;     /* 660KB*1.34 ≒ 890KB base64 */
   });
   if(!todo.length){ CLPHB=0; saveKey('b6.phup',done); clPaint(); return }
   CLPHB=todo.length; clPaint();
@@ -335,24 +351,38 @@ function clPhPush(){
       if(i<todo.length) setTimeout(clPhPush, 1200);
       return;
     }
-    var k=todo[i++], d=ph[k]||''; n++;
-    F.D.setDoc(F.D.doc(F.db,'users',CLUSER.uid,'photos',encodeURIComponent(k)),
-      {d:d, at:Date.now()})
-     .then(function(){ done[k]=d.length; CL.lastPh=Date.now(); clSave(); step() })
-     .catch(function(e){ CLPHB=0; saveKey('b6.phup',done); clErr('photo',e) });
+    var k=todo[i++]; n++;
+    /* Blob → dataURL 변환은 올릴 때만 (저장은 Blob 그대로 두어 용량 절약) */
+    var get = (typeof phDurl==='function') ? phDurl(k) : Promise.resolve(ph[k]);
+    get.then(function(d){
+      if(!d){ step(); return }
+      return F.D.setDoc(F.D.doc(F.db,'users',CLUSER.uid,'photos',encodeURIComponent(k)),
+        {d:d, n:bytesOf(k), at:Date.now()})
+       .then(function(){ done[k]=bytesOf(k); CL.lastPh=Date.now(); clSave(); step() });
+    }).catch(function(e){ CLPHB=0; saveKey('b6.phup',done); clErr('photo',e) });
   })();
 }
+
 function clPhPull(){
   if(!clOn()) return;
   var F=FB;
   F.D.getDocs(F.D.collection(F.db,'users',CLUSER.uid,'photos')).then(function(qs){
-    var got=0, done=LS('b6.phup',{})||{};
+    var got=0, done=LS('b6.phup',{})||{}, chain=Promise.resolve();
     qs.forEach(function(doc){
       var k=decodeURIComponent(doc.id), v=doc.data();
-      if(v&&v.d&&!ph[k]){ ph[k]=v.d; done[k]=v.d.length; got++ }
+      if(!(v&&v.d) || ph[k]) return;
+      got++;
+      /* 새 사진은 IndexedDB 로 들어간다 (phStore 가 폴백까지 처리) */
+      chain=chain.then(function(){
+        done[k]=v.n||v.d.length;
+        return (typeof phStore==='function')?phStore(k,v.d):(ph[k]=v.d);
+      });
     });
-    if(got){ saveKey(KY.p, ph); saveKey('b6.phup',done);
-             if(typeof render==='function') render() }
+    chain.then(function(){
+      if(got){ saveKey('b6.phup',done);
+               if(typeof render==='function') render();
+               clPaint() }
+    });
   }).catch(function(){});
 }
 
@@ -367,7 +397,11 @@ function fmtB(n){
   return (n/1048576).toFixed(2)+'MB';
 }
 /* 사진이 이 폰에서 실제로 차지하는 바이트 */
-function phBytes(){ try{ var s=localStorage.getItem(KY.p); return s?s.length:0 }catch(e){ return 0 } }
+function phBytes(){
+  /* IndexedDB 시대의 실제 사진 바이트 (Blob 크기 합). idb.js 가 없으면 예전 방식 */
+  if(typeof phRealBytes==='function') return phRealBytes();
+  try{ var s=localStorage.getItem(KY.p); return s?s.length:0 }catch(e){ return 0 }
+}
 /* 이 폰 전체 localStorage 사용량 (키 이름 포함) */
 function lsBytes(){
   var t=0;
@@ -375,13 +409,26 @@ function lsBytes(){
         t += (k||'').length + ((localStorage.getItem(k)||'').length) } }catch(e){}
   return t;
 }
+/* 기록(사진 제외)만의 바이트 — 사진이 IDB 로 빠진 뒤의 실제 기록 사용량 */
+function recBytes(){
+  var t=0;
+  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+        if(k===KY.p) continue;                          /* 사진 사본 제외 */
+        t += (k||'').length + ((localStorage.getItem(k)||'').length) } }catch(e){}
+  return t;
+}
+
 /* 클라우드에 올라간 사진 — 장수·바이트, 못 올리는 큰 사진 수까지 */
 function phUpStat(){
   var d=LS('b6.phup',{})||{}, n=0, b=0, big=0, tot=0, tb=0, k, len;
+  function bytesOf(x){
+    if(typeof PHN!=='undefined' && PHN[x]!=null) return PHN[x];
+    return (typeof ph[x]==='string')?ph[x].length:0;
+  }
   for(k in ph){
     if(!Object.prototype.hasOwnProperty.call(ph,k)) continue;
-    len=(ph[k]||'').length; tot++; tb+=len;
-    if(len>900*1024){ big++; continue }
+    len=bytesOf(k); tot++; tb+=len;
+    if(len>660*1024){ big++; continue }
     if(d[k]===len){ n++; b+=len }
   }
   return {n:n, b:b, big:big, tot:tot, tb:tb};
@@ -517,7 +564,8 @@ function clBody(){
         +'마지막 오류('+esc(CL.err||'')+'): '+esc(CL.emsg)+'</p>'):'');
   }
 
-  var U=phUpStat(), pb=phBytes(), lb=lsBytes();
+  var U=phUpStat(), pb=phBytes(), lb=lsBytes(), recB=recBytes();
+  if(typeof idbQuota==='function') idbQuota();
   return '<div class="ir"><span>계정</span><b style="font-size:12px">'+esc(CL.email||'로그인됨')+'</b></div>'
    +'<div class="ir"><span>상태</span><b style="color:'+S.c+'">'+(S.s||'-')+'</b></div>'
    /* ── 시각: 초까지 ── */
@@ -527,25 +575,47 @@ function clBody(){
      +' <span class="mu">· '+clAgo(CL.lastPh)+'</span></b></div>'):'')
    +(CL.lastDown?('<div class="ir"><span>최근 내려받기</span><b class="mu" style="font-size:11.5px">'+clStamp(CL.lastDown)+'</b></div>'):'')
 
-   /* ── 사진 용량 ── */
-   +'<div class="st" style="margin:12px 0 6px;font-size:12px">📷 사진 용량</div>'
+   /* ── 사진 용량 (IndexedDB 기준) ── */
+   +'<div class="st" style="margin:12px 0 6px;font-size:12px">📷 사진</div>'
+   +'<div class="ir"><span>저장 위치</span><b style="color:'+(IDBOK?'#2E9C7D':'#E08A00')+'">'
+     +(IDBOK?'IndexedDB (한도 없음에 가까움)':'localStorage (제한 5MB)')+'</b></div>'
    +'<div class="ir"><span>이 폰의 사진</span><b>'+U.tot+'장 · '+fmtB(pb)+'</b></div>'
    +'<div class="ir"><span>클라우드에 백업됨</span><b style="color:'+((U.tot-U.big-U.n)===0?'#2E9C7D':'#E08A00')+'">'
      +U.n+'장 · '+fmtB(U.b)+'</b></div>'
-   +'<div class="ir"><span>아직 안 올라간 사진</span><b>'+Math.max(0,U.tot-U.big-U.n)+'장</b></div>'
+   +((U.tot-U.big-U.n)>0?('<div class="ir"><span>아직 안 올라간 사진</span><b>'+(U.tot-U.big-U.n)+'장</b></div>'):'')
    +(U.big?('<div class="ir"><span>용량초과로 못 올림</span><b style="color:#EF6A4C">'+U.big+'장</b></div>'
-     +'<div class="mu" style="font-size:10px">사진 한 장이 900KB 를 넘으면 클라우드 문서 한도(1MB)에 걸립니다.</div>'):'')
+     +'<div class="mu" style="font-size:10px">한 장이 660KB(base64 변환 후 약 890KB)를 넘으면 클라우드 문서 한도(1MB)에 걸립니다.</div>'):'')
    +(U.tot?('<div class="mu" style="font-size:10.5px;margin:6px 0 0">클라우드 백업 진행률</div>'
      +clBar(U.b, pb||1, '#7FA8D9')):'')
+   +(U.tot?('<div class="mu" style="font-size:10px;margin-top:3px">장당 평균 '+fmtB(Math.round(pb/U.tot))+'</div>'):'')
 
-   /* ── 폰 저장공간 ── */
+   /* ── 이관 상태 ── */
+   +((typeof PHMIG!=='undefined' && PHMIG.moved)?
+     ('<div class="mu" style="font-size:10.5px;margin-top:6px;color:#2E9C7D">✓ 사진 '+PHMIG.moved
+      +'장을 IndexedDB 로 옮겼습니다 — localStorage 공간이 그만큼 비었습니다.</div>'):'')
+   +((typeof PHMIG!=='undefined' && PHMIG.err)?
+     ('<div class="mu" style="font-size:10px;margin-top:6px;color:#E08A00">IndexedDB 를 쓸 수 없어 예전 방식으로 저장합니다'
+      +' ('+esc(PHMIG.err)+'). 사파리 시크릿 모드에서는 정상입니다 — 데이터는 그대로 있습니다.</div>'):'')
+
+   /* ── 저장공간 ── */
    +'<div class="st" style="margin:12px 0 6px;font-size:12px">💾 이 폰 저장공간</div>'
-   +'<div class="mu" style="font-size:10.5px">앱 전체(기록+사진) · 브라우저 한도는 보통 '+fmtB(LSCAP)+'입니다.</div>'
+   +'<div class="mu" style="font-size:10.5px">기록 — 브라우저 한도 '+fmtB(LSCAP)+' (localStorage)</div>'
    +clBar(lb, LSCAP, lb>LSCAP*0.8?'#EF6A4C':'#2E9C7D')
-   +'<div class="mu" style="font-size:10.5px;margin-top:3px">그중 사진 '+fmtB(pb)
-     +' ('+(lb?Math.round(pb/lb*100):0)+'%)</div>'
-   +((CLQ&&CLQ.q)?('<div class="mu" style="font-size:10.5px;margin-top:6px">브라우저가 알려준 이 사이트 할당량: <b>'
-     +fmtB(CLQ.q)+'</b> 중 '+fmtB(CLQ.u)+' 사용</div>'):'')
+   +'<div class="mu" style="font-size:10px;margin-top:2px">기록 '+fmtB(recB)+' · 그 외 설정 '+fmtB(Math.max(0,lb-recB))
+     +(IDBOK?' · 사진은 여기서 빠졌습니다':' · 사진 '+fmtB(pb)+' 포함')+'</div>'
+   +(IDBOK?('<div class="mu" style="font-size:10.5px;margin-top:9px">사진 — IndexedDB'
+     +((IDBQ&&IDBQ.q)?(' (전체 가용 '+fmtB(IDBQ.q)+')'):'')+'</div>'
+     +((IDBQ&&IDBQ.q)?clBar(pb, IDBQ.q, '#7FA8D9')
+       :('<div class="mu" style="font-size:10px">사진 '+fmtB(pb)+' 사용 · 이 브라우저는 전체 가용량을 알려주지 않습니다</div>'))):'')
+   +((IDBQ&&IDBQ.q)?('<div class="mu" style="font-size:10px;margin-top:4px">브라우저가 알려준 이 사이트 전체: 가용 <b>'
+     +fmtB(IDBQ.q)+'</b> 중 '+fmtB(IDBQ.u)+' 사용 ('+(IDBQ.q?Math.round(IDBQ.u/IDBQ.q*1000)/10:0)+'%)'
+     +' · 남은 공간 <b>'+fmtB(Math.max(0,IDBQ.q-IDBQ.u))+'</b></div>'):'')
+   +(IDBOK?('<div class="mu" style="font-size:10px;margin-top:6px">사진을 IndexedDB 로 옮겨 5MB 제한에서 벗어났습니다. '
+     +'남은 공간 기준으로 대략 <b>'+(function(){
+        var per=U.tot?Math.round(pb/U.tot):70*1024;
+        var free=(IDBQ&&IDBQ.q)?Math.max(0,IDBQ.q-IDBQ.u):0;
+        return free&&per?(Math.floor(free/per)+'장'):'수천 장';
+      })()+'</b> 더 담을 수 있습니다.</div>'):'')
 
    +'<button class="btn g s" style="margin-top:12px" onclick="clPushNow()">'
      +((CLBUSY||CLPHB)?'🔄 백업 중…':'지금 백업하기')+'</button>'

@@ -97,6 +97,14 @@ B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
 migLogs();updMark();if(typeof perSync==='function')perSync();navApply();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook();
+/* 사진을 IndexedDB 에서 메모리로 올린다(+ localStorage 잔여분 이관).
+   비동기이므로 먼저 화면을 띄우고, 끝나면 사진이 보이도록 다시 그린다.
+   ★ 이관은 '복사 → 검증 → 원본 삭제' 순서라 중간에 끊겨도 유실이 없다. */
+if(typeof phBoot==='function' && !window._phBooted){
+  window._phBooted=1;
+  phBoot().then(function(){ render(); if(typeof clPaint==='function')clPaint() })
+          .catch(function(){ render() });
+}
 if(typeof clBoot==='function'){clBoot();clPaint()}
 /* 이전 실행에서 이미 새 버전을 찾아뒀다면(오프라인 포함) 바로 안내 */
 if(UPD.found)setTimeout(function(){updNag()},900)}
@@ -137,23 +145,62 @@ var _sc=document.getElementById('nvsc');
 if(_sc)_sc.addEventListener('click',navClose);
 document.addEventListener('keydown',function(e){if(e.key==='Escape')navClose()});
 
-/* 조리 단계 사진 업로드 */
+/* 조리 단계 사진 업로드 ─────────────────────────────────────────────
+   ★ 용량 절약 2단계: 가로 340→260px, 상한 200KB→70KB, WebP 우선.
+     localStorage 한도(5MB 안팎)는 늘릴 수 없으므로 들어가는 크기를 줄인다.
+     base64 는 원본보다 33% 크고, 사파리 계열은 문자당 2바이트로 세기도 해서
+     장당 70KB 로 조이면 실질 확보량이 크다. WebP 는 같은 화질에서
+     JPEG 보다 25~35% 작다 (iOS 14+ 지원). 미지원 기기는 JPEG 로 자동 폴백. */
+var PH_W = 260;                       /* 저장 가로 픽셀 */
+var PH_CAP = 70*1024;                 /* dataURL 상한 (문자 수) */
+
+/* 이 브라우저가 WebP 로 인코딩할 수 있는가 — 한 번만 검사해 기억한다.
+   미지원 브라우저는 요청을 무시하고 PNG 를 돌려주므로 접두사로 판별한다. */
+var _webpOK = null;
+function phWebpOK(){
+  if(_webpOK===null){
+    try{
+      var t=document.createElement('canvas'); t.width=t.height=1;
+      _webpOK = t.toDataURL('image/webp').indexOf('data:image/webp')===0;
+    }catch(e){ _webpOK=false }
+  }
+  return _webpOK;
+}
+
+/* 이미지를 지정 가로폭으로 그린 캔버스 */
+function phCanvas(im, w){
+  var W=Math.min(w, im.width||w), sc=W/(im.width||W);
+  var cv=document.createElement('canvas');
+  cv.width=W; cv.height=Math.max(1, Math.round((im.height||W)*sc));
+  var cx=cv.getContext('2d');
+  cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);   /* 투명 PNG 대비 */
+  cx.drawImage(im,0,0,cv.width,cv.height);
+  return cv;
+}
+
+/* 상한에 들어갈 때까지 품질 → 해상도 순으로 낮춘다.
+   해상도를 먼저 깎으면 글씨가 안 보이므로 품질을 먼저 내린다. */
+function phEncode(im){
+  var webp=phWebpOK(), type=webp?'image/webp':'image/jpeg';
+  var widths=[PH_W, 210, 170], qs=webp?[.72,.6,.5,.4]:[.6,.5,.42,.34];
+  var best=null;
+  for(var wi=0; wi<widths.length; wi++){
+    var cv=phCanvas(im, widths[wi]);
+    for(var qi=0; qi<qs.length; qi++){
+      var d=cv.toDataURL(type, qs[qi]);
+      if(best===null || d.length<best.length) best=d;
+      if(d.length<=PH_CAP) return d;
+    }
+  }
+  return best;                        /* 끝까지 못 줄이면 가장 작은 것 */
+}
+
 document.getElementById('fi').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;
 var rd=new FileReader();
 rd.onload=function(ev){var im=new Image();
 im.onerror=function(){alert('이미지를 읽을 수 없어요. 다른 사진으로 시도해 주세요.')};
 im.onload=function(){
-/* 원본이 작으면 확대하지 않는다(용량만 커지고 화질 이득 없음) */
-var W=Math.min(340,im.width||340),sc=W/(im.width||W);
-var cv=document.createElement('canvas');
-cv.width=W;cv.height=Math.max(1,Math.round((im.height||W)*sc));
-var cx=cv.getContext('2d');
-cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);   /* 투명 PNG 대비 */
-cx.drawImage(im,0,0,cv.width,cv.height);
-/* 용량이 크면 품질을 한 단계 더 낮춘다 (200KB 상한 목표) */
-var d=cv.toDataURL('image/jpeg',.6);
-if(d.length>200*1024)d=cv.toDataURL('image/jpeg',.45);
-if(d.length>200*1024)d=cv.toDataURL('image/jpeg',.35);
+var d=phEncode(im);
 /* ★ savePh: 저장 실패 시 메모리 상태를 되돌려
    '화면엔 보이는데 저장은 안 된' 사진이 남지 않게 한다 */
 savePh(phT,d);
@@ -167,8 +214,16 @@ document.getElementById('fj').addEventListener('change',function(e){var f=e.targ
 var r=new FileReader();
 r.onload=function(ev){try{var d=JSON.parse(ev.target.result);
 if(!confirm('현재 데이터를 덮어씁니다. 계속할까요?'))return;
-baby=d.baby||baby;logs=d.logs||[];tried=d.tried||{};myR=d.my||[];cubes=d.cubes||[];
-ov=d.ov||{};ph=d.ph||{};plan=d.plan||null;obs=d.obs||[];fav=d.fav||{};grow=d.grow||[];
+/* 슬림 형식으로 저장된 백업도 읽을 수 있게 되살린다 (logFull/obsFull/growFull) */
+baby=d.baby||baby;logs=(d.logs||[]).map(logFull);tried=d.tried||{};myR=d.my||[];cubes=d.cubes||[];
+ov=d.ov||{};plan=d.plan||null;obs=(d.obs||[]).map(obsFull);fav=d.fav||{};grow=(d.grow||[]).map(growFull);
+/* 사진은 IndexedDB 로 복원한다 (phStore 가 IDB→localStorage 폴백까지 처리) */
+var _rph=d.ph||{};ph={};
+if(typeof PHN!=='undefined'){for(var _k in PHN)delete PHN[_k]}
+if(typeof PHB!=='undefined'){for(var _k2 in PHB)delete PHB[_k2]}
+Object.keys(_rph).reduce(function(ch,k){
+ return ch.then(function(){return (typeof phStore==='function')?phStore(k,_rph[k]):(ph[k]=_rph[k])});
+},Promise.resolve()).then(function(){if(typeof render==='function')render()});
 if(d.stock&&typeof STK!=='undefined'){STK=d.stock;stkSave()}
 if(d.bowl&&typeof BW!=='undefined'){BW=d.bowl;bwSave()}
 if(d.calc)localStorage.setItem('b6.calc',JSON.stringify(d.calc));
