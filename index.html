@@ -1,4 +1,44 @@
 <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<script>
+/* ===== 버전 단일 출처 =====
+   여기만 고치면 update.js 의 APPV 가 따라옵니다.
+   배포 시 bump.py 를 쓰면 index.html 의 ?v= 와 sw.js 의 VER 까지 한 번에 맞춰집니다. */
+window.APPV='48';
+
+/* ===== 전역 오류 핸들러 =====
+   스크립트 20개가 전역 스코프를 공유하므로, 한 곳에서 예외가 나면
+   화면이 조용히 멈춥니다. 마지막 오류를 남겨 설정에서 확인할 수 있게 합니다. */
+(function(){
+ var shown=false;
+ function keep(msg,src,ln,col){
+  try{localStorage.setItem('b6.lasterr',JSON.stringify({
+   m:String(msg||'').slice(0,300),s:String(src||'').split('/').pop(),
+   l:ln||0,c:col||0,v:window.APPV,at:new Date().toISOString()}))}catch(e){}
+ }
+ function banner(){
+  if(shown)return; shown=true;
+  try{
+   var d=document.createElement('div');
+   d.setAttribute('style','position:fixed;left:0;right:0;bottom:0;z-index:99999;'+
+    'background:#B3261E;color:#fff;font:13px/1.5 -apple-system,sans-serif;'+
+    'padding:11px 14px;text-align:center');
+   d.innerHTML='문제가 생겨 일부 화면이 멈췄어요. '+
+    '<b style="text-decoration:underline">새로고침</b> · '+
+    '<span style="opacity:.8">기록은 지워지지 않습니다</span>';
+   d.onclick=function(){location.reload()};
+   (document.body||document.documentElement).appendChild(d);
+  }catch(e){}
+ }
+ window.addEventListener('error',function(e){
+  if(e&&e.target&&e.target.tagName==='SCRIPT'){keep('script load fail',e.target.src,0,0);banner();return}
+  keep(e&&e.message,e&&e.filename,e&&e.lineno,e&&e.colno);banner();
+ });
+ window.addEventListener('unhandledrejection',function(e){
+  var r=e&&e.reason;
+  keep((r&&(r.message||r))||'unhandled rejection','promise',0,0);banner();
+ });
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
@@ -20,6 +60,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun 
 body.solo{--nw:0px}body.solo #top{background:var(--bg)}
 body{background:#FFE7DC}
 #app{background:var(--bg)}
+.clb{display:none;position:fixed;left:calc(var(--nw) + 8px);top:calc(env(safe-area-inset-top) + 6px);z-index:44;font-size:10.5px;font-weight:800;letter-spacing:-.2px;background:#fff;border:1px solid var(--ln);border-radius:999px;padding:3px 9px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 #app{max-width:560px;margin:0 auto;padding-bottom:40px}
 h1,h4{margin:0;line-height:1.35}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
@@ -431,29 +472,31 @@ body.ubon{padding-top:56px}
 
 <div class="ub" id="ub"></div>
 <div class="nb" id="nb"></div>
+<div class="clb" id="cb"></div>
 <div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=43"></script>
-<script src="core.js?v=43"></script>
-<script src="update.js?v=43"></script>
-<script src="ui.js?v=43"></script>
-<script src="dash.js?v=43"></script>
-<script src="combo.js?v=43"></script>
-<script src="mix.js?v=43"></script>
-<script src="find.js?v=43"></script>
-<script src="home.js?v=43"></script>
-<script src="today.js?v=43"></script>
-<script src="stock.js?v=43"></script>
-<script src="calc.js?v=43"></script>
-<script src="plan.js?v=43"></script>
-<script src="menu.js?v=43"></script>
-<script src="edit.js?v=43"></script>
-<script src="food.js?v=43"></script>
-<script src="grow.js?v=43"></script>
-<script src="log.js?v=43"></script>
-<script src="info.js?v=43"></script>
-<script src="boot.js?v=43"></script>
+<script src="data.js?v=48"></script>
+<script src="core.js?v=48"></script>
+<script src="update.js?v=48"></script>
+<script src="ui.js?v=48"></script>
+<script src="dash.js?v=48"></script>
+<script src="combo.js?v=48"></script>
+<script src="mix.js?v=48"></script>
+<script src="find.js?v=48"></script>
+<script src="home.js?v=48"></script>
+<script src="today.js?v=48"></script>
+<script src="stock.js?v=48"></script>
+<script src="calc.js?v=48"></script>
+<script src="plan.js?v=48"></script>
+<script src="menu.js?v=48"></script>
+<script src="edit.js?v=48"></script>
+<script src="food.js?v=48"></script>
+<script src="grow.js?v=48"></script>
+<script src="log.js?v=48"></script>
+<script src="info.js?v=48"></script>
+<script src="cloud.js?v=48"></script>
+<script src="boot.js?v=48"></script>
 <script>
 /* 시트 아래로 스와이프해서 닫기 */
 (function(){var md=document.getElementById('md'),sh=document.getElementById('sh');

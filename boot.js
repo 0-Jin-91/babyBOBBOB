@@ -97,6 +97,7 @@ B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
 migLogs();updMark();if(typeof perSync==='function')perSync();navApply();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook();
+if(typeof clBoot==='function'){clBoot();clPaint()}
 /* 이전 실행에서 이미 새 버전을 찾아뒀다면(오프라인 포함) 바로 안내 */
 if(UPD.found)setTimeout(function(){updNag()},900)}
 
@@ -140,12 +141,25 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')navClose()})
 document.getElementById('fi').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;
 var rd=new FileReader();
 rd.onload=function(ev){var im=new Image();
-im.onload=function(){var W=340,sc=W/im.width,cv=document.createElement('canvas');
-cv.width=W;cv.height=Math.round(im.height*sc);
-cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
-ph[phT]=cv.toDataURL('image/jpeg',.6);save();
+im.onerror=function(){alert('이미지를 읽을 수 없어요. 다른 사진으로 시도해 주세요.')};
+im.onload=function(){
+/* 원본이 작으면 확대하지 않는다(용량만 커지고 화질 이득 없음) */
+var W=Math.min(340,im.width||340),sc=W/(im.width||W);
+var cv=document.createElement('canvas');
+cv.width=W;cv.height=Math.max(1,Math.round((im.height||W)*sc));
+var cx=cv.getContext('2d');
+cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);   /* 투명 PNG 대비 */
+cx.drawImage(im,0,0,cv.width,cv.height);
+/* 용량이 크면 품질을 한 단계 더 낮춘다 (200KB 상한 목표) */
+var d=cv.toDataURL('image/jpeg',.6);
+if(d.length>200*1024)d=cv.toDataURL('image/jpeg',.45);
+if(d.length>200*1024)d=cv.toDataURL('image/jpeg',.35);
+/* ★ savePh: 저장 실패 시 메모리 상태를 되돌려
+   '화면엔 보이는데 저장은 안 된' 사진이 남지 않게 한다 */
+savePh(phT,d);
 if(curR)document.getElementById('mb').innerHTML=rBody();render()};
 im.src=ev.target.result};
+rd.onerror=function(){alert('파일을 읽을 수 없어요.')};
 rd.readAsDataURL(f);e.target.value=''});
 
 /* 백업 JSON 불러오기 */

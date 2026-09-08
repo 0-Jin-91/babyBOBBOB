@@ -85,14 +85,66 @@ var baby=LS(KY.b,null),logs=LS(KY.l,[]),tried=LS(KY.f,{}),myR=LS(KY.m,[]),cubes=
 function migLogs(){var ch=0;
 logs.forEach(function(l){if(l.nu){if(l.nu.kcal!=null){delete l.nu.kcal;ch=1}if(l.nu.feAb!=null){delete l.nu.feAb;ch=1}}});
 if(ch)save()}
-function save(){localStorage.setItem(KY.b,JSON.stringify(baby));localStorage.setItem(KY.l,JSON.stringify(logs));
-localStorage.setItem(KY.f,JSON.stringify(tried));localStorage.setItem(KY.m,JSON.stringify(myR));
-localStorage.setItem(KY.c,JSON.stringify(cubes));localStorage.setItem(KY.o,JSON.stringify(ov));
-localStorage.setItem(KY.w,JSON.stringify(plan));localStorage.setItem(KY.a,JSON.stringify(obs));
-localStorage.setItem(KY.s,JSON.stringify(shopChk));localStorage.setItem(KY.t,JSON.stringify(todaySel));
-localStorage.setItem(KY.v,JSON.stringify(fav));localStorage.setItem(KY.g,JSON.stringify(grow));
-if(typeof BW!=='undefined')localStorage.setItem(KY.bw,JSON.stringify(BW));
-try{localStorage.setItem(KY.p,JSON.stringify(ph))}catch(e){alert('사진 저장 공간이 부족합니다.')}}
+/* ===== 저장 =====
+   ★ 과거엔 12개 setItem 이 한 함수에 묶여 있고 try/catch 가 사진에만 있었다.
+     중간에서 예외가 터지면 앞쪽은 저장·뒤쪽은 미저장인 '부분 저장'이 되고,
+     예외가 호출한 UI 함수로 번져 화면 갱신까지 멈췄다.
+     이제 키별로 격리해 한 항목의 실패가 나머지를 막지 않는다. */
+var SAVEERR={};                       /* 마지막 저장 실패 키 -> 사유 */
+function saveKey(k,val){
+ try{localStorage.setItem(k,JSON.stringify(val));delete SAVEERR[k];return true}
+ catch(e){
+  /* QuotaExceededError = 공간 부족 / 그 외(사파리 프라이빗 등) = 쓰기 차단 */
+  var q=(e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014));
+  SAVEERR[k]=q?'full':'blocked';
+  return false}
+}
+/* 실패를 한 번만, 한꺼번에 알린다 (매 저장마다 alert 이 뜨지 않도록) */
+var _sawarn=0;
+function saveWarn(){
+ var ks=Object.keys(SAVEERR);if(!ks.length)return;
+ if(Date.now()-_sawarn<60000)return;         /* 1분에 한 번까지 */
+ _sawarn=Date.now();
+ var blocked=ks.some(function(k){return SAVEERR[k]==='blocked'});
+ var photo=(ks.length===1&&ks[0]===KY.p);
+ if(blocked){
+  alert('⚠️ 저장이 차단되어 있어요.\n\n사파리 시크릿 모드에서는 기록이 저장되지 않습니다.\n일반 모드로 열어서 사용해 주세요.');
+ }else if(photo){
+  alert('📷 사진 저장 공간이 부족합니다.\n\n사진 일부를 지우면 다시 저장돼요.\n다행히 이유식 기록·재고·성장 데이터는 정상 저장되었습니다.');
+ }else{
+  alert('⚠️ 저장 공간이 부족해 일부 기록이 저장되지 않았어요.\n\n설정에서 백업 내보내기로 데이터를 먼저 보관한 뒤,\n오래된 사진을 정리해 주세요.');
+ }
+}
+function save(){
+ saveKey(KY.b,baby); saveKey(KY.l,logs);   saveKey(KY.f,tried);
+ saveKey(KY.m,myR);  saveKey(KY.c,cubes);  saveKey(KY.o,ov);
+ saveKey(KY.w,plan); saveKey(KY.a,obs);    saveKey(KY.s,shopChk);
+ saveKey(KY.t,todaySel); saveKey(KY.v,fav); saveKey(KY.g,grow);
+ if(typeof BW!=='undefined')saveKey(KY.bw,BW);
+ /* ★ 사진은 맨 마지막. 용량을 가장 많이 쓰므로, 여기서 실패해도
+    위의 기록들은 이미 안전하게 저장돼 있다. */
+ saveKey(KY.p,ph);
+ saveWarn();
+ /* 클라우드 백업 예약 (로그인 상태일 때만, 3초 디바운스).
+    폰 저장이 먼저 끝난 뒤에 호출한다 — 폰이 원본, 클라우드는 사본. */
+ if(typeof clQueue==='function')try{clQueue()}catch(e){}
+}
+/* 사진 저장만 따로 시도 — 실패하면 메모리 상태를 되돌려
+   '화면엔 있는데 저장은 안 된' 유령 사진이 남지 않게 한다. */
+function savePh(k,dataUrl){
+ var prev=ph[k];
+ ph[k]=dataUrl;
+ if(saveKey(KY.p,ph))return true;
+ if(prev===undefined)delete ph[k];else ph[k]=prev;
+ saveKey(KY.p,ph);
+ saveWarn();
+ return false;
+}
+/* 사진이 차지하는 용량(KB) — 설정 화면 표시용 */
+function phSize(){
+ try{var s=localStorage.getItem(KY.p);return s?Math.round(s.length/1024):0}catch(e){return 0}
+}
+
 function RCP(){return BASE.map(function(r){var o=ov[r.i];if(!o)return r;
 var c={};for(var k in r)c[k]=r[k];for(var k2 in o)c[k2]=o[k2];c.ed=1;return c}).concat(myR)}
 function getR(id){var a=RCP();for(var i=0;i<a.length;i++)if(a[i].i===id)return a[i];return null}

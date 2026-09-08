@@ -1,5 +1,7 @@
 /*========== 🍼 새로고침 · 업데이트 확인 ==========*/
-var APPV='43';                     /* index.html 의 ?v= 와 같은 값 */
+var APPV=(window.APPV&&/^\d+$/.test(window.APPV))?String(window.APPV):'46';
+/* ★ 버전 단일 출처: index.html <head> 의 window.APPV 를 그대로 쓴다.
+   과거 이 값을 손으로 복사하다 어긋나(43 vs 45) '새 버전 있음'이 무한 반복됐다. */
 var UPDS=LS('b6.updfound',null)||{};
 /* 저장된 '발견 버전'은 숫자이고 APPV 보다 클 때만 유효하다.
    과거 버그로 '최신' 같은 비숫자나 이미 지나간 버전이 저장돼 있으면 버린다

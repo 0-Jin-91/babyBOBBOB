@@ -171,7 +171,10 @@ function ckSt(f){var n=f[0],t=tried[n],ob=ckObs(n),m=ageM();
 if(t==='ok')return 'ok';
 if(t==='bad')return 'bad';
 if(ob||t==='watch')return 'test';
-return m<f[3]?'soon':'todo'}
+if(m<f[3])return 'soon';
+/* 그 재료가 속한 시기가 이미 끝났으면 '기간 지나 밀린 것' */
+var g=ckStgOf(f);
+return m>=g.t?'over':'todo'}
 /*----- 시기 버킷: 재료 시작 개월수를 STG 구간에 넣는다 -----*/
 function ckStages(){return STG.filter(function(g){return g.id!=='ready'})}
 function ckStgOf(f){var S=ckStages(),mo=f[3];
@@ -184,47 +187,67 @@ if(CK.cat==='주요 알레르겐')return FD.filter(function(f){return (f[6]||0)>
 return FD.filter(function(f){return f[2]===CK.cat})}
 /* 탭 배지 — 지금 해야 할(먹여도 되는데 미시도) 재료 수. 주요 알레르겐 기준 */
 function ckPending(){var m=ageM();
-return FD.filter(function(f){return ((f[6]||0)>0||ALG8.indexOf(f[0])>=0)&&m>=f[3]&&ckSt(f)==='todo'}).length}
+return FD.filter(function(f){return ((f[6]||0)>0||ALG8.indexOf(f[0])>=0)&&m>=f[3]&&(ckSt(f)==='todo'||ckSt(f)==='over')}).length}
 /*----- 시기별 신호등 판정 -----*/
 /* sig: 'blue' 지난 시기 전부 정리됨 / 'red' 지난 시기인데 안 한 게 남음
         'now' 지금 진행 중인 시기 / 'gray' 아직 오지 않은 시기 */
 function ckStgSig(g,B){var m=ageM();
 var past=m>=g.t, cur=m>=g.f&&m<g.t;
-if(past)return B.todo.length?'red':'blue';
-if(cur)return B.todo.length?'now':'blue';
+var left=B.todo.length+B.over.length;
+if(past)return left?'red':'blue';
+if(cur)return left?'now':'blue';
 return 'gray'}
-var CKSIG={red:{c:'#E0563C',bg:'#FDF0EC',lb:'🔴 안 한 게 남았어요'},
+/* 상태 색 팔레트 — 상단 그래프·칩·시기 카드가 모두 이 색을 공유한다
+   ok 통과=초록 / todo 지금 해야 함=노랑 / test 진행중=주황
+   over 기간 지나 밀림=자주(빨강은 알레르기 반응 전용이라 겹치지 않게 진한 자주를 골랐다)
+   bad 알레르기 반응=빨강 / soon 기간 미정=todo 와 같은 노랑 */
+var CKC={ok:{c:'#1F7A5F',g:'linear-gradient(90deg,#3FBF95,#2E9E7A)',bg:'#E8F6F0'},
+todo:{c:'#8A6A0B',g:'#F5CE47',bg:'#FFF9E3'},
+test:{c:'#B05A13',g:'#FF9E3D',bg:'#FFF0E2'},
+over:{c:'#8E2F5B',g:'#B23A72',bg:'#FBEBF2'},
+bad:{c:'#C0350F',g:'#E0563C',bg:'#FDF0EC'}};
+CKC.soon=CKC.todo;
+var CKSIG={red:{c:'#8E2F5B',bg:'#FBEBF2',lb:'🟣 기간이 지났어요'},
 blue:{c:'#1F7A5F',bg:'#E8F6F0',lb:'🔵 이 시기 완료'},
-now:{c:'#B07C13',bg:'#FFF6EC',lb:'🟠 지금 이 시기'},
+now:{c:'#B05A13',bg:'#FFF0E2',lb:'🟠 지금 이 시기'},
 gray:{c:'#9A8F88',bg:'#F6F1ED',lb:'⚪️ 아직 이른 시기'}};
 /* 정렬 우선순위 — 지난 시기 미완료 → 지금 시기 → 미래 → 완료 */
 var CKORD={red:0,now:1,gray:2,blue:3};
 function vFoodChk(){var m=ageM(),L=ckPool(),S=ckStages();
 /* 시기별 버킷 */
-var BK=S.map(function(g){return {g:g,ok:[],test:[],bad:[],todo:[],soon:[]}});
+var BK=S.map(function(g){return {g:g,ok:[],test:[],bad:[],todo:[],over:[],soon:[]}});
 L.forEach(function(f){var g=ckStgOf(f),b=null;
 BK.forEach(function(x){if(x.g.id===g.id)b=x});
 if(b)b[ckSt(f)].push(f)});
 BK.forEach(function(b){b.sig=ckStgSig(b.g,b);
-b.done=b.ok.length;b.tot=b.ok.length+b.test.length+b.bad.length+b.todo.length;});
-/* 전체 진도 — 지금 먹여도 되는 재료만 분모 */
-var AV=L.filter(function(f){return m>=f[3]}),OKn=0,TSn=0,BDn=0,TDn=0,SOn=L.length-AV.length;
-AV.forEach(function(f){var s=ckSt(f);if(s==='ok')OKn++;else if(s==='test')TSn++;else if(s==='bad')BDn++;else TDn++});
-var pct=AV.length?Math.round(OKn/AV.length*100):0;
+b.done=b.ok.length;
+/* 시기 카드 분모 = 그 시기의 테스트 대상 전체 (기간 미정 soon 까지 포함해야 0/0 이 안 뜬다) */
+b.tot=b.ok.length+b.test.length+b.bad.length+b.todo.length+b.over.length+b.soon.length;});
+/* 전체 진도 — 분모는 '전체 테스트 대상 재료 수'(현재 분류 전체). 기간 미정도 포함한다 */
+var OKn=0,TSn=0,BDn=0,TDn=0,OVn=0,SOn=0;
+L.forEach(function(f){var s=ckSt(f);
+if(s==='ok')OKn++;else if(s==='test')TSn++;else if(s==='bad')BDn++;
+else if(s==='over')OVn++;else if(s==='soon')SOn++;else TDn++});
+var TOT=L.length;
+var pct=TOT?Math.round(OKn/TOT*100):0;
+function ckSeg(n,g){return n?'<div style="width:'+(n/Math.max(1,TOT)*100)+'%;background:'+g+'"></div>':''}
 /* 정렬: 신호등 우선순위 → 시기 순서 */
 var ORD=BK.slice().sort(function(a,b){var d=CKORD[a.sig]-CKORD[b.sig];
 if(d)return d;return a.g.f-b.g.f});
 var red=BK.filter(function(b){return b.sig==='red'});
 return fTabBar()
 +'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:flex-start"><div><b>✅ 알레르기 통과 체크리스트</b><div class="mu" style="font-size:11px;margin-top:3px">만 '+Math.floor(m)+'개월 · '+CK.cat+'</div></div>'
-+'<div style="text-align:right"><div style="font-size:22px;font-weight:900;color:var(--mt);line-height:1">'+pct+'%</div><div class="mu" style="font-size:10.5px">'+OKn+' / '+AV.length+' 통과</div></div></div>'
-+'<div class="bar" style="margin-top:9px">'+(OKn?'<div style="width:'+(OKn/Math.max(1,AV.length)*100)+'%;background:linear-gradient(90deg,#3FBF95,#2E9E7A)"></div>':'')
-+(TSn?'<div style="width:'+(TSn/Math.max(1,AV.length)*100)+'%;background:#FFC861"></div>':'')
-+(BDn?'<div style="width:'+(BDn/Math.max(1,AV.length)*100)+'%;background:#E0563C"></div>':'')+'</div>'
++'<div style="text-align:right"><div style="font-size:22px;font-weight:900;color:var(--mt);line-height:1">'+pct+'%</div><div class="mu" style="font-size:10.5px">'+OKn+' / '+TOT+' 통과</div></div></div>'
++'<div class="bar" style="margin-top:9px">'
++ckSeg(OKn,CKC.ok.g)+ckSeg(TSn,CKC.test.g)+ckSeg(OVn,CKC.over.g)+ckSeg(BDn,CKC.bad.g)+ckSeg(TDn+SOn,CKC.todo.g)+'</div>'
 +'<div class="rw" style="gap:6px;margin-top:8px;flex-wrap:wrap">'
-+ckB('⬜ 해야 할 것',TDn,'#8A7F78','#F6F1ED')+ckB('🔄 진행 중',TSn,'#B07C13','#FFF6EC')
-+ckB('✅ 통과',OKn,'#1F7A5F','#E8F6F0')+ckB('⚠️ 반응',BDn,'#C0350F','#FDF0EC')+ckB('⏳ 이른 시기',SOn,'#9A8F88','#F6F1ED')+'</div></div>'
-+(red.length?'<div class="alert bad"><span class="ic">🔴</span><div><b>지난 시기에 안 한 게 '+red.reduce(function(a,b){return a+b.todo.length},0)+'가지 있어요</b><br><span style="font-size:11.5px">'+red.map(function(b){return b.g.n+' '+b.todo.length+'가지'}).join(' · ')+' — 아래 빨간 시기를 펼쳐 확인하세요.</span></div></div>':'')
++ckB('✅ 통과',OKn,CKC.ok.c,CKC.ok.bg)+ckB('🟠 진행 중',TSn,CKC.test.c,CKC.test.bg)
++ckB('🟡 지금 해야 할 것',TDn,CKC.todo.c,CKC.todo.bg)
++ckB('🟣 기간 지남',OVn,CKC.over.c,CKC.over.bg)
++ckB('🔴 알레르기 반응',BDn,CKC.bad.c,CKC.bad.bg)
++ckB('🟡 기간 미정',SOn,CKC.soon.c,CKC.soon.bg)+'</div>'
++'<div class="mu" style="font-size:10.5px;margin-top:7px">전체 테스트 대상 '+TOT+'가지 기준 · 막대는 통과·진행중·기간지남·반응·해야할것 순</div></div>'
++(red.length?'<div class="alert bad"><span class="ic">🟣</span><div><b>기간이 지났는데 안 한 게 '+red.reduce(function(a,b){return a+b.todo.length+b.over.length},0)+'가지 있어요</b><br><span style="font-size:11.5px">'+red.map(function(b){return b.g.n+' '+(b.todo.length+b.over.length)+'가지'}).join(' · ')+' — 아래 빨간 시기를 펼쳐 확인하세요.</span></div></div>':'')
 +'<div class="tab">'+ckCats().map(function(c){return '<button class="'+(c===CK.cat?'on':'')+'" onclick="CK.cat=\''+c+'\';CK.open={};render()">'+c+'</button>'}).join('')+'</div>'
 +'<div class="st">📅 시기별 현황 <span class="mu" style="font-weight:600">· 급한 시기부터</span></div>'
 +ORD.map(function(b){return ckStgCard(b)}).join('')
@@ -235,27 +258,43 @@ function ckStgCard(b){var g=b.g,K=CKSIG[b.sig],m=ageM();
 var open=CK.open[g.id]!==undefined?CK.open[g.id]:(b.sig==='red'||b.sig==='now');
 CKST[g.id]=open;
 var pct=b.tot?Math.round(b.done/b.tot*100):0;
+/* 미완료 = 기간 지난 것 + 지금 해야 할 것 + 기간 미정 */
+var undone=b.over.length+b.todo.length+b.soon.length;
 var body='';
 if(open){
  body='<div style="margin-top:10px">'
- +ckGrp('⬜ 아직 안 했어요',b.todo,'todo',g)
- +ckGrp('🔄 관찰 진행 중',b.test,'test',g)
- +ckGrp('⚠️ 반응 있었어요',b.bad,'bad',g)
- +ckGrp('⏳ 아직 이른 시기',b.soon,'soon',g)
+ +ckGrp('🟣 기간이 지났어요',b.over,'over',g)
+ +ckGrp('🟡 지금 해야 해요',b.todo,'todo',g)
+ +ckGrp('🟠 관찰 진행 중',b.test,'test',g)
+ +ckGrp('🔴 알레르기 반응 있었어요',b.bad,'bad',g)
+ +ckGrp('🟡 기간 미정',b.soon,'soon',g)
  +ckGrp('✅ 통과한 재료',b.ok,'ok',g)
- +(b.tot+b.soon.length===0?'<div class="mu" style="font-size:11.5px">이 분류에 해당하는 재료가 없어요.</div>':'')
+ +(b.tot===0?'<div class="mu" style="font-size:11.5px">이 분류에 해당하는 재료가 없어요.</div>':'')
  +'</div>'}
 return '<div class="cd" style="border-left:5px solid '+K.c+';background:'+(b.sig==='blue'?'#FCFFFD':'var(--cd)')+'">'
 +'<div onclick="ckTog(\''+g.id+'\')" style="cursor:pointer">'
 +'<div class="rw" style="justify-content:space-between;align-items:center">'
 +'<div style="min-width:0"><b style="font-size:14px">'+g.n+' <span class="mu" style="font-weight:600;font-size:11px">'+g.lb+'</span></b>'
 +'<div style="margin-top:5px"><span class="pill2" style="background:'+K.bg+';color:'+K.c+'">'+K.lb+'</span>'
-+(b.todo.length?' <span class="pill2" style="background:#F6F1ED;color:#8A7F78">안 한 것 '+b.todo.length+'</span>':'')
-+(b.test.length?' <span class="pill2" style="background:#FFF6EC;color:#B07C13">관찰 '+b.test.length+'</span>':'')
++(b.over.length?' <span class="pill2" style="background:'+CKC.over.bg+';color:'+CKC.over.c+'">기간지남 '+b.over.length+'</span>':'')
++(b.todo.length?' <span class="pill2" style="background:'+CKC.todo.bg+';color:'+CKC.todo.c+'">해야할것 '+b.todo.length+'</span>':'')
++(b.test.length?' <span class="pill2" style="background:'+CKC.test.bg+';color:'+CKC.test.c+'">관찰 '+b.test.length+'</span>':'')
 +'</div></div>'
-+'<div style="text-align:right;flex-shrink:0;padding-left:8px"><div style="font-size:17px;font-weight:900;color:'+K.c+';line-height:1">'+b.done+'<span class="mu" style="font-size:11px;font-weight:700">/'+b.tot+'</span></div>'
+/* 통과 / 알레르기반응 / 진행중 / 안한것 — 4분할 표기 */
++'<div style="text-align:right;flex-shrink:0;padding-left:8px">'
++'<div style="font-size:15px;font-weight:900;line-height:1;white-space:nowrap">'
++'<span style="color:'+CKC.ok.c+'">'+b.done+'</span><span class="mu" style="font-weight:700">/</span>'
++'<span style="color:'+CKC.bad.c+'">'+b.bad.length+'</span><span class="mu" style="font-weight:700">/</span>'
++'<span style="color:'+CKC.test.c+'">'+b.test.length+'</span><span class="mu" style="font-weight:700">/</span>'
++'<span style="color:'+(b.over.length?CKC.over.c:CKC.todo.c)+'">'+undone+'</span></div>'
++'<div class="mu" style="font-size:9px;margin-top:2px;white-space:nowrap">통과/반응/진행/안함</div>'
 +'<div class="mu" style="font-size:15px;line-height:1.1">'+(open?'▾':'▸')+'</div></div></div>'
-+'<div class="bar" style="height:8px;border-radius:4px;margin-top:8px">'+(b.done?'<div style="width:'+pct+'%;background:'+K.c+'"></div>':'')+'</div>'
++'<div class="bar" style="height:8px;border-radius:4px;margin-top:8px">'
++(b.done?'<div style="width:'+(b.done/Math.max(1,b.tot)*100)+'%;background:'+CKC.ok.g+'"></div>':'')
++(b.test.length?'<div style="width:'+(b.test.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.test.g+'"></div>':'')
++(b.over.length?'<div style="width:'+(b.over.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.over.g+'"></div>':'')
++(b.bad.length?'<div style="width:'+(b.bad.length/Math.max(1,b.tot)*100)+'%;background:'+CKC.bad.g+'"></div>':'')
++'</div>'
 +'</div>'+body+'</div>'}
 /* 현재 화면에 실제로 펼쳐져 있는 상태를 기억해 두고 그것을 뒤집는다
    (기본 펼침 여부가 신호등에 따라 달라지므로 undefined 를 그냥 false 로 두면
@@ -272,7 +311,7 @@ if(st==='ok'){
  return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">'+title+' '+L.length+'</div>'
  +'<div class="rw" style="flex-wrap:wrap;gap:5px">'+L.map(function(f){return ckOkChip(f)}).join('')+'</div></div>'}
 var sorted=L.slice().sort(function(a,b){
- if(st==='todo'||st==='soon'){if(a[3]!==b[3])return a[3]-b[3];return (b[6]||0)-(a[6]||0)}
+ if(st==='todo'||st==='over'||st==='soon'){if(a[3]!==b[3])return a[3]-b[3];return (b[6]||0)-(a[6]||0)}
  return 0});
 return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;font-weight:800;margin-bottom:5px">'+title+' '+L.length+'</div>'
 +sorted.map(function(f){return ckRow(f,st)}).join('')+'</div>'}
@@ -280,9 +319,9 @@ return '<div style="margin-bottom:9px"><div class="mu" style="font-size:11px;fon
 function ckOkChip(f){return '<span onclick="openF(\''+f[0]+'\')" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:14px;background:linear-gradient(135deg,#3FBF95,#2E9E7A);color:#fff;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 3px rgba(46,158,122,.35)">✓ '+f[1]+' '+esc(f[0])+'</span>'}
 /* 그 외 재료 — 한 줄 */
 function ckRow(f,st){var n=f[0],ob=ckObs(n),m=ageM();
-var C={todo:['#F6F1ED','#8A7F78'],test:['#FFF6EC','#B07C13'],bad:['#FDF0EC','#C0350F'],soon:['#F6F1ED','#9A8F88']}[st];
+var C={todo:[CKC.todo.bg,CKC.todo.c],over:[CKC.over.bg,CKC.over.c],test:[CKC.test.bg,CKC.test.c],bad:[CKC.bad.bg,CKC.bad.c],soon:[CKC.soon.bg,CKC.soon.c]}[st];
 var right='';
-if(st==='todo')right='<button class="btn g s" style="padding:5px 10px;font-size:11px;white-space:nowrap" onclick="ckStart(\''+n+'\')">🔔 시작</button>';
+if(st==='todo'||st==='over')right='<button class="btn g s" style="padding:5px 10px;font-size:11px;white-space:nowrap" onclick="ckStart(\''+n+'\')">🔔 시작</button>';
 else if(st==='test'){
  if(ob){var d=dObs(ob),p=[0,1,2].map(function(x){return ob.c[x]?'●':'○'}).join('');
   right='<span class="mu" style="font-size:10.5px;white-space:nowrap">'+d+'일차 '+p+'</span><button class="btn g s" style="padding:5px 9px;font-size:11px;white-space:nowrap" onclick="ckPass(\''+n+'\')">😊 통과</button>'}
@@ -292,6 +331,7 @@ else if(st==='soon')right='<span class="mu" style="font-size:10.5px;white-space:
 var sub='';
 if(st==='test'&&ob)sub=ob.dt+' 시작'+(ob.m?' · '+esc(ob.m):'');
 else if(st==='todo')sub='만 '+f[3]+'개월+ 가능'+((f[6]||0)>0?(f[6]===2?' · 특별주의':' · 주의'):'');
+else if(st==='over')sub='만 '+f[3]+'개월부터였어요 · 지금이라도 시작'+((f[6]||0)>0?(f[6]===2?' · 특별주의':' · 주의'):'');
 else if(st==='soon')sub='만 '+f[3]+'개월부터';
 else if(st==='bad')sub='반응 기록됨';
 return '<div class="cb" style="background:'+C[0]+';border-radius:9px;border-bottom:0;padding:8px 10px;margin-bottom:5px">'

@@ -33,6 +33,7 @@ return '<div style="padding:8px 0;border-bottom:1px solid var(--ln)"><b style="c
 +'<div class="st">전체 출처</div><div class="cd">'+Object.keys(SRC).map(function(k){return '<div style="padding:8px 0;border-bottom:1px solid var(--ln)"><span class="tg v">'+SRC[k].t+'</span><b style="display:block;font-size:13px;margin:3px 0">'+SRC[k].n+'</b><div class="mu" style="font-size:11.5px">'+SRC[k].d+'</div><a style="font-size:11px" href="'+SRC[k].u+'" target="_blank" rel="noopener">'+SRC[k].u+'</a></div>'}).join('')+'</div>'
 
 /*----- 백업 · 아기 정보 -----*/
++(typeof clCard==='function'?clCard():'')
 +'<div class="st">백업 · 아빠 폰 공유</div><div class="cd"><p class="mu" style="margin:0 0 10px">백업 파일을 카톡으로 보내고 상대 폰에서 불러오면 모든 데이터(성장기록 포함)가 옮겨집니다.</p><button class="btn g s" onclick="expJ()">⬇ 백업 내보내기 (.json)</button><button class="btn g s" style="margin-top:8px" onclick="document.getElementById(\'fj\').click()">⬆ 백업 불러오기</button></div>'
 +'<div class="st">아기 정보</div><div class="cd"><div class="ir"><span>이름</span><b>'+esc(baby.name)+'</b></div><div class="ir"><span>생일</span><b>'+fmt(d0(baby.birth))+'</b></div><div class="ir"><span>나이</span><b>'+ageT()+'</b></div><div class="ir"><span>최근 체중</span><b>'+(T.w?T.w+'kg':'미입력')+'</b></div>'
 +'<button class="btn g s" style="margin-top:12px" onclick="editBaby()">아기 정보 수정</button><button class="btn y s" style="margin-top:8px" onclick="resetAll()">전체 초기화</button></div>'
