@@ -151,3 +151,33 @@ document.getElementById('mb').innerHTML='<div class="mt2">📎 출처</div><div 
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function pickPh(k){phT=k;document.getElementById('fi').click()}
 function delPh(k){delete ph[k];save();document.getElementById('mb').innerHTML=rBody();render()}
+
+/*========== 📂 섹션 접기/펼치기 ==========*/
+/* SEC: 섹션별 펼침 상태. 기본 펼침(1). id 는 화면 안에서 유일해야 한다. */
+var SECK='b6.sec';
+var SEC=LS(SECK,null)||{};
+function secSave(){localStorage.setItem(SECK,JSON.stringify(SEC))}
+function secOn(id,def){var v=SEC[id];return v===undefined?(def===undefined?1:def):v}
+function secTog(id){SEC[id]=secOn(id)?0:1;secSave();render()}
+/* 접이식 섹션 한 덩어리.
+   id  : 저장 키
+   ico : 이모지
+   ttl : 제목
+   sub : 제목 옆 작은 글씨(선택)
+   body: 펼쳤을 때 내용 HTML (문자열 또는 함수 — 접혀 있으면 함수는 호출하지 않아 계산을 아낀다)
+   def : 기본 펼침 여부(1/0)
+   peek: 접혀 있을 때 보여줄 한 줄 요약(선택) */
+function sec(id,ico,ttl,sub,body,def,peek){var on=secOn(id,def);
+var inner=on?(typeof body==='function'?body():body):'';
+return '<div class="sc2'+(on?' on':'')+'">'
++'<button class="sh2" onclick="secTog(\''+id+'\')"><span class="si">'+ico+'</span>'
++'<span class="stx"><b>'+ttl+'</b>'+(sub?'<i>'+sub+'</i>':'')+'</span>'
++(!on&&peek?'<span class="spk">'+peek+'</span>':'')
++'<span class="sar">'+(on?'▾':'▸')+'</span></button>'
++(on?'<div class="sbd">'+inner+'</div>':'')+'</div>'}
+/* 전체 펼치기/접기 (한 화면의 섹션 id 목록을 준다) */
+function secAll(ids,v){ids.forEach(function(i){SEC[i]=v});secSave();render()}
+function secBar(ids){var open=ids.filter(function(i){return secOn(i)}).length;
+return '<div class="sbar"><span class="mu">'+open+' / '+ids.length+' 펼침</span>'
++'<button onclick="secAll('+JSON.stringify(ids).replace(/"/g,'&quot;')+',1)">전체 펼치기</button>'
++'<button onclick="secAll('+JSON.stringify(ids).replace(/"/g,'&quot;')+',0)">전체 접기</button></div>'}

@@ -1,6 +1,6 @@
 /* 이유식 노트 — 오프라인 캐시 */
-var VER='bf-v29';
-var CORE=['./','./index.html','./data.js','./core.js','./ui.js','./combo.js','./mix.js','./calc.js','./stock.js','./update.js','./dash.js',
+var VER='bf-v30';
+var CORE=['./','./index.html','./data.js','./core.js','./ui.js','./combo.js','./mix.js','./calc.js','./stock.js','./update.js','./dash.js','./find.js',
 './home.js','./today.js','./plan.js','./menu.js','./edit.js','./food.js','./grow.js',
 './log.js','./info.js','./boot.js','./manifest.json'];
 

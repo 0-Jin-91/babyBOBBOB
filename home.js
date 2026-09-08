@@ -1,4 +1,7 @@
 /*========== 홈 ==========*/
+/* 섹션 구조: 상단 검색 → 알림(항상 표시) → 접이식 6개 섹션.
+   각 섹션은 sec(id,...) 로 감싸며 펼침 상태가 저장된다(ui.js SEC). */
+var HSEC=['h_goal','h_milk','h_nut','h_rec','h_stage','h_road'];
 function vHome(){var s=curS(),T=TG(),rec=todayRec(),sl=SLOTS(),D=todaySum();
 var pAcc={p:0,fe:0,ca:0,zn:0};
 rec.forEach(function(r){if(!r)return;var n=nutOf(r).t;NK.forEach(function(k){pAcc[k]+=n[k]})});
@@ -7,32 +10,42 @@ var exp=cubes.filter(function(c){return c.q>0&&dLeft(c)<=2});
 var ns=nextStage(),nd=ns?Math.ceil((addM(d0(baby.birth),ns.f)-TD())/864e5):999;
 var dri=T.dri,w=T.w;
 var DS=dayScore(rec);
-return (s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아직 이유식 시작 전</b><p class="mu" style="margin:5px 0 0">시작 예정일 <b style="color:var(--pd)">'+fmt(addM(d0(baby.birth),6))+'</b> · <b>'+Math.max(0,Math.ceil((addM(d0(baby.birth),6)-TD())/864e5))+'일</b> 남음</p></div>':'')
+var DY=mlDay(),G=mlGuide();
+
+/*----- ① 통합 검색 + 알림 (항상 표시) -----*/
+return findBar()
++(s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아직 이유식 시작 전</b><p class="mu" style="margin:5px 0 0">시작 예정일 <b style="color:var(--pd)">'+fmt(addM(d0(baby.birth),6))+'</b> · <b>'+Math.max(0,Math.ceil((addM(d0(baby.birth),6)-TD())/864e5))+'일</b> 남음</p></div>':'')
 +(ns&&nd>0&&nd<=14?'<div class="cd" style="background:#F3FAF7"><b>🎉 '+nd+'일 후 '+ns.n+'로 넘어가요</b><p class="mu" style="margin:4px 0 0">'+fmt(addM(d0(baby.birth),ns.f))+'부터 <b>'+ns.ra+'</b> · '+ns.ct+'</p></div>':'')
 +(due.length?'<div class="alert mid"><span class="ic">🔔</span><div><b>알레르기 관찰 중 '+due.length+'건</b>'+due.map(function(o){return '<br>· '+esc(o.n)+' — '+dObs(o)+'일차'}).join('')+'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';render()">관찰 기록하기</button></div></div>':'')
 +(exp.length?'<div class="alert bad"><span class="ic">🧊</span><div>유효기간 임박: <b>'+exp.map(function(c){return c.n}).join(', ')+'</b><button class="btn g s" style="margin-top:8px" onclick="tab=\'plan\';pTab=\'c\';render()">큐브 보기</button></div></div>':'')
 
-/*----- 하루 목표 기준 -----*/
-+'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center"><b style="font-size:13.5px">🎯 오늘의 하루 목표 기준</b><button class="mu" style="color:var(--bl);font-weight:700" onclick="tab=\'grow\';render()">📈 성장기록</button></div>'
-+'<div class="g2" style="margin-top:8px">'
+/*----- 오늘 탭 바로가기 (항상 표시 · 얇게) -----*/
++'<div class="cd" style="background:#F3F6FA;cursor:pointer;padding:11px" onclick="tab=\'today\';render()"><div class="rw" style="justify-content:space-between;align-items:center"><div><b style="font-size:13px">📅 오늘 기록 관리</b><div class="mu" style="font-size:10.5px;margin-top:2px">끼니 체크 · 먹은 양 수정 · 수유 회차 · 간식</div></div><span style="color:var(--bl);font-weight:800">›</span></div></div>'
+
+/*----- 전체 펼치기/접기 -----*/
++secBar(HSEC)
+
+/*----- ② 하루 목표 기준 -----*/
++sec('h_goal','🎯','오늘의 하루 목표 기준','이유식 · 수유가 함께 채우는 비율',function(){
+return '<div class="rw" style="justify-content:flex-end;margin-bottom:7px"><button class="mu" style="color:var(--bl);font-weight:700" onclick="tab=\'grow\';render()">📈 성장기록</button></div>'
++'<div class="g2">'
 +'<div style="background:'+(T.use?'#fff':'#FFEDE4')+';border:1.5px solid '+(T.use?'var(--ln)':'var(--pc)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="baby.useW=0;save();render()"><div class="mu" style="font-size:10px;font-weight:800">표준 기준 ('+T.lb+')</div><b style="font-size:13px">단백 '+dri.p+'g · 철 '+dri.fe+'mg</b><div class="mu" style="font-size:10px">2020 섭취기준</div></div>'
 +'<div style="background:'+(T.use?'#FFEDE4':'#fff')+';border:1.5px solid '+(T.use?'var(--pc)':'var(--ln)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="if(!'+(w?1:0)+'){alert(\'성장 탭에서 몸무게를 먼저 기록해 주세요\');return}baby.useW=1;save();render()"><div class="mu" style="font-size:10px;font-weight:800">우리 아기 체중 기준</div><b style="font-size:13px">'+(w?'단백 '+rnd(w*dri.pkg)+'g · 철 '+dri.fe+'mg':'몸무게 미입력')+'</b><div class="mu" style="font-size:10px">'+(w?w+'kg × '+dri.pkg+'g/kg':'성장 탭에서 입력')+'</div></div></div>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> '+sT('kdri')+'</div>'
-+dualGoal()+'</div>'
++dualGoal()},1,(T.use?'체중 기준':'표준 기준'))
 
-/*----- 오늘 탭 안내 -----*/
-+'<div class="cd" style="background:#F3F6FA;cursor:pointer" onclick="tab=\'today\';render()"><div class="rw" style="justify-content:space-between;align-items:center"><div><b style="font-size:13px">📅 오늘 기록 관리</b><div class="mu" style="font-size:10.5px;margin-top:2px">끼니 체크 · 먹은 양 수정 · 수유 회차 · 간식까지 한 곳에서</div></div><span style="color:var(--bl);font-weight:800">›</span></div></div>'
+/*----- ③ 수유 -----*/
++sec('h_milk','🍼','오늘 수유','권장 '+DY.lo+'~'+DY.hi+'ml ('+G.lb+')',milkCard,1,D.ml+'ml')
 
-/*----- 수유 입력 -----*/
-+'<div class="st">🍼 오늘 수유 <span class="mu" style="font-weight:600;font-size:11.5px">· 권장 '+mlDay().lo+'~'+mlDay().hi+'ml ('+mlGuide().lb+')</span></div>'+milkCard()
-+'<div class="st">📊 영양 현황</div>'+dashCard()
+/*----- ④ 영양 현황 -----*/
++sec('h_nut','📊','영양 현황','일일 · 주간 · 월간 · 재료별 섭취',function(){
+return dashBoard(true)
++'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';fTab=\'dash\';render()">🥕 재료별 상세 보기</button>'},1,D.cnt+'끼')
 
-/*----- 추천 N끼 합계 -----*/
-+'<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
+/*----- ⑤ 오늘 추천 끼니 -----*/
++sec('h_rec','🍽','오늘 '+MEALS()+'끼 추천','하루 합계 '+DS.sc+'% · 대안·수정·기록',function(){
+return '<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
 return '<div style="text-align:center;background:#fff;border-radius:9px;padding:7px 2px"><div class="mu" style="font-size:9.5px">'+NL[k][0]+'</div><b style="color:'+lvCol(p)+';font-size:15px">'+p+'%</b></div>'}).join('')+'</div><div class="mu" style="font-size:10px;margin-top:6px">이유식 담당 목표 대비</div></div>'
-
-/*----- 오늘 추천 끼니 -----*/
-+'<div class="st">🍽 오늘 '+MEALS()+'끼 추천 <span style="color:'+lvCol(DS.sc)+'">· 하루 합계 '+DS.sc+'%</span></div>'
 +(DS.low.length?'<div class="alert '+(DS.low[0].pc<LV.mid?'bad':'mid')+'"><span class="ic">'+(DS.low[0].pc<LV.mid?'🚨':'⚠️')+'</span><div><b>추천 '+MEALS()+'끼를 다 먹어도 '+DS.low.map(function(x){return x.nm+' '+Math.round(x.pc)+'%'}).join(' · ')+'</b>가 부족합니다.<br>'
 +DS.low.slice(0,2).map(function(x){return '· <b>'+x.nm+'</b> '+rnd2(x.lack)+x.u+' 더 필요 — '+FIX[x.k].f.slice(0,3).join('·')+' 추가<br>'}).join('')
 +'<div class="ch" style="margin-top:7px">'+DS.low.slice(0,2).map(function(x){
@@ -46,11 +59,16 @@ return '<div class="cd" style="padding:10px"><div class="rw" style="justify-cont
 +(function(){var done=loggedToday(r.i);
 return '<div class="rw">'+(done?'<button class="btn g s" onclick="openAteFor(\''+done+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 취소</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
 +(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+(logAmtOf(done)?' · '+logAmtOf(done)+'g':' · 양 미입력')+'</div>':'')})()+'</div>'}).join('')
-+'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'
++'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},1,DS.sc+'%')
 
-/*----- 단계 기준 · 로드맵 -----*/
-+'<div class="st">'+s.n+' 기준</div><div class="cd"><div class="g2">'+cell('농도',s.ra)+cell('횟수',s.ct)+cell('1회 양',s.am)+cell('입자',s.tx)+'</div><p class="mu" style="margin:10px 0 0">'+s.ds+'</p><div class="hr"></div><ul style="margin:0;padding-left:17px;font-size:13px">'+s.td.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul><div style="margin-top:8px">'+sT('ppibbo')+'</div></div>'
-+'<div class="st">'+esc(baby.name)+'의 로드맵</div><div class="cd"><div class="rm">'+roadmap()+'</div></div>'
+/*----- ⑥ 단계 기준 -----*/
++sec('h_stage','📚',s.n+' 기준',s.lb+' · '+s.ra,function(){
+return '<div class="g2">'+cell('농도',s.ra)+cell('횟수',s.ct)+cell('1회 양',s.am)+cell('입자',s.tx)+'</div><p class="mu" style="margin:10px 0 0">'+s.ds+'</p><div class="hr"></div><ul style="margin:0;padding-left:17px;font-size:13px">'+s.td.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul><div style="margin-top:8px">'+sT('ppibbo')+'</div>'},0,s.ra)
+
+/*----- ⑦ 로드맵 -----*/
++sec('h_road','🗺',esc(baby.name)+'의 로드맵','이유식 단계별 이정표',function(){
+return '<div class="rm">'+roadmap()+'</div>'},0)
+
 +'<p class="mu" style="text-align:center;font-size:10.5px;margin:14px 6px 0">참고 자료입니다. 최종 판단은 담당 소아과와 상의하세요.</p>'}
 
 /*========== 🎯 이유식 + 수유 이중 목표 ==========*/

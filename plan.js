@@ -5,7 +5,10 @@ d.push(rs.map(function(r){return r.i}));
 prev=[];rs.forEach(function(r){mainKeys(r).forEach(function(k){if(k.charAt(0)==='P')prev.push(k)})})}
 plan={ws:ymd(ws),n:n,d:d};shopChk={};save()}
 
-function vPlan(){return '<div class="tt"><button class="'+(pTab==='w'?'on':'')+'" onclick="pTab=\'w\';render()">🗓 주간</button><button class="'+(pTab==='s'?'on':'')+'" onclick="pTab=\'s\';render()">🛒 장보기</button><button class="'+(pTab==='c'?'on':'')+'" onclick="pTab=\'c\';render()">🧊 큐브</button></div>'+(pTab==='w'?vWeek():pTab==='s'?vShop():vCube())}
+function vPlan(){return '<div class="tt"><button class="'+(pTab==='w'?'on':'')+'" onclick="pTab=\'w\';render()">🗓 주간 식단</button><button class="'+(pTab==='c'?'on':'')+'" onclick="pTab=\'c\';render()">🧊 큐브</button><button onclick="tab=\'shop\';render()">🛒 장보기 ›</button></div>'+(pTab==='c'?vCube():vWeek())}
+/* 장보기 독립 탭 */
+function vShopTab(){if(!plan||plan.ws!==ymd(wkStart())||plan.n!==SLOTS().length)genPlan();
+return vShop()}
 
 /*========== 주간 ==========*/
 function vWeek(){if(!plan||plan.ws!==ymd(wkStart())||plan.n!==SLOTS().length)genPlan();
@@ -28,7 +31,7 @@ h+='<div class="st">주간 평균 (1일 이유식 기준)</div><div class="cd">'
 return '<div class="nrow" style="cursor:pointer" onclick="diagDay(\''+k+'\')"><div class="nhd"><div class="nnm"><i class="ndot" style="background:'+NL[k][2]+'"></i>'+NL[k][0]+' <span class="badge '+lv+'">'+lvIco(pc)+'</span></div><div><div class="npc" style="color:'+lvCol(pc)+';font-size:16px">'+Math.round(pc)+'%</div><div class="nval">'+rnd(v)+' / '+rnd(T.solid[k])+NL[k][1]+'</div></div></div>'
 +'<div class="bar" style="height:17px"><i class="solid" style="width:'+Math.min(100,pc)+'%;background:'+NL[k][2]+'"></i><span class="goal" style="left:calc(100% - 3px)"></span></div></div>'}).join('')
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">총 '+cnt+'끼 · 하루 철분 평균 '+rnd(wk.fe/7)+'mg (이유식 담당 목표 '+rnd(T.solid.fe)+'mg)</div></div>'
-+'<button class="btn g s" onclick="pTab=\'s\';render()">🛒 장보기 리스트 만들기</button>';
++'<button class="btn g s" onclick="tab=\'shop\';render()">🛒 장보기 리스트 보기</button>';
 return h}
 function swapPlan(i,j){var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),L=altList(si,[plan.d[i][j]]);
 document.getElementById('mb').innerHTML='<div class="mt2">메뉴 교체</div><p class="mu" style="margin:6px 0 10px">'+['월','화','수','목','금','토','일'][i]+'요일 '+SLOTS()[j]+' · 영양 점수 높은 순</p>'

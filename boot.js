@@ -13,7 +13,8 @@ save();boot()}
 var TABD={
 home :{i:'🏠',n:'홈'   ,d:'오늘 요약·목표·추천'},
 today:{i:'📅',n:'오늘' ,d:'오늘 기록 관리'},
-plan :{i:'🗓',n:'식단' ,d:'주간 식단·장보기·큐브'},
+plan :{i:'🗓',n:'식단' ,d:'주간 식단·큐브'},
+shop :{i:'🛒',n:'장보기',d:'장보기 목록·추천'},
 menu :{i:'🍲',n:'메뉴' ,d:'레시피 목록·검색'},
 food :{i:'🥕',n:'재료' ,d:'재료도감·관찰·섭취분석'},
 grow :{i:'📈',n:'성장' ,d:'성장곡선·측정기록'},
@@ -22,7 +23,7 @@ calc :{i:'🧮',n:'계산' ,d:'배죽·분유·계량 등'},
 combo:{i:'🧩',n:'조합' ,d:'재료 궁합 점수·경고'},
 log  :{i:'📝',n:'기록' ,d:'전체 기록·CSV'},
 info :{i:'📖',n:'정보' ,d:'설정·출처·백업'}};
-var TABDEF=['home','today','plan','menu','food','grow','stock','calc','combo','log','info'];
+var TABDEF=['home','today','plan','menu','food','grow','stock','shop','calc','combo','log','info'];
 var NAVK='b6.nav';
 /* NAVC={order:[...], off:{tab:1}} */
 var NAVC=LS(NAVK,null)||{order:TABDEF.slice(),off:{}};
@@ -37,6 +38,9 @@ function navList(){return navNorm().filter(function(t){return !NAVC.off[t]})}
 /* nav 버튼 그리기 */
 function navRender(){var w=document.getElementById('nvb');if(!w)return;
 w.innerHTML=navList().map(function(t){var T=TABD[t];
+return '<button data-t="'+t+'" class="'+(t===tab?'on':'')+'"><i>'+T.i+'</i><span class="nl">'+T.n+'</span><em class="nd">'+T.d+'</em></button>'}).join('');
+var cb=document.getElementById('cbtn');
+if(cb)cb.innerHTML=navList().slice(0,5).map(function(t){var T=TABD[t];
 return '<button data-t="'+t+'" class="'+(t===tab?'on':'')+'"><i>'+T.i+'</i>'+T.n+'</button>'}).join('')}
 
 /*========== 탭 설정 모달 ==========*/
@@ -54,6 +58,11 @@ return '<div class="tcf'+(off?' off':'')+'"><div class="ti">'+T.i+'</div>'
 +'<button onclick="navMove('+i+',1)" '+(i>=o.length-1?'disabled':'')+'>▼</button></div>'
 +'<div class="tsw'+(off?'':' on')+'" onclick="navToggle(\''+t+'\')"><i></i></div>')
 +'</div>'}).join('')
++'<div class="st">메뉴 표시 방식</div>'
++'<div class="cd"><div class="g2">'
++'<div class="nmc'+(NAVM==='drawer'?' on':'')+'" onclick="navModeSet(\'drawer\')"><b>☰ 숨김 (기본)</b><div class="mu" style="font-size:10.5px;margin-top:3px">평소엔 숨어 있고 왼쪽 위 ☰ 를 누르면 열립니다. 화면이 넓어집니다.</div></div>'
++'<div class="nmc'+(NAVM==='fixed'?' on':'')+'" onclick="navModeSet(\'fixed\')"><b>📌 항상 표시</b><div class="mu" style="font-size:10.5px;margin-top:3px">왼쪽에 늘 붙어 있습니다. 탭 이동이 한 번에 됩니다.</div></div>'
++'</div><div class="mu" style="font-size:10.5px;margin-top:8px">숨김 모드에서는 <b>화면 아래에 자주 쓰는 5개 탭</b>이 함께 표시됩니다.</div></div>'
 +'<button class="btn g" style="margin-top:6px" onclick="navReset()">↩️ 기본 순서로 되돌리기</button>'
 +'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>'}
 function navMove(i,d){var o=navNorm(),j=i+d;
@@ -69,6 +78,20 @@ navSave();navCfgDraw();navRender();render()}
 function navReset(){if(!confirm('탭 순서와 표시를 기본값으로 되돌릴까요?'))return;
 NAVC={order:TABDEF.slice(),off:{}};navSave();navCfgDraw();navRender();render()}
 
+/*========== 📱 왼쪽 메뉴 — 드로어 / 고정 모드 ==========*/
+/* NAVM: 'drawer' = 숨겨져 있다가 ☰ 로 열기(기본) / 'fixed' = 항상 표시 */
+var NAVMK='b6.navmode';
+var NAVM=LS(NAVMK,null)||'drawer';
+function navModeSet(m){NAVM=m;localStorage.setItem(NAVMK,JSON.stringify(m));
+navApply();navRender();navCfgDraw&&document.getElementById('md').classList.contains('on')&&navCfgDraw();render()}
+function navApply(){var b=document.body;
+if(NAVM==='fixed'){b.classList.add('navfix');b.classList.remove('navdrw')}
+else{b.classList.add('navdrw');b.classList.remove('navfix');navClose()}}
+function navOpen(){if(NAVM==='fixed')return;
+document.body.classList.add('nvon');navRender()}
+function navClose(){document.body.classList.remove('nvon')}
+function navToggleDrawer(){document.body.classList.contains('nvon')?navClose():navOpen()}
+
 /*========== 부팅 ==========*/
 function boot(){var B=document.body;
 if(!baby){B.classList.add('solo');document.getElementById('ob').classList.remove('hd');
@@ -76,10 +99,10 @@ document.getElementById('mv').classList.add('hd');document.getElementById('nv').
 B.classList.remove('solo');document.getElementById('ob').classList.add('hd');
 document.getElementById('mv').classList.remove('hd');document.getElementById('nv').classList.remove('hd');
 if(!selS)selS=curS().id==='ready'?'early':curS().id;
-migLogs();updMark();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook()}
+migLogs();updMark();navApply();navRender();render();notiCheck();netBanner();updBanner();updAuto();updSWHook()}
 
 /*========== 렌더 ==========*/
-var VIEW={home:vHome,today:vToday,stock:vStock,calc:vCalc,combo:vCombo,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
+var VIEW={home:vHome,today:vToday,stock:vStock,shop:vShopTab,calc:vCalc,combo:vCombo,plan:vPlan,menu:vMenu,food:vFood,grow:vGrow,log:vLog,info:vInfo};
 function render(){var s=curS(),T=TG();
 document.getElementById('hdr').innerHTML='<button class="rfb'+(UPD.found?' new':'')+'" id="rfb" onclick="updCheck()" title="새로고침 · 업데이트 확인">🍼</button><div class="hg">TODAY · '+fmt(TD())+' · 이유식 '+MEALS()+'끼'+(T.w?' · '+T.w+'kg':'')+'</div><div class="hn">'+esc(baby.name)+' <span style="font-size:12px;font-weight:600;color:var(--sub)">아빠의 이유식 레시피</span></div><div class="ha">'+ageT()+'</div><span class="pl" style="background:'+s.c+'">'+s.n+' · '+s.lb+'</span>';
 document.getElementById('vw').innerHTML=(VIEW[tab]||vHome)();
@@ -99,7 +122,15 @@ b.innerHTML=isOnline()?'':'📡 오프라인 — 기록·계산은 정상 작동
 
 /*========== 이벤트 ==========*/
 document.getElementById('nv').addEventListener('click',function(e){var b=e.target.closest('button');
+if(b&&b.dataset.t){tab=b.dataset.t;navClose();render()}});
+/* 하단 빠른탭 */
+var _cb=document.getElementById('cbtn');
+if(_cb)_cb.addEventListener('click',function(e){var b=e.target.closest('button');
 if(b&&b.dataset.t){tab=b.dataset.t;render()}});
+/* 드로어 배경 클릭·ESC 로 닫기 */
+var _sc=document.getElementById('nvsc');
+if(_sc)_sc.addEventListener('click',navClose);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')navClose()});
 
 /* 조리 단계 사진 업로드 */
 document.getElementById('fi').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;
@@ -124,6 +155,8 @@ if(d.stock&&typeof STK!=='undefined'){STK=d.stock;stkSave()}
 if(d.bowl&&typeof BW!=='undefined'){BW=d.bowl;bwSave()}
 if(d.calc)localStorage.setItem('b6.calc',JSON.stringify(d.calc));
 if(d.nav){NAVC=d.nav;navSave()}
+if(d.navm){NAVM=d.navm;localStorage.setItem(NAVMK,JSON.stringify(d.navm))}
+if(d.sec&&typeof SEC!=='undefined'){SEC=d.sec;secSave()}
 if(d.cmix&&typeof CMIX!=='undefined'){CMIX=d.cmix;cmSave()}
 save();alert('불러오기 완료!');boot()}catch(err){alert('파일을 읽을 수 없습니다.')}};
 r.readAsText(f);e.target.value=''});
