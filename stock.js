@@ -107,6 +107,35 @@ function cubeGDefault(){return CUBE_G}
 function cubeGramOf(key,nm){if(typeof cubes==='undefined')return 0;
 return cubes.filter(function(c){return c.q>0&&((key&&(c.key===key))||(nm&&c.n===nm))})
 .reduce(function(a,c){return a+c.q*c.g},0)}
+/*----- 🧊 큐브 부족 판정 (2개 이하) -----*/
+var CUBE_LOW=2;   /* 이 개수 이하면 부족 알림 */
+/* 같은 재료(key 우선)끼리 묶어 총 개수를 센다 → [{n,key,q,raw,rid}]
+   raw : 관련 원재료 보유 g (0 이면 원재료부터 구입해야 함)
+   rid : 그 원재료 재고의 id (큐브화 버튼용) */
+function cubeLow(){if(typeof cubes==='undefined')return [];
+var G={},od=[];
+cubes.forEach(function(c){var k=c.key||c.n;
+if(!G[k]){G[k]={n:c.n,key:k,q:0};od.push(k)}
+G[k].q+=Math.max(0,+c.q||0)});
+return od.map(function(k){var g=G[k];
+var raw=(typeof rawGramOf==='function')?rawGramOf(g.key,g.n):0;
+var s=(typeof stkFind==='function')?(stkFind(g.key)||stkFind(g.n)):null;
+return {n:g.n,key:g.key,q:g.q,raw:raw,rid:(s?s.id:'')}})
+.filter(function(x){return x.q<=CUBE_LOW})
+.sort(function(a,b){return a.q-b.q})}
+/* 부족 알림 카드 HTML — 원재료 있으면 큐브화, 없으면 구입 안내 */
+function cubeLowAlert(){var L=cubeLow();if(!L.length)return '';
+var mk=L.filter(function(x){return x.raw>0}),by=L.filter(function(x){return !(x.raw>0)});
+var gone=L.filter(function(x){return x.q<=0}).length;
+return '<div class="alert '+(gone?'bad':'mid')+'"><span class="ic">'+(gone?'🚨':'⚠️')+'</span><div>'
++'<b>🧊 큐브 부족 '+L.length+'건</b> <span class="mu" style="font-size:10.5px">('+CUBE_LOW+'개 이하)</span>'
++(mk.length?'<div style="margin-top:7px"><b style="font-size:12px">🧊 큐브를 더 만들 수 있어요</b>'
++mk.map(function(x){return '<div class="mu" style="font-size:11px;margin-top:2px">· <b>'+esc(x.n)+'</b> 큐브 '+x.q+'개 남음 — 원재료 약 '+rnd(x.raw)+'g 보유 → <b>큐브화하세요</b>'
++(x.rid?' <button class="btn g s" style="padding:2px 8px;margin-left:3px" onclick="cubeify(\''+x.rid+'\')">🧊 큐브화</button>':'')+'</div>'}).join('')+'</div>':'')
++(by.length?'<div style="margin-top:7px"><b style="font-size:12px">🛒 원재료부터 구입해야 해요</b>'
++by.map(function(x){return '<div class="mu" style="font-size:11px;margin-top:2px">· <b>'+esc(x.n)+'</b> 큐브 '+(x.q<=0?'<b style="color:var(--rd)">소진</b>':x.q+'개 남음')+' — 원재료 재고도 없어요 → <b>장보기 필요</b></div>'}).join('')
++'<button class="btn g s" style="margin-top:6px" onclick="tab=\'plan\';pTab=\'s\';render()">🛒 장보기 목록 보기</button></div>':'')
++'</div></div>'}
 /* 원재료 재고를 큐브화: gEach g 짜리 qty 개 → 큐브 등록 + 원재료 차감 */
 function cubeify(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 var leftG=u2g(s,Math.max(0,s.left));
@@ -149,9 +178,9 @@ return '<div class="tt"><button class="'+(sTab==='list'?'on':'')+'" onclick="sTa
 /*----- 🧊 큐브 재고 목록 (재고화면 안에서 관리, plan.js cubes 공유) -----*/
 function vStkCube(){var act=(typeof cubes!=='undefined')?cubes.filter(function(c){return c.q>0}):[];
 var head='<div class="cd" style="background:#F3FAF7"><b style="font-size:13.5px">🧊 냉동 큐브 재고</b><div class="mu" style="font-size:10.5px;margin-top:4px">원재료를 큐브화하거나(원재료 탭의 <b>🧊 큐브화</b>), 장보기 후 이미 큐브로 만든 것은 <b>등록 탭 › 🧊 큐브로 바로 등록</b>. 만든 날 기준 14일까지 권장 사용기한.</div></div>';
-if(!act.length)return head+'<div class="cd mu">보유 중인 큐브가 없어요. 원재료 탭에서 <b>🧊 큐브화</b> 하거나 등록 탭에서 <b>큐브로 바로 등록</b>해 보세요.</div>';
+if(!act.length)return head+cubeLowAlert()+'<div class="cd mu">보유 중인 큐브가 없어요. 원재료 탭에서 <b>🧊 큐브화</b> 하거나 등록 탭에서 <b>큐브로 바로 등록</b>해 보세요.</div>';
 act.sort(function(a,b){return (typeof dLeft==='function'?dLeft(a)-dLeft(b):0)});
-return head+'<div class="cd">'+act.map(function(c){var d=(typeof dLeft==='function')?dLeft(c):null;
+return head+cubeLowAlert()+'<div class="cd">'+act.map(function(c){var d=(typeof dLeft==='function')?dLeft(c):null;
 return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;overflow:hidden">'+(typeof ART==='function'?ART('cube'):'🧊')+'</div>'
 +'<div style="flex:1"><b style="font-size:13.5px">'+esc(c.n)+'</b>'+(c.from==='raw'?' <span class="tg">원재료화</span>':c.from==='direct'?' <span class="tg p">장보기</span>':'')
 +'<div class="mu" style="font-size:10.5px">'+c.g+'g/개 · 총 '+(c.q*c.g)+'g · '+(d==null?'':d>0?'<b style="color:'+(d<=2?'var(--rd)':'var(--sub)')+'">D-'+d+'</b>':'<b style="color:var(--rd)">기한 초과</b>')+'</div></div>'
@@ -165,6 +194,7 @@ return (low.length?'<div class="alert '+(stkPct(low[0])<=10?'bad':'mid')+'"><spa
 +low.slice(0,5).map(function(s){return '<br>· '+esc(s.n)+' — '+stkAmt(s,Math.max(0,s.left))+' 남음 ('+Math.round(stkPct(s))+'%)'}).join('')
 +(low.length>5?'<br>· 외 '+(low.length-5)+'건':'')
 +'<button class="btn g s" style="margin-top:8px" onclick="tab=\'plan\';pTab=\'s\';render()">🛒 장보기 목록 보기</button></div></div>':'<div class="alert ok"><span class="ic">✅</span><div>모든 재료 재고가 <b>충분</b>합니다 (20% 초과).</div></div>')
++cubeLowAlert()
 +(exp.length?'<div class="alert bad"><span class="ic">📅</span><div>유통기한 임박: <b>'+exp.map(function(s){var d=stkExpLeft(s);return s.n+(d<0?'(지남)':' D-'+d)}).join(', ')+'</b></div></div>':'')
 +'<div class="cd" style="padding:9px"><input value="'+esc(sQ)+'" oninput="sQ=this.value;reStk()" id="sQi" placeholder="🔎 재고 검색" style="width:100%;padding:10px;border:1.5px solid var(--ln);border-radius:11px;outline:none"></div>'
 +'<div id="stkres">'+stkRows()+'</div>'}

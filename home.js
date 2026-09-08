@@ -17,6 +17,7 @@ return findBar()
 +(s.id==='ready'?'<div class="cd" style="background:#FFF6EC"><b>🕒 아직 이유식 시작 전</b><p class="mu" style="margin:5px 0 0">시작 예정일 <b style="color:var(--pd)">'+fmt(addM(d0(baby.birth),6))+'</b> · <b>'+Math.max(0,Math.ceil((addM(d0(baby.birth),6)-TD())/864e5))+'일</b> 남음</p></div>':'')
 +(ns&&nd>0&&nd<=14?'<div class="cd" style="background:#F3FAF7"><b>🎉 '+nd+'일 후 '+ns.n+'로 넘어가요</b><p class="mu" style="margin:4px 0 0">'+fmt(addM(d0(baby.birth),ns.f))+'부터 <b>'+ns.ra+'</b> · '+ns.ct+'</p></div>':'')
 +(due.length?'<div class="alert mid"><span class="ic">🔔</span><div><b>알레르기 관찰 중 '+due.length+'건</b>'+due.map(function(o){return '<br>· '+esc(o.n)+' — '+dObs(o)+'일차'}).join('')+'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';render()">관찰 기록하기</button></div></div>':'')
++((typeof cubeLowAlert==='function')?cubeLowAlert():'')
 +(exp.length?'<div class="alert bad"><span class="ic">🧊</span><div>유효기간 임박: <b>'+exp.map(function(c){return c.n}).join(', ')+'</b><button class="btn g s" style="margin-top:8px" onclick="tab=\'plan\';pTab=\'c\';render()">큐브 보기</button></div></div>':'')
 
 /*----- 오늘 탭 바로가기 (항상 표시 · 얇게) -----*/
