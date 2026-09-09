@@ -200,16 +200,25 @@ function reLog(){render()}
 var MSOPEN=0, MSQ='';
 function menuCands(){
   var si=IDS.indexOf(curS().id==='ready'?'early':curS().id);
-  var A=[],B=[],seen={};
+  /*───────── 후보 정렬: 내 메뉴 → 현재 단계 → 나머지 ─────────
+     ★ 내가 만든 메뉴(my=1)를 맨 위에 둔다. 직접 만든 것을 가장 자주 쓰는데
+       기본 메뉴 수십 개에 묻혀 찾기 어려웠다.
+     ★ 필터를 최소로 줄였다. 예전에는 y==='f'(과일칩)와 재료 없는 항목을
+       걸렀는데, 내가 만든 메뉴는 유형이 비어 있거나 재료를 나중에 채우는
+       경우가 있어 그 조건에 걸려 사라졌다. 내 메뉴는 무조건 통과시킨다 —
+       내가 만든 것을 앱이 숨기면 찾을 방법이 없다. */
+  var MINE=[],A=[],B=[],seen={};
   RCP().forEach(function(r){
-    if(!r||seen[r.i])return;
-    if(r.y==='f')return;                 /* 과일칩 등 메뉴가 아닌 항목 */
-    if(!(r.g||[]).length)return;         /* 재료 없는 껍데기 */
+    if(!r||!r.i||seen[r.i])return;
     seen[r.i]=1;
+    if(r.my){ MINE.push(r); return }        /* 내 메뉴 — 조건 없이 최상단 */
+    if(r.y==='f')return;                    /* 기본 항목 중 과일칩은 메뉴가 아님 */
+    if(!(r.g||[]).length)return;            /* 재료 없는 껍데기 */
     if(r.s===si)A.push(r);else B.push(r);
   });
-  var L=A.concat(B), q=(MSQ||'').trim();
+  var L=MINE.concat(A,B), q=(MSQ||'').trim();
   if(!q) return L;
+  /* 첫 글자로 시작하는 것 먼저, 그다음 이름에 포함된 것 (각 그룹 안에서 위 순서 유지) */
   var st=[],inc=[];
   L.forEach(function(r){
     var n=r.n||'';
@@ -227,15 +236,23 @@ function drawMenuSug(){
     box.innerHTML='<div class="mu" style="padding:8px 2px;font-size:11.5px">해당하는 메뉴가 없어요. 그대로 입력해도 기록됩니다.</div>';
     return;
   }
+  /* 내 메뉴는 이름 옆에 노란 별(★)로 구분하고, 기본 메뉴와 경계에 선을 둔다 */
+  var shown=L.slice(0,120), nMine=0;
+  shown.forEach(function(r){ if(r.my)nMine++ });
   box.innerHTML='<div style="max-height:230px;overflow:auto;border:1.5px solid var(--ln);border-radius:12px;margin-top:6px;background:#fff">'
-   +L.slice(0,60).map(function(r){
-      return '<div onclick="pickMenuName(\''+String(r.i).replace(/'/g,'')+'\')" '
-        +'style="padding:11px 12px;border-bottom:1px solid #F2ECE7;display:flex;justify-content:space-between;align-items:center">'
-        +'<span style="font-size:13.5px;font-weight:700">'+esc(r.n)+'</span>'
-        +'<span class="mu" style="font-size:10.5px">'+(STG[(r.s||0)+1]?STG[(r.s||0)+1].n:'')+'</span></div>';
+   +shown.map(function(r,i){
+      var sep=(i===nMine&&nMine>0&&nMine<shown.length)
+        ?'<div class="mu" style="padding:7px 12px;background:#FAF7F4;font-size:10.5px;font-weight:700">기본 메뉴</div>':'';
+      var hd=(i===0&&r.my)
+        ?'<div class="mu" style="padding:7px 12px;background:#FFFBEB;font-size:10.5px;font-weight:700;color:#B8860B">★ 나의 메뉴</div>':'';
+      return sep+hd+'<div onclick="pickMenuName(\''+String(r.i).replace(/'/g,'')+'\')" '
+        +'style="padding:11px 12px;border-bottom:1px solid #F2ECE7;display:flex;justify-content:space-between;align-items:center;gap:8px">'
+        +'<span style="font-size:13.5px;font-weight:700;flex:1;min-width:0">'
+        +(r.my?'<span style="color:#F5B301">★</span> ':'')+esc(r.n)+'</span>'
+        +'<span class="mu" style="font-size:10.5px;flex:0 0 auto">'+(STG[(r.s||0)+1]?STG[(r.s||0)+1].n:'')+'</span></div>';
     }).join('')
    +'</div>'
-   +(L.length>60?'<div class="mu" style="font-size:10.5px;margin-top:4px">앞 60개만 표시 — 이름을 더 입력해 좁혀 보세요.</div>':'');
+   +(L.length>120?'<div class="mu" style="font-size:10.5px;margin-top:4px">앞 60개만 표시 — 이름을 더 입력해 좁혀 보세요.</div>':'');
 }
 /* 고른 메뉴를 칸에 넣고 재료까지 채운다 */
 function pickMenuName(id){
