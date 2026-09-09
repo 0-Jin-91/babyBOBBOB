@@ -50,14 +50,35 @@ var al=bad.length?'<div class="alert bad" style="cursor:pointer" onclick="diagMe
 :mid.length?'<div class="alert mid" style="cursor:pointer" onclick="diagMeal(\''+(curR?curR.i:'')+'\')"><span class="ic">⚠️</span><div><b>'+mid.map(function(x){return x.nm}).join(' · ')+'</b>이 조금 부족합니다. 다른 끼니·수유로 보충됩니다.<br><u>눌러서 개선안 보기 ›</u></div></div>'
 :ovr.length?'<div class="alert mid" style="cursor:pointer" onclick="diagMeal(\''+(curR?curR.i:'')+'\')"><span class="ic">⚠️</span><div><b>'+ovr.map(function(x){return x.nm}).join(' · ')+'</b>이 1끼 목표의 '+LV.over+'%를 넘습니다. 재료를 조금 줄여도 좋아요.<br><u>눌러서 상세 보기 ›</u></div></div>'
 :'<div class="alert ok"><span class="ic">✅</span><div>이 한 끼로 주요 영양소가 <b>적정 범위('+LV.ok+'~'+LV.over+'%)</b>에 있습니다.</div></div>';
-return '<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-size:14px">🍀 1회 분량 영양'+(ml>1?' ×'+ml:'')+'</b><span class="badge '+lvl(sc)+'" style="font-size:12px;padding:5px 10px">'+lvIco(sc)+' 종합 '+sc+'%</span></div>'
-+'<div class="mu" style="font-size:10.5px;margin-bottom:9px">1끼 목표 = '+(T.use?'체중 '+T.w+'kg 기준':'표준('+T.lb+')')+' 하루 목표 × 영양소별 이유식 담당비율 ÷ '+MEALS()+'끼</div>'+al
+/*───────── 하루 분량 대비 (위) ─────────
+   ★ 1회 분량만 보여주면 "이 한 끼가 목표에 닿았나"는 알 수 있지만
+     "남은 끼니에 무엇을 보충해야 하나"는 알 수 없다. 하루 전체(이유식 담당분)
+     대비 비율을 함께 보여주면 그 판단이 된다.
+   ★ 기준은 T.solid — 하루 목표(day) 중 이유식이 담당하는 몫이다. 수유가
+     담당하는 몫까지 포함한 day 로 나누면 이유식만으로는 절대 100%가 되지 않아
+     항상 부족해 보인다. */
+var dayD = NK.map(function(k){
+  var v=(nu.t[k]||0), goal=T.solid[k]||0.01, pc=v/goal*100;
+  return {k:k, nm:NL[k][0], u:NL[k][1], col:NL[k][2], v:v, goal:goal, pc:pc};
+});
+var dayAvg = Math.round(dayD.reduce(function(a,x){return a+Math.min(150,x.pc)},0)/dayD.length);
+var oD = secOn('nuDay',1), oM = secOn('nuMeal',1);
+return '<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center;cursor:pointer" onclick="secTog(\'nuDay\')"><b style="font-size:14px">📅 하루 분량 대비'+(ml>1?' ×'+ml:'')+'</b><span><span class="badge '+lvl(dayAvg)+'" style="font-size:12px;padding:5px 10px">'+lvIco(dayAvg)+' 평균 '+dayAvg+'%</span> <span class="mu" style="font-weight:800">'+(oD?'▲':'▼')+'</span></span></div>'
++(oD?'<div class="mu" style="font-size:10.5px;margin:6px 0 9px">하루 이유식 담당량 기준 — <b>이 메뉴 하나가 하루치의 몇 %인지</b>. 남은 '+Math.max(0,MEALS()-1)+'끼에 무엇을 채울지 볼 때 쓰세요.</div>'
++dayD.map(nrow).join('')
++'<div class="mu" style="font-size:10px;margin-top:6px">하루 이유식 담당 목표: 단백 '+rnd2(T.solid.p)+'g · 철분 '+rnd2(T.solid.fe)+'mg · 칼슘 '+Math.round(T.solid.ca)+'mg · 아연 '+rnd2(T.solid.zn)+'mg ('+MEALS()+'끼 합계)</div>':'')
++'</div>'
+/*───────── 1회 분량 (아래) ─────────*/
++'<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center;cursor:pointer" onclick="secTog(\'nuMeal\')"><b style="font-size:14px">🍀 1회 분량 영양'+(ml>1?' ×'+ml:'')+'</b><span><span class="badge '+lvl(sc)+'" style="font-size:12px;padding:5px 10px">'+lvIco(sc)+' 종합 '+sc+'%</span> <span class="mu" style="font-weight:800">'+(oM?'▲':'▼')+'</span></span></div>'
++(!oM?'</div>':'')      /* 접혔으면 카드를 바로 닫는다 */
++(oM?'<div class="mu" style="font-size:10.5px;margin:6px 0 9px">1끼 목표 = '+(T.use?'체중 '+T.w+'kg 기준':'표준('+T.lb+')')+' 하루 목표 × 영양소별 이유식 담당비율 ÷ '+MEALS()+'끼</div>'+al
 +D.map(nrow).join('')
 +'<div class="mu" style="font-size:10px;margin-top:6px">비타민C '+rnd(nu.t.vc)+'mg · 고기 '+Math.round(nu.meat)+'g</div>'
 +'<div class="hr"></div><b style="font-size:12.5px">재료별 기여도</b><table class="tb" style="margin-top:5px"><tr><th>재료</th><th>g</th><th>단백</th><th>철</th><th>칼슘</th><th>VC</th></tr>'
 +nu.d.map(function(o){return '<tr><td>'+esc(o.n)+(o.ty==='h'?' <span class="tg r" style="padding:0 4px">헴</span>':'')+'</td><td>'+rnd(o.g)+'</td><td>'+rnd(o.p)+'</td><td>'+rnd2(o.fe)+'</td><td>'+Math.round(o.ca)+'</td><td>'+rnd(o.vc)+'</td></tr>'}).join('')+'</table>'
 +(nu.ms.length?'<div class="mu" style="font-size:10.5px;margin-top:6px">※ 영양 미반영: '+nu.ms.join(', ')+'</div>':'')
-+'<div class="mu" style="font-size:10.5px;margin-top:6px">※ 원물 기준 추정치(조리 손실 미반영). '+sT('rda')+sT('kdri')+'</div></div>'+feCoach(nu)}
++'<div class="mu" style="font-size:10.5px;margin-top:6px">※ 원물 기준 추정치(조리 손실 미반영). '+sT('rda')+sT('kdri')+'</div></div>':'')
++feCoach(nu)}
 
 /*========== 진단 모달 (하루) ==========*/
 function fdName(key){for(var i=0;i<FD.length;i++)if(FD[i][4]===key||FD[i][0]===key)return FD[i][0];return key}

@@ -181,8 +181,10 @@ var hit=null;STK.forEach(function(s){if(s.key===k&&!hit)hit=s});return hit}
 /* 그 재료를 재고 규격 기준으로 담을 때의 행 하나 */
 function stkRow(k){var s=stkByKey(k),q=QG[k]||10,u=qUnit(k);
 if(s&&isCnt(s.unit)){var per=stkPer(s);
-/* 권장량(g)에 가장 가까운 개수 — 0.5 단위로 끊는다. 최소 0.5 */
-var n=Math.max(.5,Math.round(q/per*2)/2);
+/* 권장량(g)에 맞는 개수 — 1개 단위. 최소 1개.
+   ★ 예전에는 0.5 단위로 끊었다. 반 개를 실제로 넣는 사람은 없어서
+     화면의 0.5 가 오해만 만들었다(edAddStk 와 같은 이유). */
+var n=Math.max(1,Math.ceil(q/per));
 return [k,n,'개',k,per]}
 return [k,q,u,k]}
 /* 재고 규격이 바뀌었을 때 저장된 모든 레시피의 개당 g 을 갱신한다.
@@ -210,9 +212,14 @@ function edAddStk(k){var s=stkByKey(k);
 if(!(s&&isCnt(s.unit)))return edAdd(k);
 var per=stkPer(s),hit=-1;
 ME.g.forEach(function(x,i){if(x[3]===k)hit=i});
-var step=Math.max(.5,Math.round((QG[k]||10)/per*2)/2);
+/* ★ 개수는 1개 단위로 올린다.
+   예전에는 Math.max(.5, …*2)/2 로 0.5개 단위로 맞췄다. 계산상으로는 권장량에
+   가깝지만, 큐브·달걀처럼 '개'로 세는 재료는 실제로 반 개를 넣지 않는다.
+   화면에 0.5 가 찍히면 사용자는 자기가 잘못 입력한 것으로 오해한다.
+   → 최소 1개, 그리고 정수로 올림한다(부족한 쪽보다 채우는 쪽이 안전). */
+var step=Math.max(1,Math.ceil((QG[k]||10)/per));
 if(hit>=0){var r=ME.g[hit];
-if(r[2]==='개'){r[1]=Math.round((+r[1]+step)*10)/10;r[4]=per}
+if(r[2]==='개'){r[1]=Math.max(1,Math.round(+r[1]+step));r[4]=per}
 else{r[1]=Math.round((+r[1]+(QG[k]||10))*10)/10}}
 else ME.g.push([k,step,'개',k,per]);
 drawEd()}

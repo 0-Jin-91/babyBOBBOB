@@ -127,6 +127,7 @@ var CLAPPLY= 0;                       /* clApply 진행 중 — 되올림(에코
 var CLMERGE= 1;                       /* 4단계 병합 사용 (0 이면 예전처럼 전체 교체) */
 var CLMGD  = 0;                       /* 방금 병합으로 내용이 달라졌다 → 되올려야 한다 */
 var CLPUSHM= 0;                       /* clPush 의 사전 확인 진행 중 — 재귀 방지 */
+var CLSCRL = 0;                       /* 마지막 스크롤 시각 — 읽는 중 화면 튐 방지 */
 
 function clReady(){ return !!(FBCFG.apiKey && FBCFG.projectId) }
 /* 로그인 여부는 변수(CLUSER) 하나에 의존하지 않는다.
@@ -569,8 +570,17 @@ function clPull(remote){
        ★ setTimeout 으로 체인 밖에서 실행하면 예외가 전역 핸들러에 그대로
          잡혀 파일·줄번호가 기록되고, 동기화 로직도 예외에 끌려가지 않는다. */
     setTimeout(function(){
+      /* 다시 그리면 스크롤이 맨 위로 튄다 — 위치를 기억해 되돌려준다.
+         읽던 자리를 잃지 않게 하는 것이 목적이므로 두 번 복원한다
+         (그리기 직후, 그리고 비동기 렌더가 끝난 뒤 한 번 더). */
+      var _sy = window.pageYOffset || document.documentElement.scrollTop || 0;
+      function _restore(){
+        if(!_sy) return;
+        try{ window.scrollTo(0, _sy) }catch(e){}
+      }
       try{
         if(typeof boot==='function') boot(); else if(typeof render==='function') render();
+        _restore(); setTimeout(_restore, 60);
       }catch(e){
         /* 화면 그리기가 실패해도 받은 데이터는 이미 저장됐다 —
            배너는 전역 핸들러가 띄우되, 원인을 남긴다. */
@@ -917,6 +927,17 @@ function clSync(why){
      닫은 뒤 다음 기회(다시 앱으로 돌아올 때)에 받으면 충분하다. */
   var _md = document.getElementById('md');
   if(_md && _md.classList.contains('on')) return;
+  /*───── 사용자가 지금 화면을 쓰고 있으면 받지 않는다 ─────
+     ★ clPull 은 boot() 로 화면 전체를 다시 그린다. 그 순간
+         · 입력 중이던 칸이 새로 만들어져 포커스가 풀린다 → 자판이 닫힌다
+         · 목록이 다시 그려져 스크롤이 맨 위로 튄다
+       받아올 내용은 몇 초 뒤에 받아도 아무 문제가 없다. 반대로 입력하던 것을
+       잃는 것은 되돌릴 수 없다 — 그래서 사용 중에는 무조건 양보한다. */
+  var ae = document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   /* 입력 중 */
+  if(ae && ae.isContentEditable) return;
+  /* 스크롤을 움직인 직후 2초는 보류 — 읽는 중에 화면이 튀지 않게 */
+  if(CLSCRL && Date.now() - CLSCRL < 2000) return;
 
   _clsync = 1; CLSYNCAT = Date.now();
   var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
@@ -997,9 +1018,14 @@ document.addEventListener('visibilitychange', function(){
      늘려도 통신이 과해지거나 로컬을 덮을 위험은 커지지 않는다. */
 window.addEventListener('pageshow', function(){ clSync('pageshow') });
 window.addEventListener('focus',    function(){ clSync('focus')    });
-/* iOS 홈화면 PWA 는 위 이벤트가 모두 누락될 때가 있다 — 화면 터치를 마지막
-   수단으로 쓴다. 억제(1.5초)가 있으므로 연속 터치로 통신이 늘지 않는다. */
-document.addEventListener('touchstart', function(){ clSync('touch') }, {passive:true});
+/*───── 스크롤 감지 — 확인이 아니라 '보류'를 위해 쓴다 ─────
+   ★ 예전에는 touchstart 로 clSync 를 불렀다. iOS 이벤트 누락을 메우려던 것인데,
+     화면을 만질 때마다 서버를 확인하고 그 결과로 boot() 가 돌아 스크롤이 위로
+     튀고 자판이 닫혔다. 손을 대는 순간이야말로 화면을 바꾸면 안 되는 때다.
+   ★ 그래서 반대로 뒤집었다 — 스크롤은 "지금 읽고 있다"는 신호이므로
+     그 시각을 기록해 clSync 가 스스로 물러나게 한다. */
+window.addEventListener('scroll', function(){ CLSCRL = Date.now() }, {passive:true});
+document.addEventListener('touchmove', function(){ CLSCRL = Date.now() }, {passive:true});
 /* 앱을 보고 있는 동안 주기 확인 — 화면이 가려져 있으면 건너뛴다(배터리).
    ★ 20초: 다른 기기 변경이 늦게 반영된다는 문제로 60초에서 줄였다.
      이 경로는 getDoc 1회(수 KB)뿐이고 내용이 같으면 아무 일도 하지 않는다. */

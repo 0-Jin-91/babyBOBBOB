@@ -572,8 +572,31 @@ if(pc<LV.ok)low.push({k:k,nm:NL[k][0],pc:pc,lack:T.solid[k]-acc[k],u:NL[k][1]});
 if(pc>150)pc=150-Math.min(50,(pc-150)*.3);
 s+=Math.min(150,pc)*W[k];tw+=W[k]});
 return {sc:Math.round(s/tw),low:low.sort(function(a,b){return a.pc-b.pc}),acc:acc}}
-function altList(si,ex){var P=pool(si);
-return P.filter(function(r){return ex.indexOf(r.i)<0}).sort(function(a,b){return mealScore(b)-mealScore(a)})}
+/* 식단 칸 교체 목록.
+   ★ 예전에는 pool(si) 만 썼다. pool 은 '추천'용이라 재고(큐브·원재료) 보유분으로
+     걸러내기 때문에, 재료가 없는 메뉴는 목록에서 아예 사라졌다. 그래서 내가
+     만든 메뉴가 한두 개만 보였다.
+   ★ 교체 목록은 '고를 수 있는 전체'여야 한다 — 재고 여부는 고를 때 참고사항일
+     뿐 후보를 없앨 이유가 아니다. 그래서 같은 단계의 전체(poolAll)를 쓰고,
+     재고로 바로 되는 것을 앞에 오게만 한다.
+   ★ 내가 만든 메뉴(ed/사용자 추가)는 단계가 달라도 뒤에 붙여 항상 보이게 한다 —
+     직접 만든 것을 앱이 숨기면 찾을 방법이 없다. */
+function altList(si,ex){
+  var all=poolAll(si), ready={}, out=[];
+  if(typeof pool==='function'){ pool(si).forEach(function(r){ ready[r.i]=1 }) }
+  /* ★ 지역 함수 이름을 따로 두지 않는다 — 이 파일 484행에 이미 전역 score(추천
+     알고리즘용)가 있어, 같은 이름을 쓰면 읽는 사람이 헷갈린다. mealScore 를 직접 쓴다. */
+  var a=all.filter(function(r){ return ready[r.i] }).sort(function(x,y){ return mealScore(y)-mealScore(x) });
+  var b=all.filter(function(r){ return !ready[r.i] }).sort(function(x,y){ return mealScore(y)-mealScore(x) });
+  out=a.concat(b);
+  /* 다른 단계에 저장된 내 메뉴도 뒤에 붙인다 (중복 제외) */
+  var seen={}; out.forEach(function(r){ seen[r.i]=1 });
+  var baseIds={}; BASE.forEach(function(b2){ baseIds[b2.i]=1 });
+  var mine=RCP().filter(function(r){
+    return !seen[r.i] && r.y!=='f' && (r.g||[]).length && !baseIds[r.i];
+  }).sort(function(x,y){ return mealScore(y)-mealScore(x) });
+  out=out.concat(mine);
+  return out.filter(function(r){return ex.indexOf(r.i)<0})}
 function todayRec(){var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),sl=SLOTS(),key=fmt(TD())+'|'+MEALS();
 if(todaySel&&todaySel.k===key&&todaySel.ids.length===sl.length){var a=todaySel.ids.map(getR);if(a.indexOf(null)<0)return a}
 var rs=recommend(si,dOld(),sl.length);
