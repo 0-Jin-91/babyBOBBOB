@@ -703,7 +703,16 @@ function clSync(why){
   if(_cltmr) return;                                    /* 업로드 대기 중(3초 디바운스) → 내 변경이 먼저 */
   if(CL.pend) return;                                   /* 못 올린 변경이 있다 → 받으면 그것이 사라진다 */
   if(!CL.baseHash) return;                              /* 기준점 없음 → 판단 불가, 건드리지 않는다 */
-  if(Date.now() - CLSYNCAT < 10000) return;             /* 10초 안에 다시 부르지 않는다 */
+  /*───── 과다호출 억제 — 단, 트리거 성격에 따라 다르게 ─────
+     ★ 예전에는 종류를 가리지 않고 10초를 막았다. 그래서 앱으로 돌아왔을 때
+       (visible/pageshow/focus) 직전에 타이머가 한 번 돌았으면 그 이벤트가
+       10초 억제에 걸려 버려지고, 결국 다음 타이머(최대 60초)까지 기다려야
+       반영됐다. "자동은 되는데 60초 걸린다"의 원인이 이것이다.
+     ★ 사용자가 앱을 다시 본 순간은 가장 확인이 필요한 시점이므로 거의 막지
+       않고(1.5초 — 같은 전환에서 이벤트 2~3개가 겹쳐 오는 것만 흡수),
+       주기 확인(timer)만 종전처럼 억제한다. */
+  var _gap = (why==='timer') ? 10000 : 1500;
+  if(Date.now() - CLSYNCAT < _gap) return;
   /* ★ 입력창(모달)이 열려 있으면 받지 않는다 — clPull 은 boot()/render() 로
      화면을 다시 그리므로, 기록을 쓰던 중이면 입력하던 내용이 사라진다.
      닫은 뒤 다음 기회(다시 앱으로 돌아올 때)에 받으면 충분하다. */
@@ -772,12 +781,17 @@ document.addEventListener('visibilitychange', function(){
      늘려도 통신이 과해지거나 로컬을 덮을 위험은 커지지 않는다. */
 window.addEventListener('pageshow', function(){ clSync('pageshow') });
 window.addEventListener('focus',    function(){ clSync('focus')    });
-/* 앱을 보고 있는 동안 60초마다 확인 — 화면이 가려져 있으면 건너뛴다(배터리) */
+/* iOS 홈화면 PWA 는 위 이벤트가 모두 누락될 때가 있다 — 화면 터치를 마지막
+   수단으로 쓴다. 억제(1.5초)가 있으므로 연속 터치로 통신이 늘지 않는다. */
+document.addEventListener('touchstart', function(){ clSync('touch') }, {passive:true});
+/* 앱을 보고 있는 동안 주기 확인 — 화면이 가려져 있으면 건너뛴다(배터리).
+   ★ 20초: 다른 기기 변경이 늦게 반영된다는 문제로 60초에서 줄였다.
+     이 경로는 getDoc 1회(수 KB)뿐이고 내용이 같으면 아무 일도 하지 않는다. */
 setInterval(function(){
   if(document.hidden) return;
   if(!clOn() || CL.pend) return;
   clSync('timer');
-}, 60000);
+}, 20000);
 
 /*───────── 지금 백업하기 (버튼 전용) ─────────*/
 /* 눌렀을 때 무슨 일이 일어났는지 반드시 화면·안내로 남긴다 */
