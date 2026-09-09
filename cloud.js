@@ -123,6 +123,7 @@ var CLUSER = null;                    /* 로그인된 사용자 (null = 비로�
 var CLBUSY = 0;                       /* 전송 중 표시 */
 var _cltmr = null;                    /* 디바운스 타이머 */
 var CLGOT  = 0;                       /* 조용한 동기화로 받아온 시각 — 배지 안내용(2단계) */
+var CLAPPLY= 0;                       /* clApply 진행 중 — 되올림(에코) 방지 */
 
 function clReady(){ return !!(FBCFG.apiKey && FBCFG.projectId) }
 /* 로그인 여부는 변수(CLUSER) 하나에 의존하지 않는다.
@@ -316,6 +317,13 @@ function clPack(){
 }
 function clApply(d){
   if(!d) return;
+  /* ★ 적용이 끝날 때까지 업로드 예약을 막는다 (되올림 방지).
+     아래 저장함수들과 마지막 save() 가 모두 clQueue 를 타므로,
+     플래그 없이는 받은 내용을 그대로 다시 올린다.
+     try/finally 로 감싸 어느 줄에서 예외가 나도 반드시 풀린다 —
+     안 풀리면 그 뒤 모든 자동 백업이 영구히 멈춘다. */
+  CLAPPLY = 1;
+  try{
   if(d.baby) baby=d.baby;
   if(d.logs) logs=d.logs.map(logFull);
   if(d.tried)tried=d.tried;
@@ -334,6 +342,7 @@ function clApply(d){
   if(d.sec &&typeof SEC !=='undefined'){ SEC =d.sec;  if(typeof secSave==='function')secSave() }
   if(d.cmix&&typeof CMIX!=='undefined'){ CMIX=d.cmix; if(typeof cmSave ==='function')cmSave()  }
   save();
+  }finally{ CLAPPLY = 0 }
 }
 /* 기록이 몇 건인지 — 첫 연결 때 사용자에게 숫자로 보여주기 위함 */
 function clCount(d){
@@ -452,6 +461,12 @@ function clPush(now){
 /* 기록이 바뀌면 3초 뒤 자동 전송 — 연달아 입력할 때 과다 전송 방지 */
 function clQueue(){
   if(!clOn()) return;
+  /* ★ 서버에서 받아 적용하는 중에는 예약하지 않는다.
+     clApply 는 STK·BW·NAVC·SEC·CMIX 를 각 저장함수로 쓰고 마지막에 save() 도
+     부른다. 그 저장함수들이 clQueue 를 타게 되면(이번 수정) "받자마자 그대로
+     되올리는" 왕복이 생긴다. 내용이 같아 지문도 같으니 사고는 아니지만,
+     의미 없는 통신이고 lastUp 시각을 흐려 진단을 어렵게 한다. */
+  if(CLAPPLY) return;
   CL.pend=1; clSave(); clPaint();
   if(_cltmr) clearTimeout(_cltmr);
   _cltmr = setTimeout(function(){ _cltmr=null; clPush() }, 3000);

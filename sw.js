@@ -3,7 +3,7 @@
      ignoreSearch:true 로 쿼리를 무시하면 버전을 올려도 구버전 응답이
      그대로 히트해 '업데이트했는데 옛 화면'이 된다. 그래서 쓰지 않는다.
    ★ 배포 시 V 만 바꾸면 CORE 전체가 따라간다 (index.html 의 window.APPV·?v= 와 동일 값). */
-var V='63';
+var V='64';
 var VER='bf-v'+V;
 var JS=['data','core','idb','update','ui','dash','combo','mix','find','home','today','stock',
 'calc','plan','menu','edit','food','grow','log','info','cloud','boot'];

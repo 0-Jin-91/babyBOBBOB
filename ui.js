@@ -161,7 +161,9 @@ function delPh(k){
 /* SEC: 섹션별 펼침 상태. 기본 펼침(1). id 는 화면 안에서 유일해야 한다. */
 var SECK='b6.sec';
 var SEC=LS(SECK,null)||{};
-function secSave(){localStorage.setItem(SECK,JSON.stringify(SEC))}
+/* ★ 폰 저장 + 클라우드 업로드 예약 — 섹션 접기 상태(sec)도 clPack 대상. */
+function secSave(){localStorage.setItem(SECK,JSON.stringify(SEC));
+if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 function secOn(id,def){var v=SEC[id];return v===undefined?(def===undefined?1:def):v}
 function secTog(id){SEC[id]=secOn(id)?0:1;secSave();render()}
 /* 접이식 섹션 한 덩어리.

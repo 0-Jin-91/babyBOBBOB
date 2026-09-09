@@ -1,7 +1,9 @@
 /*========== 🧩 조합 탭 · 재고 활용 메뉴 추천 ==========*/
 /* CMIX: 조합 실험판에 담은 재료 키 목록 (NUT 키) */
 var CMIX=LS('b6.cmix',[]),CMQ='',cmCat='재고';
-function cmSave(){localStorage.setItem('b6.cmix',JSON.stringify(CMIX))}
+/* ★ 폰 저장 + 클라우드 업로드 예약 — 조합 실험(cmix)도 clPack 대상. */
+function cmSave(){localStorage.setItem('b6.cmix',JSON.stringify(CMIX));
+if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 /* 조합 판정용 가짜 레시피 — comboOf/comboSug 를 그대로 재사용한다 */
 function cmR(){return {i:'__mix',n:'조합 실험',s:IDS.indexOf(curS().id==='ready'?'early':curS().id),y:'p',sv:1,
 g:CMIX.map(function(k){return (typeof stkRow==='function')?stkRow(k):[k,QG[k]||10,qUnit(k),k]})}}

@@ -27,7 +27,9 @@ var TABDEF=['home','today','plan','menu','food','grow','stock','shop','calc','co
 var NAVK='b6.nav';
 /* NAVC={order:[...], off:{tab:1}} */
 var NAVC=LS(NAVK,null)||{order:TABDEF.slice(),off:{}};
-function navSave(){localStorage.setItem(NAVK,JSON.stringify(NAVC))}
+/* ★ 폰 저장 + 클라우드 업로드 예약 — 탭 순서(nav)도 clPack 대상. */
+function navSave(){localStorage.setItem(NAVK,JSON.stringify(NAVC));
+if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 /* 저장된 순서에 새 탭이 생겼거나 사라진 것을 정리 */
 function navNorm(){var o=(NAVC.order||[]).filter(function(t){return TABD[t]});
 TABDEF.forEach(function(t){if(o.indexOf(t)<0)o.push(t)});

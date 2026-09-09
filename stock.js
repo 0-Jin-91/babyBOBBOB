@@ -6,7 +6,12 @@
    full = 충전량(1회 채웠을 때 기준), left = 남은 양 */
 
 var STK=LS('b6.stock',[]);
-function stkSave(){localStorage.setItem('b6.stock',JSON.stringify(STK))}
+/* ★ 폰 저장 + 클라우드 업로드 예약.
+   예전에는 localStorage 에만 썼다. 그래서 재고를 바꿔도 clQueue 가 돌지 않아
+   서버로 올라가지 않았고, 다른 기기에서는 영원히 볼 수 없었다.
+   (STK 는 clPack 이 stock 키로 올리는 대상이므로 올릴 계기만 없던 것) */
+function stkSave(){localStorage.setItem('b6.stock',JSON.stringify(STK));
+if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 /*----- 단위 유틸 -----*/
 var CNTU=['개','팩','봉','통','조각','컵'];              /* 개수로 세는 단위 */
 function isCnt(u){return CNTU.indexOf(u)>=0}

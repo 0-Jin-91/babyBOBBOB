@@ -309,7 +309,10 @@ return ml<D.lo*.7?'많이 부족':ml<D.lo?'조금 부족':ml<=D.hi?'적정':ml<=
 /*========== 그릇 무게 프리셋 ==========*/
 var BW=LS(KY.bw,null)||{list:[{id:'b1',n:'기본 이유식 그릇',w:120}],cur:'b1'};
 function bwCur(){var a=BW.list.filter(function(x){return x.id===BW.cur});return a.length?a[0]:(BW.list[0]||null)}
-function bwSave(){localStorage.setItem(KY.bw,JSON.stringify(BW))}
+/* ★ 폰 저장 + 클라우드 업로드 예약 — 그릇(bowl)도 clPack 이 올리는 대상인데
+   예전에는 예약이 없어 다른 기기에 반영되지 않았다. */
+function bwSave(){localStorage.setItem(KY.bw,JSON.stringify(BW));
+if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 function bwAdd(n,w){var id='b'+Date.now();BW.list.push({id:id,n:n,w:w});BW.cur=id;bwSave()}
 function bwDel(id){BW.list=BW.list.filter(function(x){return x.id!==id});
 if(BW.cur===id)BW.cur=BW.list.length?BW.list[0].id:null;bwSave()}
