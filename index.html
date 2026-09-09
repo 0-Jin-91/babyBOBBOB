@@ -3,7 +3,7 @@
 /* ===== 버전 단일 출처 =====
    여기만 고치면 update.js 의 APPV 가 따라옵니다.
    배포 시 bump.py 를 쓰면 index.html 의 ?v= 와 sw.js 의 VER 까지 한 번에 맞춰집니다. */
-window.APPV='81';
+window.APPV='82';
 
 /* ===== 전역 오류 핸들러 =====
    스크립트 20개가 전역 스코프를 공유하므로, 한 곳에서 예외가 나면
@@ -150,7 +150,13 @@ nav .lg{font-size:19px;margin-bottom:5px}
 .fd label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin-bottom:4px}
 .fd input,.fd select,.fd textarea{width:100%;padding:11px;border:1.5px solid var(--ln);border-radius:12px;background:#fff;outline:none}
 .fd input:focus,.fd textarea:focus{border-color:var(--pc)}
-.fd input[type=date],.fd input[type=number],.fd input[type=text],.fd select{height:46px}
+/* ★ time 을 빠뜨려 시각 칸만 높이가 달랐다(칸 크기가 뒤죽박죽인 원인).
+   기본 input(type 미지정)도 함께 묶어 한 줄에 놓인 칸들의 높이를 맞춘다.
+   box-sizing 을 지정해 padding 이 높이를 밀어내지 않게 한다. */
+.fd input,.fd select{box-sizing:border-box}
+.fd input[type=date],.fd input[type=number],.fd input[type=text],.fd input[type=time],.fd input:not([type]),.fd select{height:46px}
+/* iOS 는 time/date 입력의 기본 폰트·정렬이 달라 한 줄에서 어긋나 보인다 */
+.fd input[type=time],.fd input[type=date]{font:inherit;text-align:left;-webkit-appearance:none;appearance:none}
 .fd input[type=date]{-webkit-appearance:none;appearance:none;padding:0 12px;line-height:44px;min-width:0}
 .fd select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8480' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
 .btn{display:block;width:100%;padding:13px;border-radius:13px;background:var(--pc);color:#fff;font-weight:800}
@@ -520,28 +526,28 @@ body.ubon{padding-top:56px}
 <div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=81"></script>
-<script src="core.js?v=81"></script>
-<script src="idb.js?v=81"></script>
-<script src="update.js?v=81"></script>
-<script src="ui.js?v=81"></script>
-<script src="dash.js?v=81"></script>
-<script src="combo.js?v=81"></script>
-<script src="mix.js?v=81"></script>
-<script src="find.js?v=81"></script>
-<script src="home.js?v=81"></script>
-<script src="today.js?v=81"></script>
-<script src="stock.js?v=81"></script>
-<script src="calc.js?v=81"></script>
-<script src="plan.js?v=81"></script>
-<script src="menu.js?v=81"></script>
-<script src="edit.js?v=81"></script>
-<script src="food.js?v=81"></script>
-<script src="grow.js?v=81"></script>
-<script src="log.js?v=81"></script>
-<script src="info.js?v=81"></script>
-<script src="cloud.js?v=81"></script>
-<script src="boot.js?v=81"></script>
+<script src="data.js?v=82"></script>
+<script src="core.js?v=82"></script>
+<script src="idb.js?v=82"></script>
+<script src="update.js?v=82"></script>
+<script src="ui.js?v=82"></script>
+<script src="dash.js?v=82"></script>
+<script src="combo.js?v=82"></script>
+<script src="mix.js?v=82"></script>
+<script src="find.js?v=82"></script>
+<script src="home.js?v=82"></script>
+<script src="today.js?v=82"></script>
+<script src="stock.js?v=82"></script>
+<script src="calc.js?v=82"></script>
+<script src="plan.js?v=82"></script>
+<script src="menu.js?v=82"></script>
+<script src="edit.js?v=82"></script>
+<script src="food.js?v=82"></script>
+<script src="grow.js?v=82"></script>
+<script src="log.js?v=82"></script>
+<script src="info.js?v=82"></script>
+<script src="cloud.js?v=82"></script>
+<script src="boot.js?v=82"></script>
 <script>
 /* 시트 아래로 스와이프해서 닫기 */
 (function(){var md=document.getElementById('md'),sh=document.getElementById('sh');

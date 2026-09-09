@@ -74,10 +74,19 @@ return '<div class="cd" style="background:#FBF6F2"><b>오늘 요약</b><div clas
    브라우저가 그 UI 를 지원하지 않아서였다.
    대신 이 앱에서 확실히 동작하는 방식(모달 목록 = openAlt 와 같은 패턴)으로
    바꾼다. 직접 타이핑도 그대로 가능하다. */
-+'<div class="fd" style="margin:12px 0 10px"><label>메뉴</label>'
-+'<div class="rw" style="gap:6px"><input id="gN" style="flex:1" placeholder="메뉴명 직접 입력" oninput="pickMenuIng(this.value)">'
-+'<button class="btn g s" style="flex:0 0 auto;white-space:nowrap" onclick="openMenuPick()">📋 목록에서 고르기</button></div></div>'
-+'<div class="rw"><div class="fd" style="flex:1;margin:0"><label>먹은 시각</label><input id="gTm" type="time" value="'+nowHM()+'"></div><div class="fd" style="flex:1;margin:0"><label>먹은 양(g)</label><input id="gA" type="number" placeholder="80"></div></div>'
+/* ★ 칸 하나로 통합.
+   누르면 아래에 목록이 펼쳐지고, 글자를 넣으면 그 글자로 시작하는 메뉴만 남는다.
+   (이전에는 입력칸과 '목록에서 고르기' 버튼이 나란히 있어 배치가 어색했다) */
++'<div class="fd" style="margin:12px 0 10px;position:relative"><label>메뉴</label>'
++'<input id="gN" autocomplete="off" placeholder="메뉴명 입력 또는 눌러서 선택"'
++' onfocus="MSOPEN=1;drawMenuSug()" oninput="MSQ=this.value;MSOPEN=1;pickMenuIng(this.value);drawMenuSug()">'
++'<div id="gSug"></div></div>'
+/* ★ 두 칸의 폭·높이를 같게 맞춘다.
+   flex:1 만 주면 내용(time 위젯 vs number)에 따라 폭이 갈리므로
+   min-width:0 을 함께 준다 — flex 항목의 기본 최소폭이 내용 크기라서
+   time 칸이 더 넓게 밀려 '뒤죽박죽'으로 보였다. */
++'<div class="rw" style="align-items:flex-end"><div class="fd" style="flex:1 1 0;min-width:0;margin:0"><label>먹은 시각</label><input id="gTm" type="time" value="'+nowHM()+'"></div>'
++'<div class="fd" style="flex:1 1 0;min-width:0;margin:0"><label>먹은 양 (g)</label><input id="gA" type="number" inputmode="decimal" placeholder="80"></div></div>'
 +'<button class="btn g s" style="margin-top:8px" onclick="openScale(\'gA\')">⚖️ 그릇 무게로 계산하기</button>'
 +'<div class="mu" style="font-size:10.5px;margin-top:6px">시각을 남기면 <b>끼니 간격·수유 리듬</b>을 자동 분석해 드려요.</div>'
 +ingPicker()
@@ -182,52 +191,77 @@ if(!n)return alert('재료를 선택하거나 입력해 주세요');
 if(!q)return alert('양을 입력해 주세요');
 LG.push([n,q,u,k||(NUT[n]?n:'')]);reLog()}
 function reLog(){render()}
-/*───────── 메뉴 목록에서 고르기 (기록 탭) ─────────
-   ★ datalist 대신 쓰는 선택 UI. 현재 단계 메뉴가 먼저, 그 뒤에 다른 단계와
-     내가 만든 메뉴가 온다. 검색칸으로 좁힐 수 있다. */
-var MPQ='';
-function openMenuPick(){MPQ='';drawMenuPick();
-document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
-function drawMenuPick(){
+/*───────── 메뉴 선택 목록 (기록 탭, 입력칸 바로 아래) ─────────
+   ★ <datalist> 는 iOS Safari 에서 목록이 뜨지 않아 쓸 수 없다. 모달로 바꿨더니
+     입력칸과 버튼이 따로 놓여 배치가 어색해졌다. 그래서 입력칸 하나만 두고
+     그 아래에 목록을 직접 그린다 — 눌러서 고르기와 타이핑 검색이 한 칸에서 된다.
+   ★ 검색은 '첫 글자로 시작하는 것'을 먼저 보여주고, 그다음 이름 안에 포함된
+     것을 보여준다. 원하는 방식(첫 글자)이 우선이고, 놓치는 것도 없다. */
+var MSOPEN=0, MSQ='';
+function menuCands(){
   var si=IDS.indexOf(curS().id==='ready'?'early':curS().id);
   var A=[],B=[],seen={};
   RCP().forEach(function(r){
     if(!r||seen[r.i])return;
-    if(r.y==='f')return;
-    if(!(r.g||[]).length)return;
+    if(r.y==='f')return;                 /* 과일칩 등 메뉴가 아닌 항목 */
+    if(!(r.g||[]).length)return;         /* 재료 없는 껍데기 */
     seen[r.i]=1;
     if(r.s===si)A.push(r);else B.push(r);
   });
-  var L=A.concat(B);
-  var q=(MPQ||'').trim();
-  if(q)L=L.filter(function(r){return (r.n||'').indexOf(q)>=0});
-  var nA=0;A.forEach(function(r){if(L.indexOf(r)>=0)nA++});
-  document.getElementById('mb').innerHTML='<div class="mt2">📋 메뉴 고르기</div>'
-  +'<div class="fd" style="margin:8px 0 10px"><input id="mpq" value="'+esc(q)+'" placeholder="메뉴명 검색" oninput="MPQ=this.value;drawMenuPick();var e=document.getElementById(\'mpq\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}"></div>'
-  +(L.length
-    ? L.map(function(r,i){
-        var hdr=(i===nA&&nA>0&&nA<L.length)?'<div class="mu" style="margin:10px 0 4px;font-size:11px">— 다른 단계 · 내 메뉴 —</div>':'';
-        return hdr+'<div onclick="pickMenuName(\''+String(r.i).replace(/'/g,"")+'\')">'+rcard(r)+'</div>';
-      }).join('')
-    : '<div class="cd mu">찾는 메뉴가 없어요. 이름을 직접 입력해도 기록됩니다.</div>')
-  +'<button class="btn y" onclick="closeM()">닫기</button>';
+  var L=A.concat(B), q=(MSQ||'').trim();
+  if(!q) return L;
+  var st=[],inc=[];
+  L.forEach(function(r){
+    var n=r.n||'';
+    if(n.indexOf(q)===0)st.push(r);
+    else if(n.indexOf(q)>=0)inc.push(r);
+  });
+  return st.concat(inc);
 }
-/* 고른 메뉴를 입력칸에 넣고 재료까지 채운다 */
+function drawMenuSug(){
+  var box=document.getElementById('gSug');
+  if(!box)return;
+  if(!MSOPEN){box.innerHTML='';return}
+  var L=menuCands();
+  if(!L.length){
+    box.innerHTML='<div class="mu" style="padding:8px 2px;font-size:11.5px">해당하는 메뉴가 없어요. 그대로 입력해도 기록됩니다.</div>';
+    return;
+  }
+  box.innerHTML='<div style="max-height:230px;overflow:auto;border:1.5px solid var(--ln);border-radius:12px;margin-top:6px;background:#fff">'
+   +L.slice(0,60).map(function(r){
+      return '<div onclick="pickMenuName(\''+String(r.i).replace(/'/g,'')+'\')" '
+        +'style="padding:11px 12px;border-bottom:1px solid #F2ECE7;display:flex;justify-content:space-between;align-items:center">'
+        +'<span style="font-size:13.5px;font-weight:700">'+esc(r.n)+'</span>'
+        +'<span class="mu" style="font-size:10.5px">'+(STG[(r.s||0)+1]?STG[(r.s||0)+1].n:'')+'</span></div>';
+    }).join('')
+   +'</div>'
+   +(L.length>60?'<div class="mu" style="font-size:10.5px;margin-top:4px">앞 60개만 표시 — 이름을 더 입력해 좁혀 보세요.</div>':'');
+}
+/* 고른 메뉴를 칸에 넣고 재료까지 채운다 */
 function pickMenuName(id){
   var r=getR(id);if(!r)return;
-  closeM();
+  MSOPEN=0; MSQ='';
+  LG=[];                                  /* 기존 재료를 비우고 새 메뉴 것으로 */
+  pickMenuIng(r.n);                        /* 이 안에서 render() 가 돌아 화면이 새로 그려진다 */
   var e=document.getElementById('gN');
-  if(e)e.value=r.n;
-  LG=[];                      /* 기존 재료를 비우고 새 메뉴 재료로 채운다 */
-  pickMenuIng(r.n);
-  render();
-  var e2=document.getElementById('gN');if(e2)e2.value=r.n;
+  if(e)e.value=r.n;                        /* render 뒤에 값을 넣어야 남는다 */
 }
+/* 입력칸 밖을 누르면 목록을 닫는다 */
+document.addEventListener('click',function(ev){
+  if(!MSOPEN)return;
+  var t=ev.target;
+  if(t&&(t.id==='gN'||(t.closest&&t.closest('#gSug'))))return;
+  MSOPEN=0;drawMenuSug();
+},true);
+
 function pickMenuIng(nm){var r=null;RCP().forEach(function(x){if(x.n===nm)r=x});
 if(!r||LG.length)return;
 var sv=r.sv||1;
 LG=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']});
-render()}
+render();
+/* ★ render() 가 화면을 다시 그리면 입력칸이 비워진다 — 방금 고른(또는 입력한)
+   메뉴명을 되돌려 넣는다. 이것이 없으면 재료가 채워지는 순간 이름이 사라진다. */
+var e=document.getElementById('gN');if(e)e.value=nm}
 
 /*========== 기록 추가 ==========*/
 function addMilk2(){var v=+document.getElementById('mV').value,t=document.getElementById('mT').value,tm=document.getElementById('mTm').value;
