@@ -68,7 +68,7 @@ return '<div style="text-align:center;background:#fff;border-radius:9px;padding:
 +'</div>'
 +'<div class="ch" style="margin-top:7px">'+DS.low.slice(0,2).map(function(x){
 return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="boostDay(\''+x.k+'\')">🔧 '+x.nm+' 보충하기</button>'}).join('')
-+'<button style="background:#F5EFEA;color:var(--sub)" onclick="reRec()">🎲 다시 편성</button></div></div>'
++'<button style="background:#F5EFEA;color:var(--sub)" onclick="reRec()">🎲 다시 편성</button></div></div></div>'
 :'<div class="alert ok"><span class="ic">✅</span><div>추천 '+MEALS()+'끼로 <b>이유식 담당 영양이 충분히 채워집니다.</b> 나머지는 수유가 보충해요.</div></div>')
 +rec.map(function(r,i){if(!r)return '';var sc=mealScore(r);
 var done0=loggedToday(r.i);
