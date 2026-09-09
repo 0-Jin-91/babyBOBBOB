@@ -85,7 +85,12 @@ function navModeSet(m){NAVM=m;localStorage.setItem(NAVMK,JSON.stringify(m));
 navApply();navRender();navCfgDraw&&document.getElementById('md').classList.contains('on')&&navCfgDraw();render()}
 function navApply(){var b=document.body;
 if(NAVM==='fixed'){b.classList.add('navfix');b.classList.remove('navdrw')}
-else{b.classList.add('navdrw');b.classList.remove('navfix');navClose()}}
+/* ★ 이미 열려 있는 메뉴바는 닫지 않는다.
+   navApply 는 boot() 가 부르고, boot() 는 동기화(clPull)로도 불린다. 그래서
+   메뉴를 열어 고민하는 중에 서버 변경이 들어오면 메뉴바가 갑자기 닫혔다.
+   모드를 적용하는 것이 이 함수의 일이고, 사용자가 연 것을 닫는 것은 아니다. */
+else{b.classList.add('navdrw');b.classList.remove('navfix');
+if(!b.classList.contains('nvon'))navClose()}}
 function navOpen(){if(NAVM==='fixed')return;
 document.body.classList.add('nvon');navRender()}
 function navClose(){document.body.classList.remove('nvon')}

@@ -936,6 +936,9 @@ function clSync(why){
   var ae = document.activeElement;
   if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   /* 입력 중 */
   if(ae && ae.isContentEditable) return;
+  /* 메뉴바(드로어)를 열어 고르는 중이면 받지 않는다 — boot() 가 화면을 다시
+     그리면서 메뉴바가 닫혀 "고민하다 갑자기 사라지는" 일이 생긴다. */
+  if(document.body && document.body.classList.contains('nvon')) return;
   /* 스크롤을 움직인 직후 2초는 보류 — 읽는 중에 화면이 튀지 않게 */
   if(CLSCRL && Date.now() - CLSCRL < 2000) return;
 

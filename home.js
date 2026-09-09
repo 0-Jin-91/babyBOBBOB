@@ -33,7 +33,7 @@ return '<div class="rw" style="justify-content:flex-end;margin-bottom:7px"><butt
 +'<div style="background:'+(T.use?'#fff':'#FFEDE4')+';border:1.5px solid '+(T.use?'var(--ln)':'var(--pc)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="baby.useW=0;save();render()"><div class="mu" style="font-size:10px;font-weight:800">표준 기준 ('+T.lb+')</div><b style="font-size:13px">단백 '+dri.p+'g · 철 '+dri.fe+'mg</b><div class="mu" style="font-size:10px">2020 섭취기준</div></div>'
 +'<div style="background:'+(T.use?'#FFEDE4':'#fff')+';border:1.5px solid '+(T.use?'var(--pc)':'var(--ln)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="if(!'+(w?1:0)+'){alert(\'성장 탭에서 몸무게를 먼저 기록해 주세요\');return}baby.useW=1;save();render()"><div class="mu" style="font-size:10px;font-weight:800">우리 아기 체중 기준</div><b style="font-size:13px">'+(w?'단백 '+rnd(w*dri.pkg)+'g · 철 '+dri.fe+'mg':'몸무게 미입력')+'</b><div class="mu" style="font-size:10px">'+(w?w+'kg × '+dri.pkg+'g/kg':'성장 탭에서 입력')+'</div></div></div>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> '+sT('kdri')+'</div>'
-+dualGoal()},1,(T.use?'체중 기준':'표준 기준'))
++dualGoal()},0,(T.use?'체중 기준':'표준 기준'))
 
 /*----- ③ 수유 -----*/
 +sec('h_milk','🍼','오늘 수유','권장 '+DY.lo+'~'+DY.hi+'ml ('+G.lb+(ageM()>=6?' · 이유식 병행':'')+')',milkCard,1,D.ml+'ml')
@@ -41,7 +41,7 @@ return '<div class="rw" style="justify-content:flex-end;margin-bottom:7px"><butt
 /*----- ④ 영양 현황 -----*/
 +sec('h_nut','📊','영양 현황','일일 · 주간 · 월간 · 재료별 섭취',function(){
 return dashBoard(true)
-+'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';fTab=\'dash\';render()">🥕 재료별 상세 보기</button>'},1,D.cnt+'끼')
++'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';fTab=\'dash\';render()">🥕 재료별 상세 보기</button>'},0,D.cnt+'끼')
 
 /*----- ⑤ 오늘 추천 끼니 -----*/
 +sec('h_rec','🍽','오늘 '+MEALS()+'끼 추천','하루 합계 '+DS.sc+'% · 대안·수정·기록',function(){
@@ -60,7 +60,7 @@ return '<div class="cd" style="padding:10px"><div class="rw" style="justify-cont
 +(function(){var done=loggedToday(r.i);
 return '<div class="rw">'+(done?'<button class="btn g s" onclick="openAteFor(\''+done+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 취소</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
 +(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+(logAmtOf(done)?' · '+logAmtOf(done)+'g':' · 양 미입력')+'</div>':'')})()+'</div>'}).join('')
-+'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},1,DS.sc+'%')
++'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},0,DS.sc+'%')
 
 /*----- ⑥ 단계 기준 -----*/
 +sec('h_stage','📚',s.n+' 기준',s.lb+' · '+s.ra,function(){

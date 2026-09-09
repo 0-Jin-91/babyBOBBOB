@@ -62,7 +62,9 @@ var dayD = NK.map(function(k){
   return {k:k, nm:NL[k][0], u:NL[k][1], col:NL[k][2], v:v, goal:goal, pc:pc};
 });
 var dayAvg = Math.round(dayD.reduce(function(a,x){return a+Math.min(150,x.pc)},0)/dayD.length);
-var oD = secOn('nuDay',1), oM = secOn('nuMeal',1);
+/* ★ 기본은 접힘. 제목과 요약(%)만 보이고 상세는 눌러서 본다 —
+   화면에 한꺼번에 쏟지 않는다. 펼친 상태는 저장되므로 자주 보는 쪽만 열어두면 된다. */
+var oD = secOn('nuDay',0), oM = secOn('nuMeal',0);
 return '<div class="cd"><div class="rw" style="justify-content:space-between;align-items:center;cursor:pointer" onclick="secTog(\'nuDay\')"><b style="font-size:14px">📅 하루 분량 대비'+(ml>1?' ×'+ml:'')+'</b><span><span class="badge '+lvl(dayAvg)+'" style="font-size:12px;padding:5px 10px">'+lvIco(dayAvg)+' 평균 '+dayAvg+'%</span> <span class="mu" style="font-weight:800">'+(oD?'▲':'▼')+'</span></span></div>'
 +(oD?'<div class="mu" style="font-size:10.5px;margin:6px 0 9px">하루 이유식 담당량 기준 — <b>이 메뉴 하나가 하루치의 몇 %인지</b>. 남은 '+Math.max(0,MEALS()-1)+'끼에 무엇을 채울지 볼 때 쓰세요.</div>'
 +dayD.map(nrow).join('')
@@ -186,7 +188,21 @@ var SEC=LS(SECK,null)||{};
 function secSave(){localStorage.setItem(SECK,JSON.stringify(SEC));
 if(typeof clQueue==='function')try{clQueue()}catch(e){}}
 function secOn(id,def){var v=SEC[id];return v===undefined?(def===undefined?1:def):v}
-function secTog(id){SEC[id]=secOn(id)?0:1;secSave();render()}
+/* ★ 모달 안의 섹션도 접히게 한다.
+   예전에는 render() 만 불렀다. render 는 본문(#vw)만 다시 그리므로, 모달(#mb)
+   안에 있는 영양 블록은 아무 반응이 없었다 — "숨겨지지가 않는다"의 원인.
+   모달이 열려 있으면 그 내용을 다시 그린다(레시피 상세면 rBody, 편집이면 drawEd). */
+function secTog(id){SEC[id]=secOn(id)?0:1;secSave();
+var md=document.getElementById('md');
+if(md&&md.classList.contains('on')){
+  try{
+    if(typeof ME!=='undefined'&&ME&&typeof drawEd==='function'){ drawEd(); return }
+    if(typeof curR!=='undefined'&&curR&&typeof rBody==='function'){
+      var mb=document.getElementById('mb'); if(mb){ mb.innerHTML=rBody(); return }
+    }
+  }catch(e){}
+}
+render()}
 /* 접이식 섹션 한 덩어리.
    id  : 저장 키
    ico : 이모지
