@@ -42,7 +42,25 @@ return (pv!=null?'<div class="tlg">'+minTxt(pv)+' 뒤</div>':'')
 /*========== 뷰 ==========*/
 function vLog(){var by={};
 logs.slice().reverse().forEach(function(l){(by[l.d]=by[l.d]||[]).push(l)});
-var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),op=RCP().filter(function(r){return r.s===si}),D=todaySum(),T=TG();
+var si=IDS.indexOf(curS().id==='ready'?'early':curS().id),D=todaySum(),T=TG();
+/*───────── 메뉴 선택 목록 ─────────
+   ★ 예전에는 RCP().filter(r.s===si) — 현재 단계와 '정확히 같은' 메뉴만 담았다.
+     그래서 내가 만든 메뉴의 단계가 다르거나 s 가 비어 있으면 목록이 아예
+     비어 "메뉴가 전혀 안 나오는" 상태가 됐다.
+   ★ 기록은 '무엇을 먹였는지 적는' 일이다. 단계가 다르다고 후보에서 지울 이유가
+     없다(지난 단계 메뉴를 먹일 수도 있다). 그래서 현재 단계를 앞에 두고
+     나머지 단계·내가 만든 메뉴까지 모두 담는다. */
+var op=(function(){
+  var A=[],B=[],seen={};
+  RCP().forEach(function(r){
+    if(!r||seen[r.i])return;
+    if(r.y==='f')return;                 /* 과일칩 등 메뉴가 아닌 항목 제외 */
+    if(!(r.g||[]).length)return;         /* 재료 없는 껍데기 제외 */
+    seen[r.i]=1;
+    if(r.s===si)A.push(r);else B.push(r);
+  });
+  return A.concat(B);
+})();
 var td=fmt(TD());
 return '<div class="cd" style="background:#FBF6F2"><b>오늘 요약</b><div class="rw" style="margin-top:7px">'
 +[['이유식',D.cnt+'끼'],['수유',D.ml+'ml'],['단백질',rnd(D.f.p+D.m.p)+'g'],['철분',rnd(D.f.fe+D.m.fe)+'mg']].map(function(x){return '<div style="flex:1;text-align:center;background:#fff;border-radius:9px;padding:8px 2px"><div class="mu" style="font-size:10px">'+x[0]+'</div><b style="font-size:14px">'+x[1]+'</b></div>'}).join('')+'</div></div>'

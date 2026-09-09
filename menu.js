@@ -25,7 +25,17 @@ var ty=[['p',TY.p],['t',TY.t]];
 if(selS==='late')ty.push(['f',TY.f]);
 if(selS==='final')ty=[['m',TY.m]];
 if(!ty.filter(function(x){return x[0]===selT}).length)selT=ty[0][0];
+/* ★ 이 화면은 단계·유형 탭으로 일부러 나누므로 필터가 맞다. 다만 내가 만든
+   메뉴는 유형(y)이 비어 있거나 다르게 저장될 수 있어, 그러면 어느 탭에서도
+   보이지 않는다. 그런 '떠도는 내 메뉴'는 현재 단계 탭 끝에 붙여 준다. */
 var list=RCP().filter(function(r){return r.s===si&&r.y===selT});
+var _known={p:1,t:1,f:1,m:1};
+RCP().forEach(function(r){
+  if(!r||r.s!==si)return;
+  if(_known[r.y])return;                       /* 정상 유형이면 위 필터가 담당 */
+  if(!(r.g||[]).length)return;
+  list.push(r);
+});
 return '<div class="tab">'+STG.slice(1).map(function(s){return '<button class="'+(s.id===selS?'on':'')+'" style="'+(s.id===selS?'background:'+s.c:'')+'" onclick="selS=\''+s.id+'\';render()">'+s.n+(s.id===cur?' ·':'')+'</button>'}).join('')+'</div>'
 +'<div class="cd" style="border-left:4px solid '+st.c+'"><b style="font-size:16px">'+st.n+' <span class="mu" style="font-weight:600">'+st.lb+'</span></b>'+(st.id===cur?' <span class="tg p">지금 여기</span>':'')+'<p class="mu" style="margin:7px 0 10px">'+st.ds+'</p><div class="g2">'+cell('농도',st.ra)+cell('횟수',st.ct)+cell('1회 양',st.am)+cell('입자',st.tx)+'</div><div style="margin-top:9px">'+sT('ppibbo')+sT('bboon')+'</div></div>'
 +'<div class="tt">'+ty.map(function(t){return '<button class="'+(t[0]===selT?'on':'')+'" onclick="selT=\''+t[0]+'\';render()">'+t[1]+'</button>'}).join('')+'</div>'
