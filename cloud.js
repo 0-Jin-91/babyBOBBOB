@@ -561,7 +561,25 @@ function clPull(remote){
     var _h = clHash(clPack());
     clBase(_h);
     CL.lastDown=Date.now(); CL.err=''; clSave(); clPaint();
-    if(typeof boot==='function') boot(); else if(typeof render==='function') render();
+    /*───── 화면 갱신은 Promise 밖에서 (진단·안정성) ─────
+       ★ clPull 은 Firebase 의 then() 안에서 불린다. 거기서 boot() 가 예외를
+         던지면 브라우저는 원인을 감추고 "Script error" 만 남긴다 —
+         Firebase 가 gstatic.com(다른 출처)에서 동적 import 로 로드되기 때문이다.
+         그래서 실제 원인 파일·줄번호를 알 수 없었다.
+       ★ setTimeout 으로 체인 밖에서 실행하면 예외가 전역 핸들러에 그대로
+         잡혀 파일·줄번호가 기록되고, 동기화 로직도 예외에 끌려가지 않는다. */
+    setTimeout(function(){
+      try{
+        if(typeof boot==='function') boot(); else if(typeof render==='function') render();
+      }catch(e){
+        /* 화면 그리기가 실패해도 받은 데이터는 이미 저장됐다 —
+           배너는 전역 핸들러가 띄우되, 원인을 남긴다. */
+        try{ localStorage.setItem('b6.lasterr', JSON.stringify({
+          m:'pull-render: '+((e&&e.message)||e), s:'cloud.js', l:0, c:0,
+          v:window.APPV, at:new Date().toISOString()})) }catch(_e){}
+        throw e;
+      }
+    }, 0);
     clPhPull();
     /*───── 병합 결과 되올리기 (4단계) ─────
        병합했으면 내 내용은 서버와 다르다(양쪽을 합쳤으므로). 올리지 않으면
