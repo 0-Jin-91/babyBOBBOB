@@ -3,7 +3,7 @@
 /* ===== 버전 단일 출처 =====
    여기만 고치면 update.js 의 APPV 가 따라옵니다.
    배포 시 bump.py 를 쓰면 index.html 의 ?v= 와 sw.js 의 VER 까지 한 번에 맞춰집니다. */
-window.APPV='70';
+window.APPV='71';
 
 /* ===== 전역 오류 핸들러 =====
    스크립트 20개가 전역 스코프를 공유하므로, 한 곳에서 예외가 나면
@@ -23,10 +23,34 @@ window.APPV='70';
     'background:#B3261E;color:#fff;font:13px/1.5 -apple-system,sans-serif;'+
     'padding:11px 14px;text-align:center');
    d.innerHTML='문제가 생겨 일부 화면이 멈췄어요. '+
-    '<b style="text-decoration:underline">새로고침</b> · '+
+    '<b id="_errR" style="text-decoration:underline">새로고침</b> · '+
+    '<b id="_errD" style="text-decoration:underline">원인 보기</b> · '+
     '<span style="opacity:.8">기록은 지워지지 않습니다</span>';
-   d.onclick=function(){location.reload()};
    (document.body||document.documentElement).appendChild(d);
+   /* ★ 원인 보기 — 아이폰/아이패드는 개발자도구를 열 수 없어 오류 원문을
+      확인할 방법이 없다. 저장된 b6.lasterr 를 그 자리에서 보여주고, 길게
+      누르면 복사까지 되도록 한다. 원인을 모르면 추측으로 고치게 된다. */
+   var rb=document.getElementById('_errR');
+   var db=document.getElementById('_errD');
+   if(rb) rb.onclick=function(ev){ev.stopPropagation();location.reload()};
+   if(db) db.onclick=function(ev){
+    ev.stopPropagation();
+    var t='(저장된 오류 없음)';
+    try{
+     var o=JSON.parse(localStorage.getItem('b6.lasterr')||'null');
+     if(o) t='v'+(o.v||'?')+'  '+(o.s||'?')+':'+(o.l||0)+':'+(o.c||0)+'\n\n'+(o.m||'');
+    }catch(e){ t='(오류 정보를 읽지 못했습니다)' }
+    var w=document.createElement('div');
+    w.setAttribute('style','position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.86);'+
+     'color:#fff;font:12px/1.6 ui-monospace,monospace;padding:18px;overflow:auto;'+
+     '-webkit-user-select:text;user-select:text');
+    w.innerHTML='<div style="font:600 13px -apple-system,sans-serif;margin-bottom:10px">'+
+     '오류 원문 <span style="opacity:.7;font-weight:400">— 길게 눌러 복사하세요. 아무 곳이나 탭하면 닫힙니다.</span></div>'+
+     '<pre style="white-space:pre-wrap;word-break:break-all;margin:0">'+
+     String(t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'</pre>';
+    w.onclick=function(){ w.parentNode&&w.parentNode.removeChild(w) };
+    (document.body||document.documentElement).appendChild(w);
+   };
   }catch(e){}
  }
  window.addEventListener('error',function(e){
@@ -491,28 +515,28 @@ body.ubon{padding-top:56px}
 <div class="md" id="md" onclick="if(event.target===this)closeM()"><div class="sh" id="sh"><div class="gb" id="gb"></div><div id="mb"></div></div></div>
 <input type="file" id="fi" accept="image/*" style="display:none">
 <input type="file" id="fj" accept=".json" style="display:none">
-<script src="data.js?v=70"></script>
-<script src="core.js?v=70"></script>
-<script src="idb.js?v=70"></script>
-<script src="update.js?v=70"></script>
-<script src="ui.js?v=70"></script>
-<script src="dash.js?v=70"></script>
-<script src="combo.js?v=70"></script>
-<script src="mix.js?v=70"></script>
-<script src="find.js?v=70"></script>
-<script src="home.js?v=70"></script>
-<script src="today.js?v=70"></script>
-<script src="stock.js?v=70"></script>
-<script src="calc.js?v=70"></script>
-<script src="plan.js?v=70"></script>
-<script src="menu.js?v=70"></script>
-<script src="edit.js?v=70"></script>
-<script src="food.js?v=70"></script>
-<script src="grow.js?v=70"></script>
-<script src="log.js?v=70"></script>
-<script src="info.js?v=70"></script>
-<script src="cloud.js?v=70"></script>
-<script src="boot.js?v=70"></script>
+<script src="data.js?v=71"></script>
+<script src="core.js?v=71"></script>
+<script src="idb.js?v=71"></script>
+<script src="update.js?v=71"></script>
+<script src="ui.js?v=71"></script>
+<script src="dash.js?v=71"></script>
+<script src="combo.js?v=71"></script>
+<script src="mix.js?v=71"></script>
+<script src="find.js?v=71"></script>
+<script src="home.js?v=71"></script>
+<script src="today.js?v=71"></script>
+<script src="stock.js?v=71"></script>
+<script src="calc.js?v=71"></script>
+<script src="plan.js?v=71"></script>
+<script src="menu.js?v=71"></script>
+<script src="edit.js?v=71"></script>
+<script src="food.js?v=71"></script>
+<script src="grow.js?v=71"></script>
+<script src="log.js?v=71"></script>
+<script src="info.js?v=71"></script>
+<script src="cloud.js?v=71"></script>
+<script src="boot.js?v=71"></script>
 <script>
 /* 시트 아래로 스와이프해서 닫기 */
 (function(){var md=document.getElementById('md'),sh=document.getElementById('sh');

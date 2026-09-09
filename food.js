@@ -122,7 +122,10 @@ var f=null;FD.forEach(function(x){if(x[0]===n)f=x});
 if(f&&ageM()<f[3]&&!confirm(n+'은 만 '+f[3]+'개월부터 권장돼요. 그래도 시작할까요?'))return;
 obs.push(uNow({id:'o'+Date.now(),n:n,dt:dt,tm:tm,c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0}));
 OB.sel='';OB.free='';save();askNoti();render()}
-function obsChk(i,x){var a=obs.filter(function(o){return !o.done})[i];a.c[x]=a.c[x]?0:1;save();render()}
+function obsChk(i,x){var a=obs.filter(function(o){return !o.done})[i];
+if(!a)return;
+if(!a.c)a.c=[0,0,0];           /* 병합·구버전 데이터로 c 가 없을 수 있다 */
+a.c[x]=a.c[x]?0:1;uNow(a);save();render()}
 function obsMemo(i,v){var a=obs.filter(function(o){return !o.done})[i];a.m=v;save()}
 function obsDone(i,ok){var a=obs.filter(function(o){return !o.done})[i];
 a.done=1;a.ok=ok;tried[a.n]=ok?'ok':'bad';save();

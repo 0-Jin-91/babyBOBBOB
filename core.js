@@ -82,6 +82,22 @@ return a[i]+(a[i+1]-a[i])*(m-i)}
 var KY={b:'b6.baby',l:'b6.log',f:'b6.food',m:'b6.my',c:'b6.cube',o:'b6.ov',p:'b6.ph',w:'b6.plan',a:'b6.obs',s:'b6.shop',t:'b6.today',v:'b6.fav',g:'b6.grow',bw:'b6.bowl'};
 function LS(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v===null?d:v}catch(e){return d}}
 var baby=LS(KY.b,null),logs=LS(KY.l,[]),tried=LS(KY.f,{}),myR=LS(KY.m,[]),cubes=LS(KY.c,[]),ov=LS(KY.o,{}),ph=LS(KY.p,{}),plan=LS(KY.w,null),obs=LS(KY.a,[]),shopChk=LS(KY.s,{}),todaySel=LS(KY.t,null),fav=LS(KY.v,{}),grow=LS(KY.g,[]);
+/*───────── 저장된 관찰 기록 정규화 (필수) ─────────
+   ★ obsSlim 은 빈 값을 지워서 저장한다(c·m·done·lv). 그런데 위에서 LS 로 읽을 때
+     obsFull 을 거치지 않아, c 가 없는 항목이 그대로 전역 obs 에 들어왔다.
+     화면을 그리는 food.js:29 와 알림 notiCheck 는 o.c[x] 를 바로 읽으므로
+     그 항목을 만나면 예외가 나고 "문제가 생겨 일부 화면이 멈췄어요"가 뜬다.
+   ★ 한 기기에서만 증상이 나는 이유가 이것이다 — 저장된 데이터에 그런 항목이
+     있는 기기만 터진다. 코드가 아니라 데이터 상태의 차이다.
+   ★ 여기서 한 번 채워두면 이후 모든 읽기 지점이 안전해진다(방어를 96곳에
+     흩뿌리지 않는다). obsFull 은 함수 선언이라 호이스팅되어 호출 가능하다. */
+if(obs  && obs.length)  obs  = obs.map(function(o){ return obsFull(o) });
+/*  logs 는 여기서 채우지 않는다 — logFull 이 milkNut·gsNut(calc.js)를 쓰고,
+    calc.js 는 core.js 보다 나중에 로드된다. 그래서 원래 설계대로 boot.js 의
+    migLogs() 가 담당한다(그 주석에 이유가 적혀 있다). 여기서 부르면 영양값이
+    빈 채로 굳어 계산이 어긋난다.
+    grow 는 growFull 이 외부 의존이 없어 안전하지만, 읽는 쪽이 g.w/g.h 를
+    null 검사와 함께 쓰므로 지금 문제와 무관하다 — 불필요한 변경을 넣지 않는다. */
 /* ===== 기록 슬림화 (용량 3단계) =====
    localStorage 한도는 늘릴 수 없으므로 '계산으로 되살릴 수 있는 값은 저장하지
    않는다'는 원칙을 적용한다. 건수만큼 곱해지는 필드라 효과가 크다.
