@@ -347,11 +347,14 @@ function clPack(){
 function clMergeList(mine, theirs, idKey, kind){
   mine   = mine   || [];
   theirs = theirs || [];
-  var byId = {}, order = [], i, k, it;
-
-  function put(it, fromMine){
-    if(!it) return;
-    k = ''+(it[idKey]!==undefined ? it[idKey] : '');
+  var byId = {}, order = [], i, it;
+  /* ★ put() 안에서 쓰는 이름을 바깥과 겹치지 않게 한다. 예전에는 바깥의
+     var k 를 함수 안에서 그대로 대입해(섀도잉 없이) 공유했고, 매개변수 이름도
+     바깥 var it 와 같았다. 동작이 꼬이기 쉬운 구조라 지역변수로 분리한다. */
+  function put(item, fromMine){
+    if(!item) return;
+    var it = item;
+    var k = ''+(it[idKey]!==undefined ? it[idKey] : '');
     if(!k) return;
     /*───── 지운 것은 되살리지 않는다 (3b 묘비 연동) ─────
        ★ 판단 기준은 '내 목록에 있느냐'가 아니라 '삭제가 더 나중이냐'다.
@@ -430,17 +433,24 @@ function clApply(d){
     if(typeof delSave ==='function')delSave();
   }
   if(d.baby) baby=d.baby;
-  if(d.logs) logs = _mg ? clMergeList(logs, d.logs.map(logFull), 'id', 'logs')
+  /* logs·grow 도 obs 와 같은 이유로 병합 뒤 Full 을 다시 적용한다 */
+  if(d.logs) logs = _mg ? clMergeList(logs, d.logs.map(logFull), 'id', 'logs').map(logFull)
                         : d.logs.map(logFull);
   if(d.tried)tried=d.tried;
   if(d.my)   myR  = _mg ? clMergeList(myR, d.my, 'i', 'my') : d.my;
   if(d.cubes)cubes= _mg ? clMergeList(cubes, d.cubes, 'id', 'cubes') : d.cubes;
   if(d.ov)   ov=d.ov;
   if(d.plan!==undefined) plan=d.plan;
-  if(d.obs)  obs  = _mg ? clMergeList(obs, d.obs.map(obsFull), 'id', 'obs')
+  /* ★ 병합 결과에 obsFull 을 다시 적용한다.
+     obs 항목은 obsSlim 이 빈 값을 지워서 올린다(c·m·done·lv 가 없을 수 있다).
+     그래서 받은 쪽은 obsFull 로 기본값을 채워야 하는데, 병합은 '내 항목'과
+     '서버 항목' 중 하나를 고르므로 내 항목이 이기면 채워지지 않은 채 남는다.
+     그 상태로 notiCheck(food.js:132) 가 o.c[...] 를 읽으면 예외가 나고,
+     전역 오류 핸들러가 "문제가 생겨 일부 화면이 멈췄어요" 배너를 띄운다. */
+  if(d.obs)  obs  = _mg ? clMergeList(obs, d.obs.map(obsFull), 'id', 'obs').map(obsFull)
                         : d.obs.map(obsFull);
   if(d.fav)  fav=d.fav;
-  if(d.grow) grow = _mg ? clMergeList(grow, d.grow.map(growFull), 'id', 'grow')
+  if(d.grow) grow = _mg ? clMergeList(grow, d.grow.map(growFull), 'id', 'grow').map(growFull)
                         : d.grow.map(growFull);
   if(d.stock&&typeof STK!=='undefined'){
     STK = _mg ? clMergeStock(STK, d.stock) : d.stock;

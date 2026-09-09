@@ -129,7 +129,14 @@ a.done=1;a.ok=ok;tried[a.n]=ok?'ok':'bad';save();
 alert(ok?a.n+' — 안전 재료로 기록했어요!':a.n+' — 반응으로 기록했어요. 증상이 심하면 소아과에 문의하세요.');render()}
 function askNoti(){if(!('Notification' in window))return alert('이 브라우저는 알림을 지원하지 않아요.');
 Notification.requestPermission().then(function(p){if(p==='granted')new Notification('알림이 설정되었어요',{body:'관찰 기간 동안 앱을 열면 알려드립니다.'})})}
-function notiCheck(){var due=obs.filter(function(o){return !o.done&&dObs(o)<=3&&!o.c[dObs(o)-1]});
+/* ★ o.c 가 없어도 죽지 않게 방어한다 — obsSlim 이 빈 배열을 지워서 올리므로
+   어떤 경로로든 c 없는 항목이 들어올 수 있다. 여기서 예외가 나면 전역 핸들러가
+   "문제가 생겨 일부 화면이 멈췄어요" 배너를 띄우고 앱 전체가 멈춘다. */
+function notiCheck(){var due=obs.filter(function(o){
+  if(!o||o.done)return false;
+  var dd=dObs(o); if(dd>3)return false;
+  var cc=o.c||[0,0,0];
+  return !cc[dd-1]});
 if(due.length&&'Notification' in window&&Notification.permission==='granted')
 new Notification('🔔 알레르기 관찰 '+due.length+'건',{body:due.map(function(o){return o.n+' '+dObs(o)+'일차'}).join(', ')})}
 
