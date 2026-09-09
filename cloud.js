@@ -122,6 +122,7 @@ var FB = null;                        /* {app,auth,db,fn:{...}} — 로드 후 �
 var CLUSER = null;                    /* 로그인된 사용자 (null = 비로그인) */
 var CLBUSY = 0;                       /* 전송 중 표시 */
 var _cltmr = null;                    /* 디바운스 타이머 */
+var CLGOT  = 0;                       /* 조용한 동기화로 받아온 시각 — 배지 안내용(2단계) */
 
 function clReady(){ return !!(FBCFG.apiKey && FBCFG.projectId) }
 /* 로그인 여부는 변수(CLUSER) 하나에 의존하지 않는다.
@@ -609,6 +610,12 @@ function clState(){
   if(CL.err)            return {t:'err',  s:'백업 실패 · 눌러서 다시 시도', c:'#EF6A4C'};
   if(CLPHB)             return {t:'sync', s:'사진 백업 중… '+CLPHB+'장 남음', c:'#7FA8D9'};
   if(CL.pend)           return {t:'wait', s:'백업 대기 중…', c:'#7FA8D9'};
+  /* 2단계 — 다른 기기 변경을 방금 받아왔다면 그 사실을 잠깐 알려준다.
+     ★ 새 UI(토스트)를 만들지 않고 기존 배지에 얹는다. 자동으로 화면이
+       바뀌면 사용자는 "내가 뭘 잘못 눌렀나" 싶으므로 반드시 알려야 하지만,
+       확인을 요구하는 알림(alert)은 하던 일을 끊으므로 쓰지 않는다. */
+  if(CLGOT && Date.now()-CLGOT < 20000)
+    return {t:'got', s:'다른 기기 기록을 받아왔습니다', c:'#2E9C7D'};
   return {t:'ok', s:clWhen()+' 백업됨', c:'#2E9C7D'};
 }
 /* 배지 + 설정 카드를 함께 갱신한다.
@@ -641,15 +648,83 @@ setInterval(function(){
   c.innerHTML=clBody();
 }, 1000);
 
+/*───────── 조용한 동기화 (2단계) ─────────
+   앱으로 돌아올 때·인터넷이 돌아올 때 서버를 확인해, 다른 기기가 올린 변경을
+   자동으로 받아온다. 지금까지 다운로드는 부팅 시 1회(clFirst)뿐이었다.
+
+   ★ clFirst 와 결정적으로 다른 점 — 이 함수는 절대 묻지 않는다.
+     사용자가 앱을 쓰는 도중에 갑자기 확인창이 뜨면 하던 일이 끊기고,
+     무엇보다 "무슨 상황인지 모르는 채 누르는" 선택은 데이터를 잃게 한다.
+     그래서 확신할 수 있을 때만 움직이고, 애매하면 아무것도 하지 않는다.
+     판단이 필요한 상황은 다음 부팅 때 clFirst 가 제대로 묻는다.
+
+   ★ 기준점(baseHash)이 없으면 아예 시작하지 않는다 — 어느 쪽이 변했는지
+     알 수 없는 상태에서 자동으로 덮으면 그것이 곧 데이터 유실이다. */
+var _clsync = 0;                        /* 동시 실행 방지 */
+var CLSYNCAT = 0;                       /* 마지막 확인 시각 — 화면 표시·과다호출 방지 */
+
+function clSync(why){
+  if(_clsync) return;                                   /* 이미 확인 중 */
+  if(!clOn() || !navigator.onLine) return;
+  if(CLBUSY) return;                                    /* 업로드 중이면 비켜준다 */
+  if(_cltmr) return;                                    /* 업로드 대기 중(3초 디바운스) → 내 변경이 먼저 */
+  if(CL.pend) return;                                   /* 못 올린 변경이 있다 → 받으면 그것이 사라진다 */
+  if(!CL.baseHash) return;                              /* 기준점 없음 → 판단 불가, 건드리지 않는다 */
+  if(Date.now() - CLSYNCAT < 10000) return;             /* 10초 안에 다시 부르지 않는다 */
+  /* ★ 입력창(모달)이 열려 있으면 받지 않는다 — clPull 은 boot()/render() 로
+     화면을 다시 그리므로, 기록을 쓰던 중이면 입력하던 내용이 사라진다.
+     닫은 뒤 다음 기회(다시 앱으로 돌아올 때)에 받으면 충분하다. */
+  var _md = document.getElementById('md');
+  if(_md && _md.classList.contains('on')) return;
+
+  _clsync = 1; CLSYNCAT = Date.now();
+  var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
+  F.D.getDoc(ref).then(function(sn){
+    _clsync = 0;
+    if(!sn.exists()) return;                            /* 서버에 아직 없음 → clPush 가 할 일 */
+    var remote = sn.data();
+    if(!remote.hash) return;                            /* 구버전이 올린 문서 → 판단 불가 */
+
+    /* 확인 사이에 사용자가 입력했을 수 있다 — 그러면 물러난다 */
+    if(CLBUSY || _cltmr || CL.pend) return;
+
+    var lh = clHash(clPack());
+    if(lh === remote.hash) return;                      /* 같다 → 할 일 없음 */
+
+    /* 이 폰이 기준점 그대로면 = 이 폰은 안 변했고 서버만 변했다 → 안전하게 받는다 */
+    if(lh === CL.baseHash){
+      /* 사용자가 누르지 않았는데 화면이 바뀌는 유일한 경로 → 반드시 알린다.
+         (clFirst·clRestore 는 사용자가 스스로 선택한 것이므로 표시하지 않는다) */
+      CLGOT = Date.now();
+      clPull(remote);
+      return;
+    }
+
+    /* 그 밖(이 폰만 변함 / 둘 다 변함)은 여기서 처리하지 않는다.
+       이 폰만 변한 경우는 clQueue→clPush 가 이미 올릴 예정이고,
+       둘 다 변한 경우는 사람이 판단해야 하므로 다음 부팅의 clFirst 에 맡긴다. */
+  }).catch(function(e){
+    _clsync = 0;
+    /* 조용한 동기화의 실패는 사용자 잘못이 아니다 — 배지를 띄우지 않고
+       진단용으로만 남긴다. 다음 기회에 다시 시도하면 된다. */
+    CL.emsg = 'sync: ' + ((e&&(e.code||e.name))||'') + (e&&e.message?(' · '+e.message):'');
+    if(CL.emsg.length>200) CL.emsg=CL.emsg.slice(0,200);
+    clSave();
+  });
+}
+
 /* 인터넷이 돌아오면 밀린 것을 자동 전송 */
 window.addEventListener('online', function(){
   if(clOn() && CL.pend) clPush(1);
+  else clSync('online');                /* 밀린 게 없으면 서버 쪽 변경을 확인한다 */
   clPaint();
 });
 window.addEventListener('offline', clPaint);
-/* 앱을 다시 볼 때 밀린 것 전송 */
+/* 앱을 다시 볼 때 — 밀린 것은 올리고, 없으면 서버 변경을 받아온다 */
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden && clOn() && CL.pend) clPush(1);
+  if(document.hidden || !clOn()) return;
+  if(CL.pend) clPush(1);
+  else clSync('visible');
 });
 
 /*───────── 지금 백업하기 (버튼 전용) ─────────*/
