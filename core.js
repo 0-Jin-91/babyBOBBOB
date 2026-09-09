@@ -143,6 +143,12 @@ function delMark(kind, id){
 function delHas(kind, id){
   return !!(DEL[kind] && DEL[kind][''+id]);
 }
+/* 언제 지웠는가 (0 = 흔적 없음).
+   ★ 병합은 '있다/없다'가 아니라 '언제'로 판단해야 한다 — 지운 뒤 되살린
+     항목(undo)은 수정시각이 삭제시각보다 나중이므로 그것으로 구분된다. */
+function delAt(kind, id){
+  return (DEL[kind] && DEL[kind][''+id]) ? +DEL[kind][''+id] : 0;
+}
 /* 되살아났으면 흔적을 지운다 — stock.js 의 되돌리기(undo)처럼 정당한 부활이 있다.
    흔적을 남겨두면 그 항목이 다음 병합에서 다시 사라진다. */
 function delUnmark(kind, id){

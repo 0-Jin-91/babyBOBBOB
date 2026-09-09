@@ -126,6 +126,7 @@ var CLGOT  = 0;                       /* 조용한 동기화로 받아온 시각
 var CLAPPLY= 0;                       /* clApply 진행 중 — 되올림(에코) 방지 */
 var CLMERGE= 1;                       /* 4단계 병합 사용 (0 이면 예전처럼 전체 교체) */
 var CLMGD  = 0;                       /* 방금 병합으로 내용이 달라졌다 → 되올려야 한다 */
+var CLPUSHM= 0;                       /* clPush 의 사전 확인 진행 중 — 재귀 방지 */
 
 function clReady(){ return !!(FBCFG.apiKey && FBCFG.projectId) }
 /* 로그인 여부는 변수(CLUSER) 하나에 의존하지 않는다.
@@ -352,9 +353,18 @@ function clMergeList(mine, theirs, idKey, kind){
     if(!it) return;
     k = ''+(it[idKey]!==undefined ? it[idKey] : '');
     if(!k) return;
-    /* 지운 것은 되살리지 않는다 — 3b 의 묘비가 여기서 쓰인다.
-       단, 내 목록에 아직 살아있다면 그건 내가 방금 되살린 것이므로 남긴다. */
-    if(!fromMine && typeof delHas==='function' && delHas(kind, k)) return;
+    /*───── 지운 것은 되살리지 않는다 (3b 묘비 연동) ─────
+       ★ 판단 기준은 '내 목록에 있느냐'가 아니라 '삭제가 더 나중이냐'다.
+         처음에는 내 항목(fromMine)에는 묘비를 적용하지 않았다. undo 로 되살린
+         항목을 지키려던 것이었는데, 그 때문에 상대가 지운 항목이 내 쪽에
+         남아 두 기기가 영구히 어긋났다("아이패드에서 지운 당근이 아이폰에 남음").
+       ★ 시각으로 비교하면 두 요구가 동시에 충족된다.
+           삭제시각 > 항목수정시각  →  지운 뒤 손대지 않았다  → 삭제 유지
+           삭제시각 < 항목수정시각  →  지운 뒤 되살렸다(undo) → 항목 유지 */
+    if(typeof delAt==='function'){
+      var _dt = delAt(kind, k);
+      if(_dt && _dt >= +(it.u||0)) return;
+    }
     var cur = byId[k];
     if(cur===undefined){ byId[k]=it; order.push(k); return }
     /* 양쪽에 있다 → u 가 나중인 쪽. u 가 없으면(구 레코드) 있는 쪽을 남긴다. */
@@ -402,6 +412,23 @@ function clApply(d){
      ★ CLMERGE 가 꺼져 있으면 예전처럼 통째로 교체한다. 병합은 되돌리기 어려운
        동작이라, 문제가 생겼을 때 이 한 줄로 3단계 상태로 되돌릴 수 있게 두었다. */
   var _mg = (typeof CLMERGE==='undefined') || CLMERGE;
+  /*───── ★ 묘비를 배열 병합보다 '먼저' 합친다 ─────
+     병합(clMergeList)은 delHas() 로 "지운 것인가"를 판단한다. 그런데 묘비
+     합치기가 뒤에 있으면, 상대가 보낸 삭제 흔적을 아직 모르는 상태로 병합하게
+     되어 상대가 지운 항목이 내 쪽에서 되살아난다.
+     (실제로 "아이패드에서 지운 당근이 아이폰에 되살아나는" 증상이 여기서 났다)
+     ★ 순서가 곧 정확성이다 — 삭제 정보가 병합 판단보다 앞서야 한다. */
+  if(d.del && typeof DEL!=='undefined'){
+    var _dk, _di;
+    for(_dk in d.del){
+      if(!DEL[_dk]) DEL[_dk]={};
+      for(_di in d.del[_dk]){
+        if(!DEL[_dk][_di] || d.del[_dk][_di] > DEL[_dk][_di]) DEL[_dk][_di]=d.del[_dk][_di];
+      }
+    }
+    if(typeof delPrune==='function')delPrune();
+    if(typeof delSave ==='function')delSave();
+  }
   if(d.baby) baby=d.baby;
   if(d.logs) logs = _mg ? clMergeList(logs, d.logs.map(logFull), 'id', 'logs')
                         : d.logs.map(logFull);
@@ -425,21 +452,8 @@ function clApply(d){
   if(d.navm&&typeof NAVM!=='undefined'){ NAVM=d.navm; if(typeof NAVMK!=='undefined')saveKey(NAVMK,d.navm) }
   if(d.sec &&typeof SEC !=='undefined'){ SEC =d.sec;  if(typeof secSave==='function')secSave() }
   if(d.cmix&&typeof CMIX!=='undefined'){ CMIX=d.cmix; if(typeof cmSave ==='function')cmSave()  }
-  /* 3b — 묘비는 '덮지 않고 합친다'.
-     ★ 다른 키처럼 DEL=d.del 로 덮으면, 이 기기에서 방금 지운 흔적이 사라져
-       그 항목이 다음 병합에서 되살아난다. 삭제는 양쪽 사실을 모두 보존해야
-       하므로 합집합을 취하고, 같은 id 는 더 나중에 지운 시각을 남긴다. */
-  if(d.del && typeof DEL!=='undefined'){
-    var _k, _i;
-    for(_k in d.del){
-      if(!DEL[_k]) DEL[_k]={};
-      for(_i in d.del[_k]){
-        if(!DEL[_k][_i] || d.del[_k][_i] > DEL[_k][_i]) DEL[_k][_i]=d.del[_k][_i];
-      }
-    }
-    if(typeof delPrune==='function')delPrune();
-    if(typeof delSave ==='function')delSave();
-  }
+  /* 묘비 합치기는 위(배열 병합 앞)에서 이미 처리했다 — 순서가 중요하므로
+     여기로 되돌리지 말 것. 상대의 삭제를 모르는 채 병합하면 부활한다. */
   save();
   }finally{ CLAPPLY = 0 }
 }
@@ -549,7 +563,11 @@ function clPull(remote){
     if(CLMGD){
       CLMGD = 0;
       if(!remote.hash || remote.hash !== _h){
-        setTimeout(function(){ clPush(1) }, 300);   /* boot() 가 끝난 뒤 올린다 */
+        /* ★ clPushNow 를 직접 부른다 — clPush 를 부르면 그것이 또 서버를
+             확인하고, 서버는 아직 병합 전 상태이므로 "내가 모르는 변경이 있다"고
+             판단해 다시 병합→되올림을 반복한다(무한재귀). 방금 이 순간 서버를
+             읽어 합친 결과이므로 다시 확인할 필요가 없다. */
+        setTimeout(function(){ clPushNow(1) }, 300);  /* boot() 가 끝난 뒤 올린다 */
       }
     }
   }catch(e){ CLMGD=0; clErr('pull',e) }
@@ -567,6 +585,43 @@ function clPush(now){
   /* ★ 보낼 뭉치를 변수로 붙잡는다 — 성공 후에 clPack() 을 다시 부르면
        그 사이 사용자가 입력한 내용까지 포함된 지문이 기준점이 되어
        "안 올린 변경을 올렸다"고 오판한다. 올린 것과 같은 뭉치여야 한다. */
+  /*───── 올리기 전에 서버를 확인한다 (4단계 보강) ─────
+     ★ 여기가 "동기화 전 추가/삭제가 서로 안 보인다"의 근본 원인이었다.
+       setDoc 은 문서 전체 교체다. 서버를 보지 않고 올리면, 그 사이 상대가
+       올린 내용이 그대로 지워진다. 병합 엔진을 만들어도 clPush 가 확인 없이
+       덮으면 아무 소용이 없다 — 덮은 뒤에는 합칠 대상이 남아있지 않다.
+     ★ 그래서 올리기 직전에 한 번 읽어, 서버가 내 기준점과 다르면(=상대가
+       무언가 올렸으면) 먼저 합치고 그 결과를 올린다. */
+  if(CLMERGE && CL.baseHash && !CLPUSHM){
+    CLPUSHM = 1;                                  /* 이 확인 때문에 재귀하지 않도록 */
+    F.D.getDoc(ref).then(function(sn){
+      CLPUSHM = 0;
+      var rem = sn.exists() ? sn.data() : null;
+      if(rem && rem.hash && rem.hash !== CL.baseHash && rem.hash !== clHash(clPack())){
+        /* 서버에 내가 모르는 변경이 있다 → 합친 뒤 올린다.
+           clPull 이 병합·저장·화면갱신까지 하고, CLMGD 로 되올림도 예약한다. */
+        CLBUSY = 0;
+        CLGOT = Date.now(); CLMGD = 1;
+        clPull(rem);
+        return;
+      }
+      clPushNow(now);                             /* 서버가 내가 아는 상태 → 그냥 올린다 */
+    }).catch(function(e){
+      CLPUSHM = 0;
+      /* 확인에 실패했으면 예전처럼 올린다 — 백업이 멈추는 것보다 낫다 */
+      clPushNow(now);
+    });
+    return;
+  }
+  clPushNow(now);
+}
+
+/* 실제 전송 — clPush 가 서버 확인을 끝낸 뒤 부른다 */
+function clPushNow(now){
+  if(!clOn()) return;
+  if(!navigator.onLine){ CLBUSY=0; CL.pend=1; clSave(); clPaint(); return }
+  CLBUSY=1; clPaint();
+  var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
   var out = clPack();
   try{
     F.D.setDoc(ref, fbEnc(out)).then(function(){
@@ -574,6 +629,12 @@ function clPush(now){
       clBase(out.hash || clHash(out));            /* 올린 내용 = 서버 내용 → 기준점 */
       clSave(); clPaint();
       clPhPush();                                 /* 기록이 끝난 뒤 사진 */
+      /* ★ 올린 직후 서버를 한 번 확인한다 (4단계 보강).
+         내 변경을 올리는 것과 상대 변경을 받는 것은 별개다. 예전에는 올리고
+         끝나서, 내가 입력한 뒤에는 상대가 올린 것을 받을 기회가 없었다.
+         (CL.pend 가 서 있는 동안 clSync 는 스스로 물러나므로 더욱 그랬다)
+         → "동기화 전에 각각 추가/삭제한 것이 서로 안 보인다"의 직접 원인. */
+      setTimeout(function(){ clSync('afterpush') }, 500);
     }).catch(function(e){
       CLBUSY=0; CL.pend=1; clErr('push',e);
     });
@@ -874,13 +935,18 @@ function clSync(why){
 }
 
 /* 인터넷이 돌아오면 밀린 것을 자동 전송 */
+/*───── 밀린 것이 있으면 올리고, 없으면 받는다 ─────
+   ★ clPush 는 이제 올리기 전에 서버를 확인해 필요하면 합치므로(위 참조),
+     pend 상태에서 clPush 를 부르는 것만으로 '올리기 + 받기'가 함께 이뤄진다.
+     전송 성공 후에도 clSync('afterpush') 가 한 번 더 확인한다.
+     예전에는 pend 면 clPush 만 하고 끝나서, 내가 입력한 뒤에는 상대 변경을
+     받을 경로가 아예 없었다. */
 window.addEventListener('online', function(){
   if(clOn() && CL.pend) clPush(1);
-  else clSync('online');                /* 밀린 게 없으면 서버 쪽 변경을 확인한다 */
+  else clSync('online');
   clPaint();
 });
 window.addEventListener('offline', clPaint);
-/* 앱을 다시 볼 때 — 밀린 것은 올리고, 없으면 서버 변경을 받아온다 */
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || !clOn()) return;
   if(CL.pend) clPush(1);
@@ -907,7 +973,11 @@ document.addEventListener('touchstart', function(){ clSync('touch') }, {passive:
      이 경로는 getDoc 1회(수 KB)뿐이고 내용이 같으면 아무 일도 하지 않는다. */
 setInterval(function(){
   if(document.hidden) return;
-  if(!clOn() || CL.pend) return;
+  if(!clOn()) return;
+  /* ★ 밀린 것이 있으면 clPush 로 간다 — clPush 가 서버 확인·병합까지 한다.
+     예전에는 pend 면 그냥 건너뛰어서, 올리지 못한 상태가 이어지는 동안
+     상대 변경을 영원히 받지 못했다. */
+  if(CL.pend){ clPush(1); return }
   clSync('timer');
 }, 20000);
 
