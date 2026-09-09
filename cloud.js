@@ -25,7 +25,91 @@ var FBCFG = {
 var CLK = 'b6.cloud';                 /* 동기화 상태 저장 키 */
 var CL  = LS(CLK, null) || {on:0, uid:'', email:'', lastUp:0, lastDown:0, pend:0, err:''};
 if(CL.emsg===undefined) CL.emsg='';   /* 마지막 오류 원문 — 진단용 */
+/*───────── 동기화 기준점 (1단계) ─────────
+   baseHash = 이 폰과 클라우드가 마지막으로 일치했던 시점의 내용 지문.
+   이 값이 있으면 "어느 쪽이 변했는가"를 3자 비교로 알 수 있다.
+     local===remote           → 아무 일도 없음
+     local===base, remote 다름 → 서버만 변했다  → 받으면 된다
+     remote===base, local 다름 → 이 폰만 변했다 → 올리면 된다
+     둘 다 base 와 다름        → 진짜 충돌      → 이때만 사용자에게 묻는다
+   ★ 기존 사용자는 이 값이 빈 문자열이다. 그때는 판단 근거가 없으므로
+     예전처럼 묻는다 — 없는 기준점을 추측해서 자동으로 덮으면 안 된다. */
+if(CL.baseHash===undefined) CL.baseHash='';   /* 마지막 일치 시점의 지문 */
+if(CL.baseAt  ===undefined) CL.baseAt  =0;    /* 그 시각 — 화면 표시·진단용 */
 function clSave(){ saveKey(CLK, CL) }
+/* 기준점 갱신 — push/pull 이 성공한 직후에만 부른다.
+   ★ 성공하지 않은 전송으로 기준점을 올리면 "변한 적 없다"고 오판해
+     다음 동기화에서 변경이 조용히 사라진다. 반드시 성공 후에만. */
+function clBase(h){
+  if(!h) return;
+  CL.baseHash=h; CL.baseAt=Date.now(); clSave();
+}
+
+/*───────── 기기 식별 (1단계) ─────────
+   여러 기기가 같은 계정을 쓸 때 "누가 올린 데이터인지" 구분하기 위한 것.
+   ★ did 는 이 기기에서 최초 1회만 만들고 CL 에 영구 보관한다 — 지우면 다른
+     기기로 인식되므로 clForget/clLogout 에서도 건드리지 않는다.
+   ★ 이 단계는 값을 실어 보내기만 한다. 판단 로직은 2단계에서 쓴다. */
+function clDid(){
+  if(!CL.did){
+    CL.did = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    clSave();
+  }
+  return CL.did;
+}
+/* 기기명 — 사용자가 알림에서 "어느 폰이 올린 것"인지 알아볼 수 있으면 된다.
+   UA 는 브라우저마다 다르므로 못 알아내면 빈 값을 두고 표시할 때 대체한다. */
+function clDevName(){
+  if(CL.dn) return CL.dn;                       /* 사용자가 고친 이름이 있으면 우선 */
+  var u = (navigator.userAgent||''), n = '';
+  /* Android UA 는 "(Linux; Android 14; SM-S931N Build/…)" 꼴.
+     정규식을 복잡하게 쓰지 않고 세미콜론으로 잘라 모델명 토큰만 집는다. */
+  if(u.indexOf('Android')>=0){
+    var seg = u.split(';'), t, x;
+    for(x=0;x<seg.length;x++){
+      t = seg[x].split(')')[0].split('Build')[0].trim();   /* 괄호 뒤 버전정보 버림 */
+      if(t && t.indexOf('Android')<0 && t.indexOf('Linux')<0
+           && t.indexOf('Mozilla')<0 && t.indexOf('AppleWebKit')<0){ n=t; break }
+    }
+  }
+  else if(/iPhone/i.test(u)) n = 'iPhone';
+  else if(/iPad/i.test(u))   n = 'iPad';
+  else if(/Macintosh/i.test(u)) n = 'Mac';
+  else if(/Windows/i.test(u))   n = 'Windows PC';
+  return n || '알 수 없는 기기';
+}
+/* 내용 해시 — "서버 데이터와 지금 이 폰이 같은가"를 건수가 아니라 내용으로 본다.
+   ★ 반드시 fbEnc 를 거치지 않은 원본에 대해 계산한다. fbEnc 는 중첩 배열을
+     {_na:1,…} 객체로 바꾸므로, 인코딩 후에 계산하면 양쪽 값이 어긋난다.
+   ★ 메타(at·v·did·dn·hash)는 제외한다 — 시각·버전이 달라도 내용이 같으면
+     같다고 봐야 알림을 지울 수 있다. */
+var CLMETA = {sv:1, v:1, at:1, did:1, dn:1, hash:1};
+function clStable(v){
+  if(v===undefined || v===null) return 'null';
+  if(typeof v!=='object') return JSON.stringify(v);
+  if(Object.prototype.toString.call(v)==='[object Array]'){
+    var i, a=[];
+    for(i=0;i<v.length;i++) a.push(clStable(v[i]));
+    return '['+a.join(',')+']';
+  }
+  var ks=[], k;
+  for(k in v){ if(Object.prototype.hasOwnProperty.call(v,k)) ks.push(k) }
+  ks.sort();                                    /* 키 순서가 달라도 같은 해시 */
+  var p=[];
+  for(i=0;i<ks.length;i++) p.push(JSON.stringify(ks[i])+':'+clStable(v[ks[i]]));
+  return '{'+p.join(',')+'}';
+}
+function clHash(d){
+  if(!d) return '';
+  var body={}, k;
+  for(k in d){ if(Object.prototype.hasOwnProperty.call(d,k) && !CLMETA[k]) body[k]=d[k] }
+  var s=clStable(body), h1=0x811c9dc5, h2=0x01000193, i;
+  for(i=0;i<s.length;i++){                      /* FNV 계열 2채널 — 충돌 여유 */
+    h1 = (h1 ^ s.charCodeAt(i)) >>> 0; h1 = (h1 * 16777619) >>> 0;
+    h2 = (h2 + s.charCodeAt(i) * (i%7+1)) >>> 0;
+  }
+  return s.length.toString(36)+'-'+h1.toString(36)+h2.toString(36);
+}
 /* 오류를 코드+원문으로 남긴다 — 원인을 화면에서 확인할 수 있어야 고칠 수 있다 */
 function clErr(kind, e){
   CL.err=kind;
@@ -137,7 +221,14 @@ function clPopupHelp(){
 /* 로그인 이력만 지운다 — 기록은 건드리지 않는다 */
 function clForget(){
   if(!confirm('이 폰에 저장된 로그인 정보를 지웁니다.\n\n이유식 기록은 그대로 남습니다.\n계속할까요?')) return;
-  CL={on:0,uid:'',email:'',lastUp:0,lastDown:0,pend:0,err:'',emsg:''};
+  /* ★ did/dn 은 남긴다 — 이 폰의 신분증이므로 지우면 같은 폰이 '새 기기'로
+     인식되어 동기화 판단(2단계)이 어긋난다. 지우는 건 로그인 정보뿐. */
+  /* ★ baseHash 는 지운다 — 계정이 바뀌면 "마지막으로 일치했던 시점"이라는
+     전제가 무효다. 남겨두면 다른 계정 데이터에 대해 잘못된 자동 판정을 한다.
+     지문이 없으면 clFirst() 는 안전하게 사용자에게 묻는 쪽으로 돌아간다. */
+  CL={on:0,uid:'',email:'',lastUp:0,lastDown:0,pend:0,err:'',emsg:'',
+      baseHash:'', baseAt:0,
+      did:CL.did||'', dn:CL.dn||''};
   CLUSER=null; clSave(); clPaint();
   if(typeof render==='function') try{ render() }catch(e){}
 }
@@ -205,8 +296,9 @@ function fbDec(v){
 /*───────── 데이터 묶기 / 풀기 ─────────*/
 /* 기록 뭉치 — 사진 제외. schemaVersion 을 넣어 나중에 구조가 바뀌어도 읽을 수 있게. */
 function clPack(){
-  return {
+  var p = {
     sv:1, v:(window.APPV||''), at:Date.now(),
+    did:clDid(), dn:clDevName(),          /* 1단계 — 어느 기기가 올렸는지 */
     /* 슬림 형식으로 올린다 — Firestore 문서 1MiB 한도에도 여유가 생긴다 */
     baby:baby, logs:logs.map(logSlim), tried:tried, my:myR, cubes:cubes, ov:ov,
     plan:plan, obs:obs.map(obsSlim), fav:fav, grow:grow.map(growSlim),
@@ -218,6 +310,8 @@ function clPack(){
     sec  :(typeof SEC !=='undefined'?SEC :null),
     cmix :(typeof CMIX!=='undefined'?CMIX:null)
   };
+  p.hash = clHash(p);            /* 메타 제외한 내용만의 지문 — 2단계에서 비교에 쓴다 */
+  return p;
 }
 function clApply(d){
   if(!d) return;
@@ -260,14 +354,41 @@ function clFirst(){
   var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
   F.D.getDoc(ref).then(function(sn){
     var remote = sn.exists() ? sn.data() : null;
-    var rn = clCount(remote), ln = clCount(clPack());
+    var mine   = clPack();
+    var rn = clCount(remote), ln = clCount(mine);
 
+    /*── 1. 한쪽이 비어 있으면 물을 것이 없다 ──*/
     if(!remote || rn===0){ clPush(1); return }        /* 클라우드 비어있음 → 올림 */
     if(ln===0){ clPull(remote); return }              /* 이 폰 비어있음 → 조용히 내림 */
 
-    /* 양쪽에 다 있음 → 가져올지만 묻는다 (기본은 백업) */
-    var rt = remote.at ? clStamp(new Date(remote.at).getTime()) : '알 수 없음';
-    var msg = '이 계정에 백업된 기록이 있습니다.\n\n'
+    /*── 2. 내용 지문으로 비교 ──
+       ★ 예전에는 clCount() 로 건수만 비교했다. 그런데 clPack() 은 17개 키를
+         올리는데 clCount() 는 logs·grow·obs·my 4종만 센다. 그래서 재고·즐겨찾기·
+         설정만 바꾼 기기는 변경이 감지되지 않고, 반대로 내용이 완전히 같아도
+         양쪽에 기록이 있으면 팝업이 떴다.
+       ★ clHash() 는 메타(at·v·did·dn)를 제외한 17개 키 전체의 지문이므로
+         "시각만 다르고 내용은 같다"를 정확히 판정한다. */
+    var lh = mine.hash || clHash(mine);
+    var rh = remote.hash || clHash(remote);          /* 구버전이 올린 문서는 hash 가 없다 */
+    var base = CL.baseHash || '';
+
+    /* (a) 양쪽 내용이 같다 → 아무것도 하지 않는다. 기준점만 세운다 */
+    if(lh && rh && lh===rh){ clBase(lh); clPaint(); return }
+
+    /* (b) 기준점이 있으면 어느 쪽이 변했는지 알 수 있다 → 묻지 않고 처리 */
+    if(base && lh && rh){
+      if(lh===base){ clPull(remote); return }        /* 서버만 변함  → 조용히 받는다 */
+      if(rh===base){ clPush(1);      return }        /* 이 폰만 변함 → 조용히 올린다 */
+    }
+
+    /*── 3. 진짜 충돌(둘 다 변함) 또는 기준점 없음 → 이때만 묻는다 ──*/
+    var rt  = remote.at ? clStamp(new Date(remote.at).getTime()) : '알 수 없음';
+    /* 어느 기기가 올린 백업인지 알려준다 — 내 폰이 올린 것이면 그렇게 표시 */
+    var who = remote.dn ? remote.dn : '알 수 없는 기기';
+    if(remote.did && remote.did===CL.did) who = '이 폰';
+    var msg = (base ? '두 기기에서 각각 기록이 바뀌었습니다.\n\n'
+                    : '이 계정에 백업된 기록이 있습니다.\n\n')
+      +'· 백업한 기기: '+who+'\n'
       +'· 백업 시각: '+rt+'\n'
       +'· 백업된 기록: '+rn+'건\n'
       +'· 지금 이 폰: '+ln+'건\n\n'
@@ -276,9 +397,12 @@ function clFirst(){
       +'[예] 백업을 내려받아 이 폰 기록을 대체합니다';
     if(!confirm(msg)){ clPush(1); return }
 
-    /* 이 폰 기록이 사라지는 쪽이므로 한 번 더 */
+    /* 이 폰 기록이 사라지는 쪽이므로 한 번 더.
+       ★ 여기서 '취소'는 아무것도 하지 않고 끝낸다 — 예전에는 취소해도
+         clPush(1) 이 실행되어 "취소했는데 서버가 덮이는" 반대 방향 파괴가
+         일어났다. 다음 save() 때 어차피 올라가므로 지금 강행할 이유가 없다. */
     if(!confirm('이 폰의 기록 '+ln+'건이 백업 '+rn+'건으로 바뀝니다.\n\n'
-      +'되돌릴 수 없습니다. 계속할까요?')){ clPush(1); return }
+      +'되돌릴 수 없습니다. 계속할까요?')) return;
     clPull(remote);
   }).catch(function(e){ clErr('first',e) });
 }
@@ -286,6 +410,11 @@ function clFirst(){
 function clPull(remote){
   try{
     clApply(fbDec(remote));                       /* 인코딩된 중첩 배열을 원래 모양으로 */
+    /* 받은 직후 이 폰 = 서버. 그 지문이 새 기준점이다.
+       ★ 서버가 보낸 remote.hash 를 그대로 믿지 않고 적용 후 다시 계산한다 —
+         구버전 문서는 hash 가 없고, clApply 가 일부 키만 반영하는 경우도
+         있어(if(d.logs) 형태) 실제 로컬 상태와 어긋날 수 있다. */
+    clBase(clHash(clPack()));
     CL.lastDown=Date.now(); CL.err=''; clSave(); clPaint();
     if(typeof boot==='function') boot(); else if(typeof render==='function') render();
     clPhPull();
@@ -301,9 +430,15 @@ function clPush(now){
   /* setDoc 은 데이터가 규격에 안 맞으면 Promise 를 만들기 전에 '동기적으로' throw 한다.
      그때 .catch() 는 실행되지 않으므로 CLBUSY 가 1로 남아 '백업 중…'이 영구히 멈춘다.
      → 호출 자체를 try 로 감싸 어떤 경로로 실패해도 반드시 CLBUSY 를 0으로 되돌린다. */
+  /* ★ 보낼 뭉치를 변수로 붙잡는다 — 성공 후에 clPack() 을 다시 부르면
+       그 사이 사용자가 입력한 내용까지 포함된 지문이 기준점이 되어
+       "안 올린 변경을 올렸다"고 오판한다. 올린 것과 같은 뭉치여야 한다. */
+  var out = clPack();
   try{
-    F.D.setDoc(ref, fbEnc(clPack())).then(function(){
-      CLBUSY=0; CL.lastUp=Date.now(); CL.pend=0; CL.err=''; clSave(); clPaint();
+    F.D.setDoc(ref, fbEnc(out)).then(function(){
+      CLBUSY=0; CL.lastUp=Date.now(); CL.pend=0; CL.err='';
+      clBase(out.hash || clHash(out));            /* 올린 내용 = 서버 내용 → 기준점 */
+      clSave(); clPaint();
       clPhPush();                                 /* 기록이 끝난 뒤 사진 */
     }).catch(function(e){
       CLBUSY=0; CL.pend=1; clErr('push',e);
