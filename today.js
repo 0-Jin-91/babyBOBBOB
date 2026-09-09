@@ -34,9 +34,44 @@ return tdHead()
 
 /*----- 끼니별 체크리스트 -----*/
 +'<div class="st">🍽 오늘 '+MEALS()+'끼</div>'
-+sl.map(function(s,i){var r=rec[i],hit=null;
-fs.forEach(function(l){if(l.t===s||(r&&(l.rid===r.i||l.n===r.n)))hit=l});
-return tdSlot(s,r,hit,i)}).join('')
+/*───────── 끼니 슬롯 ↔ 실제 기록 연결 ─────────
+   ★ 예전에는 l.t===s (끼니 이름이 같다) 또는 추천 메뉴와 이름/rid 가 같을 때만
+     연결했다. 그래서 기록 탭에서 직접 입력한 메뉴는 어느 슬롯에도 붙지 않아
+     '오늘' 화면의 끼니가 계속 비어 보였다.
+   ★ 이름 대신 '순서'로 붙인다 — 오늘의 이유식 기록을 시각순으로 정렬해
+     첫 번째를 첫 슬롯, 두 번째를 두 번째 슬롯에 넣는다. 무엇을 먹였든
+     기록한 만큼 채워진다.
+   ★ 슬롯 수보다 많이 먹은 경우(간식 등)는 아래 '그 밖의 기록'에서 보여준다. */
++(function(){
+  var used={};
+  var out=sl.map(function(s,i){
+    var r=rec[i], hit=null;
+    /* ① 추천 메뉴와 명확히 일치하는 기록이 있으면 그것을 우선 */
+    fs.forEach(function(l){
+      if(hit||used[l.id])return;
+      if(r&&(l.rid===r.i||l.n===r.n))hit=l;
+    });
+    /* ② 없으면 아직 안 쓰인 기록을 순서대로 붙인다 */
+    if(!hit){
+      for(var j=0;j<fs.length;j++){ if(!used[fs[j].id]){ hit=fs[j]; break } }
+    }
+    if(hit)used[hit.id]=1;
+    return tdSlot(s,r,hit,i);
+  }).join('');
+  /* 슬롯에 못 들어간 나머지 이유식 기록 */
+  var rest=fs.filter(function(l){return !used[l.id]});
+  if(rest.length){
+    out+='<div class="cd" style="padding:9px 10px"><div class="mu" style="font-size:10.5px;font-weight:700;margin-bottom:5px">슬롯 외 기록 '+rest.length+'건 (간식 등)</div>'
+      +rest.map(function(l){
+        return '<div class="rw" style="justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #F2ECE7">'
+          +'<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700">'+esc(l.n||'기록')+'</span>'
+          +'<span class="mu" style="font-size:10.5px;flex:0 0 auto">'+(l.tm||'')+(l.a?' · '+l.a+'g':'')+'</span>'
+          +'<button class="mu" style="font-weight:700;color:var(--bl);flex:0 0 auto" onclick="openAteFor(\''+l.id+'\')">수정</button>'
+          +'<button class="mu" style="font-weight:700;color:var(--sub);flex:0 0 auto" onclick="delLog(\''+l.id+'\')">삭제</button></div>';
+      }).join('')+'</div>';
+  }
+  return out;
+})()
 
 /*----- 수유 -----*/
 +'<div class="st">🍼 수유 <span class="mu" style="font-weight:600;font-size:11.5px">· 권장 회당 '+G.per[0]+'~'+G.per[1]+'ml · 하루 '+G.cnt[0]+'~'+G.cnt[1]+'회</span></div>'

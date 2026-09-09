@@ -33,7 +33,7 @@ return '<div class="rw" style="justify-content:flex-end;margin-bottom:7px"><butt
 +'<div style="background:'+(T.use?'#fff':'#FFEDE4')+';border:1.5px solid '+(T.use?'var(--ln)':'var(--pc)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="baby.useW=0;save();render()"><div class="mu" style="font-size:10px;font-weight:800">표준 기준 ('+T.lb+')</div><b style="font-size:13px">단백 '+dri.p+'g · 철 '+dri.fe+'mg</b><div class="mu" style="font-size:10px">2020 섭취기준</div></div>'
 +'<div style="background:'+(T.use?'#FFEDE4':'#fff')+';border:1.5px solid '+(T.use?'var(--pc)':'var(--ln)')+';border-radius:11px;padding:9px;cursor:pointer" onclick="if(!'+(w?1:0)+'){alert(\'성장 탭에서 몸무게를 먼저 기록해 주세요\');return}baby.useW=1;save();render()"><div class="mu" style="font-size:10px;font-weight:800">우리 아기 체중 기준</div><b style="font-size:13px">'+(w?'단백 '+rnd(w*dri.pkg)+'g · 철 '+dri.fe+'mg':'몸무게 미입력')+'</b><div class="mu" style="font-size:10px">'+(w?w+'kg × '+dri.pkg+'g/kg':'성장 탭에서 입력')+'</div></div></div>'
 +'<div class="mu" style="font-size:10.5px;margin-top:7px">눌러서 기준 변경. 현재 적용: <b style="color:var(--pd)">'+(T.use?'체중 기준':'표준 기준')+'</b> '+sT('kdri')+'</div>'
-+dualGoal()},0,(T.use?'체중 기준':'표준 기준'))
++dualGoal()},1,(T.use?'체중 기준':'표준 기준'))
 
 /*----- ③ 수유 -----*/
 +sec('h_milk','🍼','오늘 수유','권장 '+DY.lo+'~'+DY.hi+'ml ('+G.lb+(ageM()>=6?' · 이유식 병행':'')+')',milkCard,1,D.ml+'ml')
@@ -44,23 +44,50 @@ return dashBoard(true)
 +'<button class="btn g s" style="margin-top:8px" onclick="tab=\'food\';fTab=\'dash\';render()">🥕 재료별 상세 보기</button>'},0,D.cnt+'끼')
 
 /*----- ⑤ 오늘 추천 끼니 -----*/
-+sec('h_rec','🍽','오늘 '+MEALS()+'끼 추천','하루 합계 '+DS.sc+'% · 대안·수정·기록',function(){
+/* ★ 이미 기록한 끼니 수를 세어 '남은 끼니' 중심으로 보여준다.
+   예전에는 추천 N끼가 항상 같은 모습이라, 한 끼를 먹고 나서도 무엇이 남았는지
+   한눈에 알 수 없었다. */
++(function(){
+  var _td=fmt(TD()), _ate=0;
+  logs.forEach(function(l){ if(l.d===_td && l.k!=='milk') _ate++ });
+  var _left=Math.max(0, MEALS()-_ate);
+  return sec('h_rec','🍽',
+    (_left>0? '남은 '+_left+'끼 추천' : '오늘 '+MEALS()+'끼 완료'),
+    (_ate>0? _ate+'끼 먹었어요 · 하루 합계 '+DS.sc+'%' : '하루 합계 '+DS.sc+'% · 대안·수정·기록'),
+    function(){
 return '<div class="cd" style="background:#FBF6F2"><b style="font-size:12.5px">추천 '+MEALS()+'끼를 모두 먹으면 (이유식만)</b><div class="g5" style="margin-top:8px">'+NK.map(function(k){var p=Math.round(pAcc[k]/T.solid[k]*100);
 return '<div style="text-align:center;background:#fff;border-radius:9px;padding:7px 2px"><div class="mu" style="font-size:9.5px">'+NL[k][0]+'</div><b style="color:'+lvCol(p)+';font-size:15px">'+p+'%</b></div>'}).join('')+'</div><div class="mu" style="font-size:10px;margin-top:6px">이유식 담당 목표 대비</div></div>'
 +(DS.low.length?'<div class="alert '+(DS.low[0].pc<LV.mid?'bad':'mid')+'"><span class="ic">'+(DS.low[0].pc<LV.mid?'🚨':'⚠️')+'</span><div><b>추천 '+MEALS()+'끼를 다 먹어도 '+DS.low.map(function(x){return x.nm+' '+Math.round(x.pc)+'%'}).join(' · ')+'</b>가 부족합니다.<br>'
-+DS.low.slice(0,2).map(function(x){return '· <b>'+x.nm+'</b> '+rnd2(x.lack)+x.u+' 더 필요 — '+FIX[x.k].f.slice(0,3).join('·')+' 추가<br>'}).join('')
+/* ★ 예전에는 항목마다 <br> 로 줄을 바꿔 세로로 길게 늘어졌다.
+   가로로 흐르는 칩(flex-wrap)으로 바꿔 한눈에 들어오게 한다. */
++'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
++DS.low.slice(0,3).map(function(x){
+  return '<span style="background:#fff;border:1px solid var(--ln);border-radius:8px;padding:4px 8px;font-size:11px;white-space:nowrap">'
+    +'<b>'+x.nm+'</b> +'+rnd2(x.lack)+x.u+' <span class="mu">· '+FIX[x.k].f.slice(0,2).join('·')+'</span></span>';
+ }).join('')
++'</div>'
 +'<div class="ch" style="margin-top:7px">'+DS.low.slice(0,2).map(function(x){
 return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="boostDay(\''+x.k+'\')">🔧 '+x.nm+' 보충하기</button>'}).join('')
 +'<button style="background:#F5EFEA;color:var(--sub)" onclick="reRec()">🎲 다시 편성</button></div></div>'
 :'<div class="alert ok"><span class="ic">✅</span><div>추천 '+MEALS()+'끼로 <b>이유식 담당 영양이 충분히 채워집니다.</b> 나머지는 수유가 보충해요.</div></div>')
 +rec.map(function(r,i){if(!r)return '';var sc=mealScore(r);
+var done0=loggedToday(r.i);
+/* ★ 이미 먹은 끼니는 한 줄로 접어 자리를 아낀다 — 남은 끼니가 눈에 들어오게. */
+if(done0)return '<div class="cd" style="padding:9px 10px;background:#F4FAF6">'
+ +'<div class="rw" style="justify-content:space-between;align-items:center;gap:8px">'
+ +'<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700"><span style="color:var(--ok)">✅ '+sl[i]+'</span> · '+esc(r.n)+'</span>'
+ +'<span class="mu" style="font-size:10.5px;flex:0 0 auto">'+(logTmOf(done0)||'')+(logAmtOf(done0)?' · '+logAmtOf(done0)+'g':'')+'</span>'
+ +'<button class="mu" style="font-weight:700;color:var(--bl);flex:0 0 auto" onclick="openAteFor(\''+done0+'\')">수정</button>'
+ +'<button class="mu" style="font-weight:700;color:var(--sub);flex:0 0 auto" onclick="unLog(\''+done0+'\')">취소</button></div></div>';
 return '<div class="cd" style="padding:10px"><div class="rw" style="justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:12.5px;color:var(--pd)">'+sl[i]+'</b><span><button class="mu" style="font-weight:700;color:var(--bl)" onclick="openAlt('+i+')">🔄 대안</button> <button class="mu" style="font-weight:700;color:var(--pd);margin-left:8px" onclick="openEd(\''+r.i+'\')">✏️ 수정</button></span></div>'
 +rcard(r)
 +((sc<LV.mid||sc>LV.over)?'<div class="alert '+lvl(sc)+'" style="margin:6px 0 8px;cursor:pointer" onclick="diagMeal(\''+r.i+'\')"><span class="ic">'+lvIco(sc)+'</span><div>1끼 목표의 <b>'+sc+'%</b> ('+lvTxt(sc)+') — <u>눌러서 개선안 보기 ›</u></div></div>':'')
 +(function(){var done=loggedToday(r.i);
 return '<div class="rw">'+(done?'<button class="btn g s" onclick="openAteFor(\''+done+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 취소</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
 +(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+(logAmtOf(done)?' · '+logAmtOf(done)+'g':' · 양 미입력')+'</div>':'')})()+'</div>'}).join('')
-+'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},1,DS.sc+'%')
++'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},1,
+    (_left>0?_left+'끼 남음':'완료'));
+})()
 
 /*----- ⑥ 단계 기준 -----*/
 +sec('h_stage','📚',s.n+' 기준',s.lb+' · '+s.ra,function(){
@@ -155,6 +182,10 @@ function delMilk(id){if(!confirm('이 수유 회차를 삭제할까요?'))return
 logs=logs.filter(function(l){return l.id!==id});delMark('logs',id);save();render()}
 
 /*========== 오늘 먹은 여부 ==========*/
+/* 추천 메뉴가 오늘 기록됐는지 — rid 또는 이름으로 찾는다.
+   ★ 기록 탭에서 다른 이름으로 입력한 경우는 여기서 잡히지 않는다. 그 대신
+     홈의 '남은 끼니' 수는 기록 건수(_ate)로 세므로 진행 상황은 정확히 반영된다.
+     (슬롯 단위 연결은 '오늘' 탭이 순서 기준으로 담당한다) */
 function loggedToday(rid){var td=fmt(TD()),hit=null;
 logs.forEach(function(l){if(l.d===td&&l.k!=='milk'&&(l.rid===rid||l.n===(getR(rid)||{}).n))hit=l.id});
 return hit}
