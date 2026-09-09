@@ -124,6 +124,8 @@ var CLBUSY = 0;                       /* 전송 중 표시 */
 var _cltmr = null;                    /* 디바운스 타이머 */
 var CLGOT  = 0;                       /* 조용한 동기화로 받아온 시각 — 배지 안내용(2단계) */
 var CLAPPLY= 0;                       /* clApply 진행 중 — 되올림(에코) 방지 */
+var CLMERGE= 1;                       /* 4단계 병합 사용 (0 이면 예전처럼 전체 교체) */
+var CLMGD  = 0;                       /* 방금 병합으로 내용이 달라졌다 → 되올려야 한다 */
 
 function clReady(){ return !!(FBCFG.apiKey && FBCFG.projectId) }
 /* 로그인 여부는 변수(CLUSER) 하나에 의존하지 않는다.
@@ -318,6 +320,75 @@ function clPack(){
   p.hash = clHash(p);            /* 메타 제외한 내용만의 지문 — 2단계에서 비교에 쓴다 */
   return p;
 }
+/*═════════ 병합 엔진 (4단계) ═════════
+   두 기기가 각각 입력한 것을 둘 다 살린다.
+
+   왜 필요한가 — clPush 는 setDoc(문서 전체 교체)이고 clApply 는 배열을
+   통째로 갈아치운다. 그래서 아이패드에 소고기, 아이폰에 닭고기를 넣으면
+   나중에 올린 쪽이 앞의 것을 덮어 하나가 사라졌다.
+
+   병합 규칙 — 자료 성격마다 다르다. 한 규칙을 전부에 쓰면 반드시 사고가 난다.
+     ① 기록형 배열 (logs·grow·obs·my·cubes·stock)
+        → 합집합. id 로 짝을 맞추고, 양쪽에 있으면 u(수정시각)가 나중인 쪽.
+        → 묘비(DEL)에 있는 id 는 되살리지 않는다.
+     ② 재고(stock)는 여기에 규칙이 하나 더 붙는다
+        → id 는 기기마다 다르게 생성되므로(k+Date.now()) 같은 재료가 두 줄이
+          될 수 있다. stkFind() 가 이름/키로 중복을 막고 있으니, 같은 재료는
+          한 줄로 합치고 u 가 나중인 쪽을 택한다.
+     ③ 설정·단일값 (baby·plan·bowl·calc·nav·navm·sec·tried·fav·ov·cmix)
+        → 합치지 않고 '더 나중에 저장된 문서' 쪽을 통째로 택한다.
+        ★ tried·fav 는 토글(해제 시 키를 delete)이므로 합집합을 쓰면 안 된다 —
+          한쪽에서 해제한 즐겨찾기가 상대편 키 때문에 되살아난다.
+        ★ cmix 는 문자열 배열(조합 실험판에 담은 재료)이라 id 가 없고,
+          성격도 '지금 담아둔 목록'이므로 합치는 것이 의미가 없다. */
+
+/* 항목 배열을 id 기준으로 합친다 */
+function clMergeList(mine, theirs, idKey, kind){
+  mine   = mine   || [];
+  theirs = theirs || [];
+  var byId = {}, order = [], i, k, it;
+
+  function put(it, fromMine){
+    if(!it) return;
+    k = ''+(it[idKey]!==undefined ? it[idKey] : '');
+    if(!k) return;
+    /* 지운 것은 되살리지 않는다 — 3b 의 묘비가 여기서 쓰인다.
+       단, 내 목록에 아직 살아있다면 그건 내가 방금 되살린 것이므로 남긴다. */
+    if(!fromMine && typeof delHas==='function' && delHas(kind, k)) return;
+    var cur = byId[k];
+    if(cur===undefined){ byId[k]=it; order.push(k); return }
+    /* 양쪽에 있다 → u 가 나중인 쪽. u 가 없으면(구 레코드) 있는 쪽을 남긴다. */
+    var a = +(cur.u||0), b = +(it.u||0);
+    if(b > a) byId[k] = it;
+  }
+  for(i=0;i<mine.length;i++)   put(mine[i], 1);
+  for(i=0;i<theirs.length;i++) put(theirs[i], 0);
+
+  var out = [];
+  for(i=0;i<order.length;i++){ it = byId[order[i]]; if(it) out.push(it) }
+  return out;
+}
+
+/* 재고 전용 — 위 합집합 뒤에 '같은 재료 한 줄로' 규칙을 더 적용한다 */
+function clMergeStock(mine, theirs){
+  var list = clMergeList(mine, theirs, 'id', 'stock');
+  var byName = {}, order = [], i, s, k, cur;
+  for(i=0;i<list.length;i++){
+    s = list[i];
+    k = ''+(s.key || s.n || '');          /* stkFind 와 같은 기준(키 또는 이름) */
+    if(!k){ order.push('#'+i); byName['#'+i]=s; continue }
+    cur = byName[k];
+    if(cur===undefined){ byName[k]=s; order.push(k); continue }
+    /* 같은 재료가 양쪽에서 등록됨 → 최신 것 하나만 남긴다.
+       (수량을 더하지 않는다 — 재고는 '현재 남은 양'이고, 추가 구매는
+        충전 기능이 담당한다) */
+    if(+(s.u||0) > +(cur.u||0)) byName[k]=s;
+  }
+  var out = [];
+  for(i=0;i<order.length;i++){ if(byName[order[i]]) out.push(byName[order[i]]) }
+  return out;
+}
+
 function clApply(d){
   if(!d) return;
   /* ★ 적용이 끝날 때까지 업로드 예약을 막는다 (되올림 방지).
@@ -327,17 +398,27 @@ function clApply(d){
      안 풀리면 그 뒤 모든 자동 백업이 영구히 멈춘다. */
   CLAPPLY = 1;
   try{
+  /*───── 기록형 배열은 합친다 (4단계) ─────
+     ★ CLMERGE 가 꺼져 있으면 예전처럼 통째로 교체한다. 병합은 되돌리기 어려운
+       동작이라, 문제가 생겼을 때 이 한 줄로 3단계 상태로 되돌릴 수 있게 두었다. */
+  var _mg = (typeof CLMERGE==='undefined') || CLMERGE;
   if(d.baby) baby=d.baby;
-  if(d.logs) logs=d.logs.map(logFull);
+  if(d.logs) logs = _mg ? clMergeList(logs, d.logs.map(logFull), 'id', 'logs')
+                        : d.logs.map(logFull);
   if(d.tried)tried=d.tried;
-  if(d.my)   myR=d.my;
-  if(d.cubes)cubes=d.cubes;
+  if(d.my)   myR  = _mg ? clMergeList(myR, d.my, 'i', 'my') : d.my;
+  if(d.cubes)cubes= _mg ? clMergeList(cubes, d.cubes, 'id', 'cubes') : d.cubes;
   if(d.ov)   ov=d.ov;
   if(d.plan!==undefined) plan=d.plan;
-  if(d.obs)  obs=d.obs.map(obsFull);
+  if(d.obs)  obs  = _mg ? clMergeList(obs, d.obs.map(obsFull), 'id', 'obs')
+                        : d.obs.map(obsFull);
   if(d.fav)  fav=d.fav;
-  if(d.grow) grow=d.grow.map(growFull);
-  if(d.stock&&typeof STK!=='undefined'){ STK=d.stock; if(typeof stkSave==='function')stkSave() }
+  if(d.grow) grow = _mg ? clMergeList(grow, d.grow.map(growFull), 'id', 'grow')
+                        : d.grow.map(growFull);
+  if(d.stock&&typeof STK!=='undefined'){
+    STK = _mg ? clMergeStock(STK, d.stock) : d.stock;
+    if(typeof stkSave==='function')stkSave();
+  }
   if(d.bowl &&typeof BW !=='undefined'){ BW =d.bowl;  if(typeof bwSave ==='function')bwSave()  }
   if(d.calc) saveKey('b6.calc', d.calc);
   if(d.nav &&typeof NAVC!=='undefined'){ NAVC=d.nav;  if(typeof navSave==='function')navSave() }
@@ -409,28 +490,39 @@ function clFirst(){
       if(rh===base){ clPush(1);      return }        /* 이 폰만 변함 → 조용히 올린다 */
     }
 
-    /*── 3. 진짜 충돌(둘 다 변함) 또는 기준점 없음 → 이때만 묻는다 ──*/
+    /*── 3. 둘 다 변함 + 기준점 있음 → 합친다 (4단계) ──
+       예전에는 여기서 "어느 쪽으로 덮을까요"를 물었다. 어느 쪽을 골라도 반대편
+       입력이 사라지는 질문이었다. 이제 합칠 수 있으므로 묻지 않는다. */
+    if(CLMERGE && base){
+      CLGOT = Date.now();
+      CLMGD = 1;
+      clPull(remote);
+      return;
+    }
+
+    /*── 4. 기준점이 없다(이 기기의 첫 연결) → 이때만 묻는다 ──
+       기준점이 없으면 "무엇이 새로 생긴 것인지" 판단할 근거가 없다. 다만
+       합치기가 가능해졌으므로, 예전처럼 한쪽을 버리게 하지 않고 합치기를
+       기본 선택지로 제시한다. */
     var rt  = remote.at ? clStamp(new Date(remote.at).getTime()) : '알 수 없음';
     /* 어느 기기가 올린 백업인지 알려준다 — 내 폰이 올린 것이면 그렇게 표시 */
     var who = remote.dn ? remote.dn : '알 수 없는 기기';
     if(remote.did && remote.did===CL.did) who = '이 폰';
-    var msg = (base ? '두 기기에서 각각 기록이 바뀌었습니다.\n\n'
-                    : '이 계정에 백업된 기록이 있습니다.\n\n')
+    var msg = '이 계정에 백업된 기록이 있습니다.\n\n'
       +'· 백업한 기기: '+who+'\n'
       +'· 백업 시각: '+rt+'\n'
       +'· 백업된 기록: '+rn+'건\n'
       +'· 지금 이 폰: '+ln+'건\n\n'
-      +'이 백업을 폰으로 가져올까요?\n\n'
-      +'[아니오] 지금 이 폰의 기록을 백업합니다 (권장)\n'
-      +'[예] 백업을 내려받아 이 폰 기록을 대체합니다';
+      +'두 기록을 하나로 합칠까요?\n\n'
+      +'[예] 백업과 이 폰 기록을 합칩니다 (권장 — 어느 쪽도 사라지지 않습니다)\n'
+      +'[아니오] 합치지 않고 이 폰 기록만 백업합니다';
     if(!confirm(msg)){ clPush(1); return }
 
-    /* 이 폰 기록이 사라지는 쪽이므로 한 번 더.
-       ★ 여기서 '취소'는 아무것도 하지 않고 끝낸다 — 예전에는 취소해도
-         clPush(1) 이 실행되어 "취소했는데 서버가 덮이는" 반대 방향 파괴가
-         일어났다. 다음 save() 때 어차피 올라가므로 지금 강행할 이유가 없다. */
-    if(!confirm('이 폰의 기록 '+ln+'건이 백업 '+rn+'건으로 바뀝니다.\n\n'
-      +'되돌릴 수 없습니다. 계속할까요?')) return;
+    /* 합치기 — 어느 쪽도 지워지지 않으므로 재확인을 두지 않는다.
+       ★ 예전에는 "되돌릴 수 없습니다"를 한 번 더 물었다. 그때는 한쪽을 버리는
+         동작이었기 때문이다. 이제는 합치기이므로 그 경고가 사실과 다르다. */
+    CLGOT = Date.now();
+    CLMGD = 1;
     clPull(remote);
   }).catch(function(e){ clErr('first',e) });
 }
@@ -442,11 +534,25 @@ function clPull(remote){
        ★ 서버가 보낸 remote.hash 를 그대로 믿지 않고 적용 후 다시 계산한다 —
          구버전 문서는 hash 가 없고, clApply 가 일부 키만 반영하는 경우도
          있어(if(d.logs) 형태) 실제 로컬 상태와 어긋날 수 있다. */
-    clBase(clHash(clPack()));
+    var _h = clHash(clPack());
+    clBase(_h);
     CL.lastDown=Date.now(); CL.err=''; clSave(); clPaint();
     if(typeof boot==='function') boot(); else if(typeof render==='function') render();
     clPhPull();
-  }catch(e){ clErr('pull',e) }
+    /*───── 병합 결과 되올리기 (4단계) ─────
+       병합했으면 내 내용은 서버와 다르다(양쪽을 합쳤으므로). 올리지 않으면
+       상대 기기는 자기 것만 있는 옛 문서를 계속 보게 된다.
+       ★ 서버가 보낸 hash 와 비교해 정말 달라졌을 때만 올린다 — 합쳤는데
+         결과가 서버와 같으면(내 쪽에 새 것이 없었던 경우) 올릴 필요가 없다.
+       ★ clBase 를 먼저 세워 두었으므로, 이 push 가 성공하면 기준점이 다시
+         갱신되어 다음 확인에서 "변한 적 없음"으로 조용히 넘어간다. */
+    if(CLMGD){
+      CLMGD = 0;
+      if(!remote.hash || remote.hash !== _h){
+        setTimeout(function(){ clPush(1) }, 300);   /* boot() 가 끝난 뒤 올린다 */
+      }
+    }
+  }catch(e){ CLMGD=0; clErr('pull',e) }
 }
 
 /*───────── 올리기 (기록) ─────────*/
@@ -738,6 +844,18 @@ function clSync(why){
       /* 사용자가 누르지 않았는데 화면이 바뀌는 유일한 경로 → 반드시 알린다.
          (clFirst·clRestore 는 사용자가 스스로 선택한 것이므로 표시하지 않는다) */
       CLGOT = Date.now();
+      clPull(remote);
+      return;
+    }
+
+    /*───── 4단계 — 둘 다 변했으면 합친다 ─────
+       예전에는 여기서 물러나(return) 다음 부팅의 clFirst 가 사용자에게 물었다.
+       이제는 양쪽 변경을 합칠 수 있으므로 묻지 않고 처리한다.
+       ★ 합친 뒤에는 내 내용이 서버와 다르다 → 반드시 되올려야 상대 기기도
+         합쳐진 결과를 본다. 안 올리면 각 기기가 서로 다른 목록을 갖게 된다. */
+    if(CLMERGE && CL.baseHash){
+      CLGOT = Date.now();
+      CLMGD = 1;                       /* clPull 안에서 되올림을 예약하게 한다 */
       clPull(remote);
       return;
     }
