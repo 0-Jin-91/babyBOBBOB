@@ -165,7 +165,7 @@ render()}
 /*========== 기록 추가 ==========*/
 function addMilk2(){var v=+document.getElementById('mV').value,t=document.getElementById('mT').value,tm=document.getElementById('mTm').value;
 if(!v)return alert('수유량을 입력해 주세요');
-logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:t,tm:tm||nowHM(),n:MILK[t].n+' '+v+'ml',t:'수유'});save();render()}
+logs.push(uNow({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:t,tm:tm||nowHM(),n:MILK[t].n+' '+v+'ml',t:'수유'}));save();render()}
 function addLog(){var n=document.getElementById('gN').value.trim();
 if(!n&&!LG.length)return alert('메뉴명을 입력하거나 재료를 추가해 주세요');
 var tm=document.getElementById('gTm').value||nowHM();
@@ -176,14 +176,14 @@ if(r){nu=nutOf(r).t;
 if(amt){var base=0;(r.g||[]).forEach(function(x){base+=gOf(x)});base=base/(r.sv||1);
 if(base>0){var f=amt/base,n2={};NK.forEach(function(k){n2[k]=nu[k]*f});n2.vc=nu.vc*f;nu=n2}}}}
 var lid2=''+Date.now();
-logs.push({id:lid2,d:fmt(TD()),n:n||'직접 입력',a:amt,t:slotOf(tm),tm:tm,rx:lRx,nu:nu,gs:gs});
+logs.push(uNow({id:lid2,d:fmt(TD()),n:n||'직접 입력',a:amt,t:slotOf(tm),tm:tm,rx:lRx,nu:nu,gs:gs}));
 if(gs.length&&typeof stkUse==='function')stkUse(gs,n||'직접 입력',lid2);
 LG=[];save();render()}
 /* 즉시 기록 (양 미입력) */
 function qLogNow(id,tm){var r=getR(id),sv=r.sv||1;tm=tm||nowHM();
 var lid=''+Date.now();
 var gs=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']});
-logs.push({id:lid,d:fmt(TD()),n:r.n,a:'',t:slotOf(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,gs:gs});
+logs.push(uNow({id:lid,d:fmt(TD()),n:r.n,a:'',t:slotOf(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,gs:gs}));
 if(typeof stkUse==='function')stkUse(gs,r.n,lid);
 save();return lid}
 
@@ -312,10 +312,11 @@ if(typeof stkUndo==='function')stkUndo(AT.lid);
 if(gs.length&&typeof stkUse==='function')stkUse(gs,AT.n,AT.lid);
 if(i>=0){logs[i].a=AT.a;logs[i].tm=AT.tm;logs[i].t=slotOf(AT.tm);logs[i].rx=AT.rx;
 logs[i].pre=AT.pre;logs[i].post=AT.post;logs[i].n=AT.n||logs[i].n;
-if(nu)logs[i].nu=nu;if(gs.length)logs[i].gs=gs}}
+if(nu)logs[i].nu=nu;if(gs.length)logs[i].gs=gs;
+uNow(logs[i])}}   /* 기존 기록을 고쳤으므로 수정시각을 새로 찍는다 */
 else{var nid=''+Date.now();
-logs.push({id:nid,d:fmt(TD()),n:AT.n,a:AT.a,t:slotOf(AT.tm),tm:AT.tm,rx:AT.rx,
-nu:nu,gs:gs,rid:AT.rid,pre:AT.pre,post:AT.post});
+logs.push(uNow({id:nid,d:fmt(TD()),n:AT.n,a:AT.a,t:slotOf(AT.tm),tm:AT.tm,rx:AT.rx,
+nu:nu,gs:gs,rid:AT.rid,pre:AT.pre,post:AT.post}));
 if(typeof stkUse==='function')stkUse(gs,AT.n,nid)}
 save();closeM();if(tab!=='today')tab='today';render()}
 function delLog(id){if(!confirm('이 기록을 삭제할까요?'))return;

@@ -5,7 +5,7 @@ if(!b)return alert('태어난 날을 선택해 주세요');
 if(d0(b)>TD())return alert('오늘 이후 날짜는 안 돼요');
 baby={name:n,birth:b,sex:document.getElementById('iS').value,feed:document.getElementById('iF').value,meals:+document.getElementById('iM').value,vol:+document.getElementById('iV').value||180,useW:1};
 var w=+document.getElementById('iW').value,h=+document.getElementById('iH').value;
-if(w||h)grow.push({id:'g'+Date.now(),d:ymd(TD()),w:w||null,h:h||null,c:null});
+if(w||h)grow.push(uNow({id:'g'+Date.now(),d:ymd(TD()),w:w||null,h:h||null,c:null}));
 save();boot()}
 
 /*========== 탭 정의 · 순서·표시 설정 ==========*/

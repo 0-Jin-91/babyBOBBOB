@@ -178,6 +178,6 @@ return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;
 +'<div class="cd" style="background:#F3FAF7;font-size:12px"><b>보관 팁</b><ul style="margin:5px 0 0;padding-left:16px;color:var(--sub)"><li>완전히 식힌 뒤 뚜껑을 덮어 냉동.</li><li>지퍼백에 재료명·날짜를 적어두세요.</li><li>실온 방치·재냉동은 피하세요.</li></ul><div style="margin-top:6px">'+sT('mfds')+'</div></div>'}
 function addCube(){var n=document.getElementById('cN').value.trim(),q=+document.getElementById('cQ').value,g=+document.getElementById('cG').value||10,dt=document.getElementById('cD').value;
 if(!n)return alert('재료명을 입력해 주세요');if(!q)return alert('개수를 입력해 주세요');
-cubes.push({id:'c'+Date.now(),n:n,key:(typeof NUT!=='undefined'&&NUT[n]?n:n),q:q,g:g,dt:dt});save();render()}
+cubes.push(uNow({id:'c'+Date.now(),n:n,key:(typeof NUT!=='undefined'&&NUT[n]?n:n),q:q,g:g,dt:dt}));save();render()}
 function cQ2(id,d){cubes.forEach(function(c){if(c.id===id)c.q=Math.max(0,c.q+d)});save();render()}
 function cD2(id){cubes=cubes.filter(function(c){return c.id!==id});save();render()}

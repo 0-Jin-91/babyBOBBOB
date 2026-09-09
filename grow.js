@@ -45,6 +45,6 @@ return g}
 function addGrow(){var d=document.getElementById('grD').value,w=document.getElementById('grW').value,h=document.getElementById('grH').value,c=document.getElementById('grC').value;
 if(!d)return alert('날짜를 선택해 주세요');
 if(!w&&!h&&!c)return alert('측정값을 하나 이상 입력해 주세요');
-grow.push({id:'g'+Date.now(),d:d,w:w||null,h:h||null,c:c||null});save();render()}
+grow.push(uNow({id:'g'+Date.now(),d:d,w:w||null,h:h||null,c:c||null}));save();render()}
 function delGrow(id){if(!confirm('이 기록을 삭제할까요?'))return;
 grow=grow.filter(function(g){return g.id!==id});save();render()}

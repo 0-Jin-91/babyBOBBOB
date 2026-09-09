@@ -84,6 +84,7 @@ var d=g2u(s,rem);
 s.left=Math.round((s.left-d)*100)/100;
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:-d,why:why||'사용',lid:logId||''});
 if(s.hist.length>60)s.hist=s.hist.slice(-60);
+uNow(s);                        /* 사용으로 남은 양이 줄었다 → 수정시각 갱신 */
 n++});
 if(n)stkSave();
 if(cbHit){cbuSave();if(typeof save==='function')save()}
@@ -93,14 +94,14 @@ function stkUndo(logId){if(!logId)return 0;var n=0;
 /* ① 원재료 복원 */
 STK.forEach(function(s){var keep=[],back=0;
 (s.hist||[]).forEach(function(h){if(h.lid===logId&&h.g<0){back+=-h.g}else keep.push(h)});
-if(back){s.left=Math.round((s.left+back)*100)/100;s.hist=keep;n++}});
+if(back){s.left=Math.round((s.left+back)*100)/100;s.hist=keep;uNow(s);n++}});
 if(n)stkSave();
 /* ② 큐브 복원 — 같은 lid 의 사용 기록만큼 개수를 되돌린다 */
 if(typeof cubes!=='undefined'){var keepU=[],cb=0;
 CBU.forEach(function(u){if(u.lid!==logId){keepU.push(u);return}
 var hit=null;cubes.forEach(function(c){if(c.id===u.cid)hit=c});
 if(hit)hit.q=hit.q+u.q;
-else cubes.push({id:u.cid,n:u.n,key:u.key,q:u.q,g:u.g,dt:ymd(TD()),from:'undo'});
+else cubes.push(uNow({id:u.cid,n:u.n,key:u.key,q:u.q,g:u.g,dt:ymd(TD()),from:'undo'}));
 cb++});
 if(cb){CBU=keepU;cbuSave();if(typeof save==='function')save();n+=cb}}
 return n}
@@ -153,7 +154,7 @@ var usedG=ge*q;
 if(usedG>leftG+0.5&&!confirm('만들 큐브('+rnd(usedG)+'g)가 남은 원재료('+rnd(leftG)+'g)보다 많아요.\n그래도 진행할까요?'))return;
 /* 큐브 등록 (기존 cubes 시스템과 공유) */
 if(typeof cubes==='undefined')cubes=[];
-cubes.push({id:'c'+Date.now(),n:s.n,key:s.key||s.n,q:q,g:ge,dt:ymd(TD()),from:'raw'});
+cubes.push(uNow({id:'c'+Date.now(),n:s.n,key:s.key||s.n,q:q,g:ge,dt:ymd(TD()),from:'raw'}));
 /* 원재료 차감 — 실제 남은 g 을 물어 보정(자투리 반영) */
 var rem=prompt('큐브화 완료! 🧊 '+ge+'g × '+q+'개 = '+rnd(usedG)+'g 사용\n\n원재료가 실제로 얼마나 남았나요? (g)\n자투리를 정확히 반영합니다. 비우면 사용분만 차감('+rnd(Math.max(0,leftG-usedG))+'g 남김)',rnd(Math.max(0,leftG-usedG)));
 var newLeftG;
@@ -161,6 +162,7 @@ if(rem===null||rem.trim()==='')newLeftG=Math.max(0,leftG-usedG);
 else{newLeftG=+rem;if(isNaN(newLeftG)||newLeftG<0)newLeftG=Math.max(0,leftG-usedG)}
 s.left=g2u(s,newLeftG);
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:-(g2u(s,usedG)),why:'큐브화 '+ge+'g×'+q+'개'});
+uNow(s);                        /* 큐브화로 원재료가 줄었다 → 수정시각 갱신 */
 if(typeof save==='function')save();else stkSave();
 sTab='cube';render()}
 /* 재고 등록 화면에서 '큐브로 바로 등록' — 장보기 후 이미 큐브화한 것 */
@@ -168,7 +170,7 @@ function cubeAddDirect(){if(!SE)return alert('재료를 선택해 주세요');
 var ge=prompt('「'+SE.n+'」 큐브 1개 용량 (g)',CUBE_G);if(ge===null)return;ge=+ge;if(!ge||ge<=0)return alert('0보다 큰 g');
 var q=prompt('큐브 개수',7);if(q===null)return;q=+q;if(!q||q<=0)return alert('1개 이상');
 if(typeof cubes==='undefined')cubes=[];
-cubes.push({id:'c'+Date.now(),n:SE.n,key:(SE.key&&NUT[SE.key]?SE.key:SE.n),q:q,g:ge,dt:ymd(TD()),from:'direct'});
+cubes.push(uNow({id:'c'+Date.now(),n:SE.n,key:(SE.key&&NUT[SE.key]?SE.key:SE.n),q:q,g:ge,dt:ymd(TD()),from:'direct'}));
 if(typeof save==='function')save();
 SE=null;ISQ.SE='';sTab='cube';render()}
 
@@ -266,7 +268,7 @@ return '<button class="mu" style="flex:1;font-weight:700;color:var(--bl);font-si
 function stkPerEdit(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 var v=prompt('「'+s.n+'」 1'+s.unit+'의 용량(g)\n\n예) 소고기 200g 짜리 → 200 / 달걀 1개 → 50 / 두부 1팩 → 300\n\n레시피 사용량(g)을 이 값으로 나눠 '+s.unit+' 수를 차감합니다.',stkPer(s));
 if(v===null)return;v=+v;if(!v||v<=0)return alert('0보다 큰 숫자를 넣어 주세요');
-s.per=v;stkSave();
+s.per=v;uNow(s);stkSave();
 /* 이 규격을 쓰는 레시피들의 1개당 g 도 함께 갱신 */
 var n=(typeof perSync==='function')?perSync():0;
 if(n)alert('「'+s.n+'」 규격을 1'+s.unit+'='+v+'g 으로 바꿨어요.\n\n이 재료를 개수로 쓰는 레시피 '+n+'곳의 중량도 자동으로 다시 계산했습니다.');
@@ -350,8 +352,8 @@ var exp=document.getElementById('skE').value,memo=document.getElementById('skM')
 if(stkFind(SE.n))return alert('이미 등록된 재료예요. 목록에서 🔄 충전을 눌러 주세요.');
 if(!per||per<=0)return alert('1개 용량(예: 200)을 입력해 주세요');
 if(!cnt||cnt<=0)return alert('개수를 입력해 주세요');
-STK.push({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:u,per:per,spec:per+pu,full:cnt,left:cnt,dt:fmt(TD()),exp:exp,memo:memo,
-hist:[{d:fmt(TD()),t:nowHM(),g:cnt,why:'최초 등록 ('+per+pu+'×'+rnd2(cnt)+u+')'}]});
+STK.push(uNow({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:u,per:per,spec:per+pu,full:cnt,left:cnt,dt:fmt(TD()),exp:exp,memo:memo,
+hist:[{d:fmt(TD()),t:nowHM(),g:cnt,why:'최초 등록 ('+per+pu+'×'+rnd2(cnt)+u+')'}]}));
 if(typeof perSync==='function')perSync();   /* 등록한 규격을 기존 레시피에도 반영 */
 stkSave();SE=null;ISQ.SE='';SU=CNTU[0];sTab='list';render()}
 
@@ -364,7 +366,7 @@ if(v>s.full)s.full=v;
 var e=prompt('유통기한 (YYYY-MM-DD) — 비워두면 그대로',s.exp||'');
 if(e!==null)s.exp=e.trim();
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:v,why:'충전'});
-stkSave();render()}
+uNow(s);stkSave();render()}
 function stkAdj(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 var v=prompt('「'+s.n+'」 실제 남은 양 ('+s.unit+')\n\n'+(isCnt(s.unit)?'남은 개수를 세어서 넣어 주세요. 0.5 처럼 반 개도 됩니다.':'저울로 재서 정확한 값을 넣으면 맞춰집니다.'),isCnt(s.unit)?rnd2(Math.max(0,s.left)):rnd(Math.max(0,s.left)));
 if(v===null)return;v=+v;
@@ -374,11 +376,11 @@ s.left=v;
 var f=prompt('충전량(100% 기준) — 비워두면 그대로',s.full);
 if(f!==null&&+f>0)s.full=+f;
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:d,why:'실측 조정'});
-stkSave();render()}
+uNow(s);stkSave();render()}
 function stkQuick(id,g){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 s.left=Math.round((s.left+g)*10)/10;
 s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:g,why:'직접 차감'});
-stkSave();render()}
+uNow(s);stkSave();render()}
 function stkDel(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 if(!confirm('「'+s.n+'」 재고를 삭제할까요?'))return;
 STK=STK.filter(function(x){return x.id!==id});stkSave();render()}

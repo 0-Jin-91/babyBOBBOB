@@ -130,5 +130,5 @@ function tfSave(){var n=document.getElementById('tfN').value.trim(),tm=document.
 var a=document.getElementById('tfA').value,rx=document.getElementById('tfR').value;
 if(!n&&!TF.length)return alert('내용을 입력해 주세요');
 var nu=TF.length?nutOf({g:TF,sv:1}).t:null;
-logs.push({id:''+Date.now(),d:fmt(TD()),n:n||'간식',a:a,t:'간식',tm:tm,rx:rx,nu:nu,gs:TF.slice()});
+logs.push(uNow({id:''+Date.now(),d:fmt(TD()),n:n||'간식',a:a,t:'간식',tm:tm,rx:rx,nu:nu,gs:TF.slice()}));
 TF=[];save();closeM();if(tab!=='today')tab='today';render()}

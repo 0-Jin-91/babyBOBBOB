@@ -120,7 +120,7 @@ if(!n)return alert(OB.cat==='직접입력'?'재료명을 입력해 주세요':'�
 if(obs.filter(function(o){return !o.done&&o.n===n}).length)return alert('이미 관찰 중인 재료예요.');
 var f=null;FD.forEach(function(x){if(x[0]===n)f=x});
 if(f&&ageM()<f[3]&&!confirm(n+'은 만 '+f[3]+'개월부터 권장돼요. 그래도 시작할까요?'))return;
-obs.push({id:'o'+Date.now(),n:n,dt:dt,tm:tm,c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0});
+obs.push(uNow({id:'o'+Date.now(),n:n,dt:dt,tm:tm,c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0}));
 OB.sel='';OB.free='';save();askNoti();render()}
 function obsChk(i,x){var a=obs.filter(function(o){return !o.done})[i];a.c[x]=a.c[x]?0:1;save();render()}
 function obsMemo(i,v){var a=obs.filter(function(o){return !o.done})[i];a.m=v;save()}
@@ -152,7 +152,7 @@ document.getElementById('mb').innerHTML='<div style="font-size:40px;text-align:c
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function startObs(n){var f=null;FD.forEach(function(x){if(x[0]===n)f=x});
 if(obs.filter(function(o){return !o.done&&o.n===n}).length){alert('이미 관찰 중인 재료예요.');closeM();tab='food';render();return}
-obs.push({id:'o'+Date.now(),n:n,dt:ymd(TD()),tm:nowHM(),c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0});
+obs.push(uNow({id:'o'+Date.now(),n:n,dt:ymd(TD()),tm:nowHM(),c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0}));
 OB.sel='';OB.free='';
 save();askNoti();closeM();tab='food';render()}
 function setF(n,s){tried[n]=tried[n]===s?null:s;if(!tried[n])delete tried[n];save();openF(n);render()}
@@ -433,7 +433,7 @@ return '<div class="cb" style="background:'+C[0]+';border-radius:9px;border-bott
 /*----- 체크리스트에서 바로 조작 -----*/
 function ckStart(n){var f=null;FD.forEach(function(x){if(x[0]===n)f=x});
 if(obs.filter(function(o){return !o.done&&o.n===n}).length)return alert('이미 관찰 중인 재료예요.');
-obs.push({id:'o'+Date.now(),n:n,dt:ymd(TD()),tm:nowHM(),c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0});
+obs.push(uNow({id:'o'+Date.now(),n:n,dt:ymd(TD()),tm:nowHM(),c:[0,0,0],m:'',done:0,lv:f?(f[6]||0):0}));
 save();askNoti();render()}
 function ckPass(n){var a=null;obs.forEach(function(o){if(!o.done&&o.n===n)a=o});
 if(a){a.done=1;a.ok=1}

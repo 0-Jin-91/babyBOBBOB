@@ -84,6 +84,7 @@ if(ME.orig){var id=ME.orig;ov[id]={n:ME.n,g:ME.g,st:ME.st,tm:ME.tm,sv:ME.sv,tip:
 save();closeM();curR=getR(id);openR(id);render();return}
 ME.my=1;ME.tag='내 레시피';delete ME.orig;
 var i=-1;myR.forEach(function(r,x){if(r.i===ME.i)i=x});
+uNow(ME);                       /* 신규든 수정이든 지금 시각을 찍는다 */
 if(i>=0)myR[i]=ME;else myR.push(ME);
 save();closeM();
 /* 식단 칸에서 만들기로 들어왔으면 그 칸에 넣고 식단으로 돌아간다 */

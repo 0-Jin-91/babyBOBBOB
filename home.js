@@ -164,7 +164,7 @@ function unLog(id){if(typeof stkUndo==='function')stkUndo(id);
 logs=logs.filter(function(l){return l.id!==id});save();render()}
 
 /*========== 수유 · 즐겨찾기 ==========*/
-function addMilk(v,tm){logs.push({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:tm||milkTm(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'});save();render()}
+function addMilk(v,tm){logs.push(uNow({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:tm||milkTm(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'}));save();render()}
 function milkTm(){var e=document.getElementById('mkTm');return (e&&e.value)?e.value:nowHM()}
 function addMilkP(){var G=mlGuide(),tm=milkTm();
 var v=prompt('수유량 (ml)  ·  '+tm+'  ·  권장 회당 '+G.per[0]+'~'+G.per[1]+'ml',baby.vol||G.per[0]);

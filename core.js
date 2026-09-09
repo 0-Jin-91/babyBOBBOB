@@ -113,6 +113,27 @@ function milkName(l){
   return M ? (M.n+' '+(+l.ml||0)+'ml') : ('수유 '+(+l.ml||0)+'ml');
 }
 
+/*───────── 레코드 수정시각 (3단계) ─────────
+   u = 이 레코드를 마지막으로 만들거나 고친 시각(ms).
+
+   왜 필요한가 — 두 기기의 목록을 합칠 때(4단계) 같은 항목이 양쪽에 다른
+   내용으로 있으면 "어느 쪽이 더 나중인가"를 알아야 한다. id 는 'k'+Date.now()
+   즉 생성시각이므로, 나중에 고친 사실을 담지 못한다.
+
+   ★ u 는 레코드의 일부일 뿐 화면에 쓰이지 않는다. 3a 단계에서는 값만 심고,
+     실제로 소비하는 것은 4단계 병합이다. 즉 이 단계는 동작을 바꾸지 않는다.
+   ★ 기존 레코드에는 u 가 없다(undefined). 4단계에서 "u 없음"은 아주 오래된
+     것으로 취급하면 되므로, 지금 소급해서 넣지 않는다 — 없던 시각을
+     지금 시각으로 찍으면 오래된 기록이 방금 고친 것처럼 보여 더 위험하다. */
+function uNow(o){ if(o&&typeof o==='object') o.u=Date.now(); return o }
+/* 배열 안에서 id 로 찾아 수정시각만 새로 찍는다 (내용 수정 후 호출) */
+function uTouch(arr, id, key){
+  if(!arr || !arr.length) return null;
+  var k = key || 'id', i;
+  for(i=0;i<arr.length;i++){ if(arr[i] && arr[i][k]===id){ arr[i].u=Date.now(); return arr[i] } }
+  return null;
+}
+
 /* 저장용 — 되살릴 수 있는 것과 빈 것을 뺀다 */
 function logSlim(l){
   var o={}, k;
@@ -233,6 +254,10 @@ function growSlim(g){
   if(g.w!=null) r.w=g.w;
   if(g.h!=null) r.h=g.h;
   if(g.c!=null) r.c=g.c;
+  /* ★ u(수정시각)를 반드시 실어보낸다 — 이 함수는 logSlim/obsSlim 과 달리
+     지정한 키만 복사하는 방식이라, 적지 않으면 업로드 과정에서 u 가 조용히
+     탈락한다. 그러면 성장기록만 4단계 병합에서 시각 비교가 불가능해진다. */
+  if(g.u!=null) r.u=g.u;
   return r;
 }
 function growFull(g){
