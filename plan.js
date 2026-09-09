@@ -169,7 +169,11 @@ return k-Math.floor((TD()-d0(c.dt))/864e5)}
 function vCube(){var act=cubes.filter(function(c){return c.q>0});
 return ((typeof cubeLowAlert==='function')?cubeLowAlert():'')
 +'<div class="cd"><b>🧊 냉동 큐브 재고</b><p class="mu" style="margin:5px 0 10px">만든 날 기준 14일까지를 권장 사용기한으로 계산하고 장보기에서 자동 차감합니다.</p>'
-+'<div class="rw"><div class="fd" style="flex:1.3;margin:0"><label>재료</label><input id="cN" list="cL" placeholder="소고기"><datalist id="cL">'+Object.keys(NUT).map(function(k){return '<option>'+k+'</option>'}).join('')+'</datalist></div><div class="fd" style="flex:.6;margin:0"><label>개수</label><input id="cQ" type="number" placeholder="7"></div><div class="fd" style="flex:.6;margin:0"><label>1개 g</label><input id="cG" type="number" placeholder="10"></div></div>'
+/* ★ datalist 는 iOS Safari 에서 목록이 뜨지 않는다 — 옆에 <select> 를 두어
+   반드시 고를 수 있게 한다. 직접 입력도 그대로 가능하다. */
++'<div class="rw"><div class="fd" style="flex:1.3;margin:0"><label>재료</label>'
++'<div class="rw" style="gap:5px"><input id="cN" style="flex:1" placeholder="소고기">'
++'<select style="flex:0 0 92px" onchange="if(this.value)document.getElementById(\'cN\').value=this.value"><option value="">고르기</option>'+Object.keys(NUT).map(function(k){return '<option>'+k+'</option>'}).join('')+'</select></div></div><div class="fd" style="flex:.6;margin:0"><label>개수</label><input id="cQ" type="number" placeholder="7"></div><div class="fd" style="flex:.6;margin:0"><label>1개 g</label><input id="cG" type="number" placeholder="10"></div></div>'
 +'<div class="fd" style="margin:10px 0 0"><label>만든 날</label><input id="cD" type="date" value="'+ymd(TD())+'"></div><button class="btn" style="margin-top:10px" onclick="addCube()">＋ 큐브 등록</button></div>'
 +'<div class="st">보유 중 ('+act.length+'종)</div>'
 +(act.length?'<div class="cd">'+act.map(function(c){var d=dLeft(c);

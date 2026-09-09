@@ -68,7 +68,15 @@ return '<div class="cd" style="background:#FBF6F2"><b>오늘 요약</b><div clas
 
 /*----- 이유식 기록 입력 -----*/
 +'<div class="cd"><b style="font-size:15px">📝 이유식 기록</b>'
-+'<div class="fd" style="margin:12px 0 10px"><label>메뉴</label><input id="gN" list="gL" placeholder="메뉴명 입력 또는 선택" oninput="pickMenuIng(this.value)"><datalist id="gL">'+op.map(function(r){return '<option>'+esc(r.n)+'</option>'}).join('')+'</datalist></div>'
+/* ★ <datalist> 를 버렸다.
+   iOS Safari(아이폰·아이패드)는 datalist 목록을 띄우지 않는 경우가 많다 —
+   그래서 "메뉴가 전혀 선택되지 않는" 증상이 났다. 목록이 비어서가 아니라
+   브라우저가 그 UI 를 지원하지 않아서였다.
+   대신 이 앱에서 확실히 동작하는 방식(모달 목록 = openAlt 와 같은 패턴)으로
+   바꾼다. 직접 타이핑도 그대로 가능하다. */
++'<div class="fd" style="margin:12px 0 10px"><label>메뉴</label>'
++'<div class="rw" style="gap:6px"><input id="gN" style="flex:1" placeholder="메뉴명 직접 입력" oninput="pickMenuIng(this.value)">'
++'<button class="btn g s" style="flex:0 0 auto;white-space:nowrap" onclick="openMenuPick()">📋 목록에서 고르기</button></div></div>'
 +'<div class="rw"><div class="fd" style="flex:1;margin:0"><label>먹은 시각</label><input id="gTm" type="time" value="'+nowHM()+'"></div><div class="fd" style="flex:1;margin:0"><label>먹은 양(g)</label><input id="gA" type="number" placeholder="80"></div></div>'
 +'<button class="btn g s" style="margin-top:8px" onclick="openScale(\'gA\')">⚖️ 그릇 무게로 계산하기</button>'
 +'<div class="mu" style="font-size:10.5px;margin-top:6px">시각을 남기면 <b>끼니 간격·수유 리듬</b>을 자동 분석해 드려요.</div>'
@@ -174,6 +182,47 @@ if(!n)return alert('재료를 선택하거나 입력해 주세요');
 if(!q)return alert('양을 입력해 주세요');
 LG.push([n,q,u,k||(NUT[n]?n:'')]);reLog()}
 function reLog(){render()}
+/*───────── 메뉴 목록에서 고르기 (기록 탭) ─────────
+   ★ datalist 대신 쓰는 선택 UI. 현재 단계 메뉴가 먼저, 그 뒤에 다른 단계와
+     내가 만든 메뉴가 온다. 검색칸으로 좁힐 수 있다. */
+var MPQ='';
+function openMenuPick(){MPQ='';drawMenuPick();
+document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
+function drawMenuPick(){
+  var si=IDS.indexOf(curS().id==='ready'?'early':curS().id);
+  var A=[],B=[],seen={};
+  RCP().forEach(function(r){
+    if(!r||seen[r.i])return;
+    if(r.y==='f')return;
+    if(!(r.g||[]).length)return;
+    seen[r.i]=1;
+    if(r.s===si)A.push(r);else B.push(r);
+  });
+  var L=A.concat(B);
+  var q=(MPQ||'').trim();
+  if(q)L=L.filter(function(r){return (r.n||'').indexOf(q)>=0});
+  var nA=0;A.forEach(function(r){if(L.indexOf(r)>=0)nA++});
+  document.getElementById('mb').innerHTML='<div class="mt2">📋 메뉴 고르기</div>'
+  +'<div class="fd" style="margin:8px 0 10px"><input id="mpq" value="'+esc(q)+'" placeholder="메뉴명 검색" oninput="MPQ=this.value;drawMenuPick();var e=document.getElementById(\'mpq\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}"></div>'
+  +(L.length
+    ? L.map(function(r,i){
+        var hdr=(i===nA&&nA>0&&nA<L.length)?'<div class="mu" style="margin:10px 0 4px;font-size:11px">— 다른 단계 · 내 메뉴 —</div>':'';
+        return hdr+'<div onclick="pickMenuName(\''+String(r.i).replace(/'/g,"")+'\')">'+rcard(r)+'</div>';
+      }).join('')
+    : '<div class="cd mu">찾는 메뉴가 없어요. 이름을 직접 입력해도 기록됩니다.</div>')
+  +'<button class="btn y" onclick="closeM()">닫기</button>';
+}
+/* 고른 메뉴를 입력칸에 넣고 재료까지 채운다 */
+function pickMenuName(id){
+  var r=getR(id);if(!r)return;
+  closeM();
+  var e=document.getElementById('gN');
+  if(e)e.value=r.n;
+  LG=[];                      /* 기존 재료를 비우고 새 메뉴 재료로 채운다 */
+  pickMenuIng(r.n);
+  render();
+  var e2=document.getElementById('gN');if(e2)e2.value=r.n;
+}
 function pickMenuIng(nm){var r=null;RCP().forEach(function(x){if(x.n===nm)r=x});
 if(!r||LG.length)return;
 var sv=r.sv||1;
