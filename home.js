@@ -60,7 +60,7 @@ return '<div class="cd" style="padding:10px"><div class="rw" style="justify-cont
 +(function(){var done=loggedToday(r.i);
 return '<div class="rw">'+(done?'<button class="btn g s" onclick="openAteFor(\''+done+'\')">⚖️ 먹은 양 수정</button><button class="btn y s" onclick="unLog(\''+done+'\')">↩︎ 취소</button>':'<button class="btn g s" onclick="qLog(\''+r.i+'\')">📝 먹었어요</button><button class="btn y s" onclick="toggleFav(\''+r.i+'\')">'+(fav[r.i]?'⭐ 해제':'☆ 즐겨찾기')+'</button>')+'</div>'
 +(done?'<div class="mu" style="font-size:10.5px;margin-top:6px;color:var(--ok);font-weight:700">✅ 기록됨'+(logTmOf(done)?' · 🕐 '+logTmOf(done):'')+(logAmtOf(done)?' · '+logAmtOf(done)+'g':' · 양 미입력')+'</div>':'')})()+'</div>'}).join('')
-+'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},0,DS.sc+'%')
++'<button class="btn y s" onclick="reRec()">🎲 추천 다시 받기</button>'},1,DS.sc+'%')
 
 /*----- ⑥ 단계 기준 -----*/
 +sec('h_stage','📚',s.n+' 기준',s.lb+' · '+s.ra,function(){

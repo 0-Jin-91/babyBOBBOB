@@ -166,6 +166,9 @@ function clLoad(){
       clPaint();
       if(typeof render==='function') try{ render() }catch(e){}
       if(u) setTimeout(function(){ try{ clFirst() }catch(e){ clErr('first',e) } },0);
+      /* 실시간 구독 — 로그인하면 붙이고, 로그아웃하면 뗀다 */
+      if(u) setTimeout(function(){ try{ clWatch() }catch(e){} }, 800);
+      else  try{ clUnwatch() }catch(e){}
     });
     return FB;
   }).catch(function(e){
@@ -696,7 +699,10 @@ function clQueue(){
   if(CLAPPLY) return;
   CL.pend=1; clSave(); clPaint();
   if(_cltmr) clearTimeout(_cltmr);
-  _cltmr = setTimeout(function(){ _cltmr=null; clPush() }, 3000);
+  /* ★ 3초 → 1.2초. 이 시간이 곧 '내 입력이 상대 기기에 닿기까지의 지연'이다.
+     연달아 입력할 때 과다 전송을 막는 것이 목적이므로 1초 남짓으로 충분하다.
+     (입력이 계속되면 타이머가 계속 밀려 전송은 여전히 한 번만 일어난다) */
+  _cltmr = setTimeout(function(){ _cltmr=null; clPush() }, 1200);
 }
 
 /*───────── 사진 (기록과 분리, 한 장씩) ─────────*/
@@ -940,7 +946,9 @@ function clSync(why){
      그리면서 메뉴바가 닫혀 "고민하다 갑자기 사라지는" 일이 생긴다. */
   if(document.body && document.body.classList.contains('nvon')) return;
   /* 스크롤을 움직인 직후 2초는 보류 — 읽는 중에 화면이 튀지 않게 */
-  if(CLSCRL && Date.now() - CLSCRL < 2000) return;
+  /* 스크롤을 멈춘 뒤 1초면 '읽던 손'은 떠난 상태다 — 2초는 과했다.
+     실시간 구독으로 알림이 즉시 오므로 이 대기가 곧 체감 지연이 된다. */
+  if(CLSCRL && Date.now() - CLSCRL < 1000) return;
 
   _clsync = 1; CLSYNCAT = Date.now();
   var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
@@ -1021,6 +1029,41 @@ document.addEventListener('visibilitychange', function(){
      늘려도 통신이 과해지거나 로컬을 덮을 위험은 커지지 않는다. */
 window.addEventListener('pageshow', function(){ clSync('pageshow') });
 window.addEventListener('focus',    function(){ clSync('focus')    });
+
+/*═════════ 실시간 구독 — 폴링 없이 즉시 알림 ═════════
+   ★ 지금까지는 20초마다 서버를 물어봐야(폴링) 다른 기기 변경을 알 수 있었다.
+     Firestore 의 onSnapshot 은 서버가 바뀌는 순간 알려주므로, 기다림이 사라진다.
+   ★ 중요 — 알림을 받아도 '바로 화면을 갈아치우지 않는다'. clSync 를 부를 뿐이다.
+     그래야 입력 중·스크롤 중·메뉴바 열림 같은 기존 안전장치를 그대로 통과한다.
+     즉 "빨라지는 것"과 "방해하지 않는 것"이 충돌하지 않는다.
+   ★ 내가 올려서 생긴 변경도 알림이 온다. 그때는 지문이 같아 clSync 가 스스로
+     아무 일도 하지 않는다(내용 동일 → 무동작). */
+var CLSUB = null;         /* 구독 해지 함수 */
+var CLSUBQ = null;        /* 알림이 몰려올 때 합치는 타이머 */
+function clWatch(){
+  if(CLSUB || !clOn() || !FB || !FB.D || !FB.D.onSnapshot) return;
+  try{
+    var F=FB, ref=F.D.doc(F.db,'users',CLUSER.uid,'data','main');
+    CLSUB = F.D.onSnapshot(ref, function(sn){
+      if(!sn || !sn.exists()) return;
+      var rh = sn.data().hash;
+      if(!rh) return;                                  /* 구버전 문서 → 판단 불가 */
+      if(rh === CL.baseHash) return;                   /* 내가 아는 상태 → 할 일 없음 */
+      /* 짧은 시간에 여러 번 오면 한 번으로 합친다(연속 입력·되올림) */
+      if(CLSUBQ) clearTimeout(CLSUBQ);
+      CLSUBQ = setTimeout(function(){ CLSUBQ=null; clSync('live') }, 400);
+    }, function(e){
+      /* 구독이 끊기면 조용히 폴링에 맡긴다 — 사용자에게 알릴 일이 아니다 */
+      CLSUB = null;
+      CL.emsg = 'watch: ' + ((e&&(e.code||e.message))||'');
+      clSave();
+    });
+  }catch(e){ CLSUB = null }
+}
+function clUnwatch(){
+  if(CLSUBQ){ clearTimeout(CLSUBQ); CLSUBQ=null }
+  if(CLSUB){ try{ CLSUB() }catch(e){} CLSUB=null }
+}
 /*───── 스크롤 감지 — 확인이 아니라 '보류'를 위해 쓴다 ─────
    ★ 예전에는 touchstart 로 clSync 를 불렀다. iOS 이벤트 누락을 메우려던 것인데,
      화면을 만질 때마다 서버를 확인하고 그 결과로 boot() 가 돌아 스크롤이 위로
@@ -1035,12 +1078,15 @@ document.addEventListener('touchmove', function(){ CLSCRL = Date.now() }, {passi
 setInterval(function(){
   if(document.hidden) return;
   if(!clOn()) return;
+  /* 구독이 끊겨 있으면 다시 붙인다 — 네트워크가 바뀌면 끊길 수 있다.
+     구독이 살아 있으면 알림이 즉시 오므로 이 폴링은 보조 수단일 뿐이다. */
+  if(!CLSUB) try{ clWatch() }catch(e){}
   /* ★ 밀린 것이 있으면 clPush 로 간다 — clPush 가 서버 확인·병합까지 한다.
      예전에는 pend 면 그냥 건너뛰어서, 올리지 못한 상태가 이어지는 동안
      상대 변경을 영원히 받지 못했다. */
   if(CL.pend){ clPush(1); return }
   clSync('timer');
-}, 20000);
+}, 30000);
 
 /*───────── 지금 백업하기 (버튼 전용) ─────────*/
 /* 눌렀을 때 무슨 일이 일어났는지 반드시 화면·안내로 남긴다 */
