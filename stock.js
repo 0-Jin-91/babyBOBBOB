@@ -102,6 +102,9 @@ CBU.forEach(function(u){if(u.lid!==logId){keepU.push(u);return}
 var hit=null;cubes.forEach(function(c){if(c.id===u.cid)hit=c});
 if(hit)hit.q=hit.q+u.q;
 else cubes.push(uNow({id:u.cid,n:u.n,key:u.key,q:u.q,g:u.g,dt:ymd(TD()),from:'undo'}));
+/* ★ 원래 id 로 되살아난 정당한 부활 — 묘비를 지워야 한다.
+   그대로 두면 4단계 병합이 "지운 것"으로 보고 이 큐브를 다시 없앤다. */
+if(typeof delUnmark==='function')delUnmark('cubes',u.cid);
 cb++});
 if(cb){CBU=keepU;cbuSave();if(typeof save==='function')save();n+=cb}}
 return n}
@@ -383,7 +386,7 @@ s.hist=(s.hist||[]);s.hist.push({d:fmt(TD()),t:nowHM(),g:g,why:'직접 차감'})
 uNow(s);stkSave();render()}
 function stkDel(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
 if(!confirm('「'+s.n+'」 재고를 삭제할까요?'))return;
-STK=STK.filter(function(x){return x.id!==id});stkSave();render()}
+STK=STK.filter(function(x){return x.id!==id});delMark('stock',id);stkSave();render()}
 
 /*----- 이력 -----*/
 function vStkHist(){var H=[];

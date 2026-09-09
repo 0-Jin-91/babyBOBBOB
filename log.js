@@ -321,7 +321,7 @@ if(typeof stkUse==='function')stkUse(gs,AT.n,nid)}
 save();closeM();if(tab!=='today')tab='today';render()}
 function delLog(id){if(!confirm('이 기록을 삭제할까요?'))return;
 if(typeof stkUndo==='function')stkUndo(id);
-logs=logs.filter(function(l){return l.id!==id});save();render()}
+logs=logs.filter(function(l){return l.id!==id});delMark('logs',id);save();render()}
 
 /*========== 기록 수정 모달 ==========*/
 var EL=null;

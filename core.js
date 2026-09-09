@@ -113,6 +113,48 @@ function milkName(l){
   return M ? (M.n+' '+(+l.ml||0)+'ml') : ('수유 '+(+l.ml||0)+'ml');
 }
 
+/*───────── 삭제 흔적 = 묘비 (3b단계) ─────────
+   DEL = { logs:{id:지운시각, …}, grow:{…}, obs:{…}, my:{…}, cubes:{…}, stock:{…} }
+
+   왜 필요한가 — 4단계에서 두 기기의 목록을 합칠 때, 상대에게만 있는 항목이
+   '아직 내가 모르는 새 항목'인지 '내가 방금 지운 항목'인지 구분해야 한다.
+   흔적이 없으면 지운 것이 상대편에서 되살아나고, 사용자는 눈치채지 못한다.
+
+   ★ 왜 배열에 섞지 않고 따로 두는가 —
+     logs·STK 등을 읽는 곳이 앱 전체에 96곳 있다(표시·통계·CSV·검색).
+     배열에 {del:1} 을 섞으면 그 96곳 전부에서 걸러내야 하고, 한 곳만 놓쳐도
+     지운 기록이 화면에 유령처럼 나타난다. 따로 두면 기존 배열은 지금처럼
+     '살아있는 것만' 담으므로 화면 로직을 하나도 건드리지 않는다.
+
+   ★ 보관 30일 — 그 안에 모든 기기가 한 번은 동기화된다는 가정.
+     짧으면 오래 안 켠 기기에서 삭제가 부활하고, 길면 계속 쌓인다. */
+var DELK = 'b6.del';
+var DELTTL = 30*24*60*60*1000;                 /* 30일 */
+var DEL = LS(DELK, null) || {};
+function delSave(){ saveKey(DELK, DEL) }
+/* 지웠다고 적는다 — 배열에서 빼는 것과 같은 자리에서 부른다 */
+function delMark(kind, id){
+  if(!kind || id===undefined || id===null) return;
+  if(!DEL[kind]) DEL[kind] = {};
+  DEL[kind][''+id] = Date.now();
+  delPrune(); delSave();
+}
+/* 지운 흔적이 있는가 (4단계 병합에서 되살리기 방지에 쓴다) */
+function delHas(kind, id){
+  return !!(DEL[kind] && DEL[kind][''+id]);
+}
+/* 되살아났으면 흔적을 지운다 — stock.js 의 되돌리기(undo)처럼 정당한 부활이 있다.
+   흔적을 남겨두면 그 항목이 다음 병합에서 다시 사라진다. */
+function delUnmark(kind, id){
+  if(DEL[kind] && DEL[kind][''+id]!==undefined){ delete DEL[kind][''+id]; delSave() }
+}
+/* 30일 지난 흔적 청소 — 무한히 쌓이는 것을 막는다 */
+function delPrune(){
+  var cut = Date.now() - DELTTL, k, id, n = 0;
+  for(k in DEL){ for(id in DEL[k]){ if(DEL[k][id] < cut){ delete DEL[k][id]; n++ } } }
+  return n;
+}
+
 /*───────── 레코드 수정시각 (3단계) ─────────
    u = 이 레코드를 마지막으로 만들거나 고친 시각(ms).
 

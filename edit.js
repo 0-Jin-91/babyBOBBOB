@@ -94,4 +94,4 @@ mTab='m';tab='menu';srch='';render()}
 function resetOv(id){if(!confirm('기본 레시피로 되돌릴까요?'))return;
 delete ov[id];save();curR=getR(id);document.getElementById('mb').innerHTML=rBody();render()}
 function delMy(id){if(!confirm('삭제할까요?'))return;
-myR=myR.filter(function(r){return r.i!==id});save();closeM();render()}
+myR=myR.filter(function(r){return r.i!==id});delMark('my',id);save();closeM();render()}

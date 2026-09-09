@@ -310,7 +310,10 @@ function clPack(){
     nav  :(typeof NAVC!=='undefined'?NAVC:null),
     navm :(typeof NAVM!=='undefined'?NAVM:null),
     sec  :(typeof SEC !=='undefined'?SEC :null),
-    cmix :(typeof CMIX!=='undefined'?CMIX:null)
+    cmix :(typeof CMIX!=='undefined'?CMIX:null),
+    /* 3b — 삭제 흔적(묘비). 이것이 서버를 거쳐 다른 기기로 가야
+       "A에서 지운 것이 B에서 되살아나는" 사고를 4단계가 막을 수 있다. */
+    del  :(typeof DEL !=='undefined'?DEL :null)
   };
   p.hash = clHash(p);            /* 메타 제외한 내용만의 지문 — 2단계에서 비교에 쓴다 */
   return p;
@@ -341,6 +344,21 @@ function clApply(d){
   if(d.navm&&typeof NAVM!=='undefined'){ NAVM=d.navm; if(typeof NAVMK!=='undefined')saveKey(NAVMK,d.navm) }
   if(d.sec &&typeof SEC !=='undefined'){ SEC =d.sec;  if(typeof secSave==='function')secSave() }
   if(d.cmix&&typeof CMIX!=='undefined'){ CMIX=d.cmix; if(typeof cmSave ==='function')cmSave()  }
+  /* 3b — 묘비는 '덮지 않고 합친다'.
+     ★ 다른 키처럼 DEL=d.del 로 덮으면, 이 기기에서 방금 지운 흔적이 사라져
+       그 항목이 다음 병합에서 되살아난다. 삭제는 양쪽 사실을 모두 보존해야
+       하므로 합집합을 취하고, 같은 id 는 더 나중에 지운 시각을 남긴다. */
+  if(d.del && typeof DEL!=='undefined'){
+    var _k, _i;
+    for(_k in d.del){
+      if(!DEL[_k]) DEL[_k]={};
+      for(_i in d.del[_k]){
+        if(!DEL[_k][_i] || d.del[_k][_i] > DEL[_k][_i]) DEL[_k][_i]=d.del[_k][_i];
+      }
+    }
+    if(typeof delPrune==='function')delPrune();
+    if(typeof delSave ==='function')delSave();
+  }
   save();
   }finally{ CLAPPLY = 0 }
 }
@@ -741,6 +759,25 @@ document.addEventListener('visibilitychange', function(){
   if(CL.pend) clPush(1);
   else clSync('visible');
 });
+/*───────── iOS 보강 (3b) ─────────
+   아이폰·아이패드에서 "다른 기기 수정이 앱을 껐다 켜야 반영된다"는 문제.
+   원인이 둘이다.
+     ① iOS Safari/PWA 는 앱을 전환해도 visibilitychange 가 오지 않는 경우가
+        많다. pageshow·focus 는 상대적으로 잘 온다.
+     ② 아예 화면을 계속 보고 있으면 어떤 이벤트도 발생하지 않는다.
+        서버가 바뀐 것을 알려주는 수단이 없으므로(onSnapshot 미사용)
+        스스로 주기적으로 확인해야 한다.
+
+   ★ clSync 안에 10초 억제와 여러 안전장치가 이미 있으므로, 트리거를
+     늘려도 통신이 과해지거나 로컬을 덮을 위험은 커지지 않는다. */
+window.addEventListener('pageshow', function(){ clSync('pageshow') });
+window.addEventListener('focus',    function(){ clSync('focus')    });
+/* 앱을 보고 있는 동안 60초마다 확인 — 화면이 가려져 있으면 건너뛴다(배터리) */
+setInterval(function(){
+  if(document.hidden) return;
+  if(!clOn() || CL.pend) return;
+  clSync('timer');
+}, 60000);
 
 /*───────── 지금 백업하기 (버튼 전용) ─────────*/
 /* 눌렀을 때 무슨 일이 일어났는지 반드시 화면·안내로 남긴다 */

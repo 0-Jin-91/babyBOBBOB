@@ -152,7 +152,7 @@ var t=prompt('먹은 시각 (HH:MM) — 비워두면 그대로',L.tm||'');
 if(t!==null&&t.trim())L.tm=t.trim();
 save();render()}
 function delMilk(id){if(!confirm('이 수유 회차를 삭제할까요?'))return;
-logs=logs.filter(function(l){return l.id!==id});save();render()}
+logs=logs.filter(function(l){return l.id!==id});delMark('logs',id);save();render()}
 
 /*========== 오늘 먹은 여부 ==========*/
 function loggedToday(rid){var td=fmt(TD()),hit=null;
@@ -161,7 +161,7 @@ return hit}
 function logAmtOf(id){var a='';logs.forEach(function(l){if(l.id===id)a=l.a||''});return a}
 function logTmOf(id){var t='';logs.forEach(function(l){if(l.id===id)t=l.tm||''});return t}
 function unLog(id){if(typeof stkUndo==='function')stkUndo(id);
-logs=logs.filter(function(l){return l.id!==id});save();render()}
+logs=logs.filter(function(l){return l.id!==id});delMark('logs',id);save();render()}
 
 /*========== 수유 · 즐겨찾기 ==========*/
 function addMilk(v,tm){logs.push(uNow({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:MTYPE(),tm:tm||milkTm(),n:MILK[MTYPE()].n+' '+v+'ml',t:'수유'}));save();render()}

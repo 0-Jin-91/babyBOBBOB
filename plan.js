@@ -180,4 +180,4 @@ function addCube(){var n=document.getElementById('cN').value.trim(),q=+document.
 if(!n)return alert('재료명을 입력해 주세요');if(!q)return alert('개수를 입력해 주세요');
 cubes.push(uNow({id:'c'+Date.now(),n:n,key:(typeof NUT!=='undefined'&&NUT[n]?n:n),q:q,g:g,dt:dt}));save();render()}
 function cQ2(id,d){cubes.forEach(function(c){if(c.id===id)c.q=Math.max(0,c.q+d)});save();render()}
-function cD2(id){cubes=cubes.filter(function(c){return c.id!==id});save();render()}
+function cD2(id){cubes=cubes.filter(function(c){return c.id!==id});delMark('cubes',id);save();render()}
