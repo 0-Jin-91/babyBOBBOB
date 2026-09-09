@@ -595,7 +595,7 @@ function clPull(remote){
              확인하고, 서버는 아직 병합 전 상태이므로 "내가 모르는 변경이 있다"고
              판단해 다시 병합→되올림을 반복한다(무한재귀). 방금 이 순간 서버를
              읽어 합친 결과이므로 다시 확인할 필요가 없다. */
-        setTimeout(function(){ clPushNow(1) }, 300);  /* boot() 가 끝난 뒤 올린다 */
+        setTimeout(function(){ clSend(1) }, 300);  /* boot() 가 끝난 뒤 올린다 */
       }
     }
   }catch(e){ CLMGD=0; clErr('pull',e) }
@@ -633,19 +633,23 @@ function clPush(now){
         clPull(rem);
         return;
       }
-      clPushNow(now);                             /* 서버가 내가 아는 상태 → 그냥 올린다 */
+      clSend(now);                                /* 서버가 내가 아는 상태 → 그냥 올린다 */
     }).catch(function(e){
       CLPUSHM = 0;
       /* 확인에 실패했으면 예전처럼 올린다 — 백업이 멈추는 것보다 낫다 */
-      clPushNow(now);
+      clSend(now);
     });
     return;
   }
-  clPushNow(now);
+  clSend(now);
 }
 
-/* 실제 전송 — clPush 가 서버 확인을 끝낸 뒤 부른다 */
-function clPushNow(now){
+/* 실제 전송 — clPush 가 서버 확인을 끝낸 뒤 부른다.
+   ★ 이름을 clSend 로 둔다. 예전에 clPushNow 로 지었더니 파일 아래쪽에 이미
+     있던 clPushNow('지금 백업하기' 버튼 → clPush 호출)와 이름이 겹쳤다.
+     나중 정의가 이 함수를 덮어써서 clPush → 버튼함수 → clPush 무한재귀가 되어
+     RangeError: Maximum call stack size exceeded 가 났다. */
+function clSend(now){
   if(!clOn()) return;
   if(!navigator.onLine){ CLBUSY=0; CL.pend=1; clSave(); clPaint(); return }
   CLBUSY=1; clPaint();
