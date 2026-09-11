@@ -10,6 +10,17 @@ function minTxt(m){if(m==null)return '';var h=Math.floor(m/60),i=m%60;
 return (h?h+'시간 ':'')+(i?i+'분':(h?'':'0분'))}
 function slotOf(tm){var m=hm2min(tm);if(m==null)return '';
 return m<10*60?'아침':m<14*60?'점심':m<18*60?'저녁':'밤'}
+/*───────── 등록 순서로 끼니 이름을 정한다 ─────────
+   ★ slotOf 는 '시각'으로 판정한다. 그래서 오전에 두 번 기록하면 둘 다 '아침'이
+     되어 '오늘' 화면의 끼니가 채워지지 않았다.
+   ★ 하루 끼니 수(MEALS)에 맞춰 등록 순서대로 이름을 준다 —
+     2끼면 첫 기록이 아침, 두 번째가 저녁. 그 이상은 시각으로 보조 판정한다. */
+function slotByOrder(tm){
+  var td=fmt(TD()), n=0;
+  logs.forEach(function(l){ if(l.d===td && l.k!=='milk') n++ });
+  var S=SLOTS();
+  return (n<S.length) ? S[n] : (slotOf(tm)||'간식');
+}
 
 /*----- 간격 분석 -----*/
 function gapsOf(d){var L=logs.filter(function(l){return l.d===d&&l.tm}).map(function(l){
@@ -287,22 +298,28 @@ logs.push(uNow({id:''+Date.now(),d:fmt(TD()),k:'milk',ml:v,mt:t,tm:tm||nowHM(),n
 function addLog(){var n=document.getElementById('gN').value.trim();
 if(!n&&!LG.length)return alert('메뉴명을 입력하거나 재료를 추가해 주세요');
 var tm=document.getElementById('gTm').value||nowHM();
-var amt=document.getElementById('gA').value,nu=null,gs=null;
+/* ★ gs 는 [] 로 시작한다. 예전에는 null 이어서, 재료 없이 메뉴명만 적어
+     저장하면 아래 gs.length 에서 TypeError 가 나 기록이 통째로 사라졌다. */
+var amt=document.getElementById('gA').value,nu=null,gs=[];
 if(LG.length){gs=JSON.parse(JSON.stringify(LG));nu=nutOf({g:gs,sv:1}).t}
 else{var r=null;RCP().forEach(function(x){if(x.n===n)r=x});
 if(r){nu=nutOf(r).t;
 if(amt){var base=0;(r.g||[]).forEach(function(x){base+=gOf(x)});base=base/(r.sv||1);
 if(base>0){var f=amt/base,n2={};NK.forEach(function(k){n2[k]=nu[k]*f});n2.vc=nu.vc*f;nu=n2}}}}
 var lid2=''+Date.now();
-logs.push(uNow({id:lid2,d:fmt(TD()),n:n||'직접 입력',a:amt,t:slotOf(tm),tm:tm,rx:lRx,nu:nu,gs:gs}));
-if(gs.length&&typeof stkUse==='function')stkUse(gs,n||'직접 입력',lid2);
+logs.push(uNow({id:lid2,d:fmt(TD()),n:n||'직접 입력',a:amt,t:slotByOrder(tm),tm:tm,rx:lRx,nu:nu,gs:gs,gsCook:JSON.parse(JSON.stringify(gs))}));
+if(gs&&gs.length&&typeof stkUse==='function')stkUse(gs,n||'직접 입력',lid2);
 LG=[];save();render()}
 /* 즉시 기록 (양 미입력) */
 function qLogNow(id,tm){var r=getR(id),sv=r.sv||1;tm=tm||nowHM();
 var lid=''+Date.now();
-var gs=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']});
-logs.push(uNow({id:lid,d:fmt(TD()),n:r.n,a:'',t:slotOf(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,gs:gs}));
-if(typeof stkUse==='function')stkUse(gs,r.n,lid);
+/* 양을 안 물었으므로 먹은 양 = 1회분 그대로. 조리 투입량(gsCook)도 동일하다.
+   그래도 gsCook 을 함께 남겨 둔다 — 나중에 이 기록의 먹은 양을 수정할 때
+   saveAte 가 '원래 얼마를 만들었는지'를 알아야 재고를 옳게 차감한다. */
+var gs=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'',x[4]]});
+var gsCook=JSON.parse(JSON.stringify(gs));
+logs.push(uNow({id:lid,d:fmt(TD()),n:r.n,a:'',t:slotByOrder(tm),tm:tm,rx:'😋',nu:nutOf(r).t,rid:id,gs:gs,gsCook:gsCook}));
+if(gsCook.length&&typeof stkUse==='function')stkUse(gsCook,r.n,lid);
 save();return lid}
 
 /* 먹었어요 → 중량 입력 모달 */
@@ -375,7 +392,9 @@ return '<tr><td>'+esc(x[0])+'</td>'
 +'<tr style="border-top:1.5px solid var(--ln)"><td><b>합계</b></td>'
 +(chg?'<td class="mu">'+P.tot+'g</td><td><b style="color:var(--pd)">'+gsTotal(P.scaled)+'g</b></td>':'<td><b>'+P.tot+'g</b></td>')
 +'</tr></table>'
-+'<div class="mu" style="font-size:10px;margin-top:6px">이 값이 <b>재고 차감</b>과 <b>재료별 섭취 분석</b>에 그대로 반영됩니다.</div></div>'}
++'<div class="mu" style="font-size:10px;margin-top:6px;line-height:1.6">이 값은 <b>재료별 섭취 분석(영양 계산)</b>에 쓰입니다.'
++'<br>※ <b>재고는 조리에 넣은 1회분('+P.tot+'g) 전량이 차감됩니다.</b> 아기가 남겨도 냄비에 들어간 재료는 이미 쓴 것이므로, 먹은 양에 따라 재고가 줄었다 늘었다 하지 않습니다.'
++'<br>※ 여기서 조정되는 것은 <b>이 기록(먹은 양)</b>일 뿐이며, <b>레시피에 저장된 재료량은 바뀌지 않습니다.</b></div></div>'}
 function atSumHTML(){return '<div class="cd" style="background:#F3F6FA;font-size:11.5px"><b>기록될 양:</b> <b style="color:var(--pd);font-size:14px">'+(AT.a?AT.a+'g':'미입력 (레시피 1회분 기준)')+'</b><div class="mu" style="font-size:10px;margin-top:3px">양을 넣으면 실제 먹은 만큼 영양이 계산됩니다.</div></div>'}
 function atLive(){var r=document.getElementById('atres'),s=document.getElementById('atsum'),g=document.getElementById('atgs');
 if(r)r.innerHTML=atResHTML();
@@ -396,25 +415,45 @@ function gsTotal(gs){var t=0;
 return Math.round(t*10)/10}
 /* 재료 배열을 비율 f 로 조정 */
 function gsScale(gs,f){return (gs||[]).map(function(x){
-return [x[0],Math.round((+x[1]||0)*f*10)/10,x[2],x[3]]})}
+/* x[4]=개당 g 은 배율과 무관한 '단위 정의'다. 반드시 그대로 넘긴다 —
+   빠뜨리면 gOf 가 PCG 기본값으로 폴백해 '1개'의 무게가 멋대로 변한다. */
+return [x[0],Math.round((+x[1]||0)*f*10)/10,x[2],x[3],x[4]]})}
 /* 재료 배열로 영양 재계산 */
 function gsNut(gs){return (gs&&gs.length)?nutOf({g:gs,sv:1}).t:null}
 
+/* 먹은 기록 저장
+   ★ 여기서 재료(gs)를 먹은 양 비율로 조정하는 것은 "레시피를 고치는 것"이 아니라
+     "실제 먹은 양만큼 섭취 기록을 남기는 것"이다. 레시피 원본(myR/ov)은 건드리지 않는다.
+     조정 결과는 저장 전 atGsHTML() 표에 '전 → 기록' 으로 이미 보이고 있다.
+     ※ 메뉴를 만들 때 넣은 재료량(레시피)과, 아기가 먹은 양(기록)은 서로 다른 값이며
+       기록 쪽 비례 조정이 레시피 재료량을 줄이지 않는다. */
 function saveAte(){var r=AT.rid?getR(AT.rid):null,sv=r?(r.sv||1):1;
 var amt=AT.a===''?null:+AT.a;
 var old=null;if(AT.lid)logs.forEach(function(l){if(l.id===AT.lid)old=l});
-var nu=null,gs=[];
+var nu=null,gs=[],gsCook=[];
+/* ★★ gs 와 gsCook 은 성질이 다른 값이다 — 절대 섞지 말 것 ★★
+   gsCook = 조리에 실제로 넣은 재료량. 냄비에 들어간 순간 이미 100% 소비됐다.
+            아기가 다 먹었는지 남겼는지와 무관하다. → 재고 차감은 반드시 이 값.
+   gs     = 아기가 먹은 양에 해당하는 재료량. 영양·섭취 분석 전용. → 재고와 무관.
+   예전에는 하나의 gs 를 스케일해 재고까지 깎았다. 그래서 60g 만들어 30g 먹이면
+   재료를 절반만 차감해 남긴 30g 어치가 재고에 유령으로 남고, 120% 먹이면
+   1.2 배를 깎아 실제보다 과다 차감됐다. 매 끼니 누적되면 재고 숫자 자체를
+   신뢰할 수 없게 되고 장보기·부족알림·큐브화 안내가 연쇄로 틀어진다. */
 
 if(r){
-/* 레시피 기반 — 1회분 재료에서 시작해 먹은 양 비율로 조정 */
+/* 레시피 기반 — 조리 투입량은 1회분 그대로 고정, 섭취량만 비율 조정 */
 nu=nutOf(r).t;
-gs=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'']});
-if(amt){var base=gsTotal(gs);
-if(base>0){var f=amt/base;gs=gsScale(gs,f);
+gsCook=(r.g||[]).map(function(x){return [x[0],Math.round((+x[1]||0)/sv*10)/10,x[2],x[3]||'',x[4]]});
+gs=JSON.parse(JSON.stringify(gsCook));
+if(amt){var base=gsTotal(gsCook);
+if(base>0){var f=amt/base;gs=gsScale(gsCook,f);
 var n2=gsNut(gs);if(n2)nu=n2;else{n2={};NK.forEach(function(k){n2[k]=nutOf(r).t[k]*f});nu=n2}}}}
 
 else if(old&&old.gs&&old.gs.length){
-/* 레시피 없는 기록(간식·직접입력) — 기존 재료를 이전 양 대비 비례 조정 */
+/* 레시피 없는 기록(간식·직접입력) — 기존 재료를 이전 양 대비 비례 조정.
+   이 경우 '조리 투입량' 원본이 따로 없으므로 저장된 gsCook 을 우선 쓰고,
+   없으면(구버전 기록) 기존 gs 를 투입량으로 간주한다. */
+gsCook=JSON.parse(JSON.stringify(old.gsCook&&old.gsCook.length?old.gsCook:old.gs));
 gs=JSON.parse(JSON.stringify(old.gs));
 var prev=+old.a||0,pbase=gsTotal(gs);
 if(amt&&pbase>0){
@@ -423,19 +462,22 @@ var f2=prev>0?(amt/prev):(amt/pbase);
 gs=gsScale(gs,f2)}
 nu=gsNut(gs)||old.nu||null}
 
-else if(old){nu=old.nu||null;gs=old.gs||[]}
+else if(old){nu=old.nu||null;gs=old.gs||[];
+gsCook=(old.gsCook&&old.gsCook.length)?old.gsCook:(old.gs||[])}
 
 if(AT.lid){var i=-1;logs.forEach(function(l,x){if(l.id===AT.lid)i=x});
 if(typeof stkUndo==='function')stkUndo(AT.lid);
-if(gs.length&&typeof stkUse==='function')stkUse(gs,AT.n,AT.lid);
+/* 재고는 먹은 양이 아니라 조리 투입량으로 차감한다 */
+if(gsCook.length&&typeof stkUse==='function')stkUse(gsCook,AT.n,AT.lid);
 if(i>=0){logs[i].a=AT.a;logs[i].tm=AT.tm;logs[i].t=slotOf(AT.tm);logs[i].rx=AT.rx;
 logs[i].pre=AT.pre;logs[i].post=AT.post;logs[i].n=AT.n||logs[i].n;
 if(nu)logs[i].nu=nu;if(gs.length)logs[i].gs=gs;
+if(gsCook.length)logs[i].gsCook=gsCook;
 uNow(logs[i])}}   /* 기존 기록을 고쳤으므로 수정시각을 새로 찍는다 */
 else{var nid=''+Date.now();
 logs.push(uNow({id:nid,d:fmt(TD()),n:AT.n,a:AT.a,t:slotOf(AT.tm),tm:AT.tm,rx:AT.rx,
-nu:nu,gs:gs,rid:AT.rid,pre:AT.pre,post:AT.post}));
-if(typeof stkUse==='function')stkUse(gs,AT.n,nid)}
+nu:nu,gs:gs,gsCook:gsCook,rid:AT.rid,pre:AT.pre,post:AT.post}));
+if(gsCook.length&&typeof stkUse==='function')stkUse(gsCook,AT.n,nid)}
 save();closeM();if(tab!=='today')tab='today';render()}
 function delLog(id){if(!confirm('이 기록을 삭제할까요?'))return;
 if(typeof stkUndo==='function')stkUndo(id);
@@ -446,6 +488,10 @@ var EL=null;
 function editLog(id){var l=null;logs.forEach(function(x){if(x.id===id)l=x});
 if(!l)return;
 EL=JSON.parse(JSON.stringify(l));if(!EL.gs)EL.gs=[];
+/* ★ 조리 투입량 원본 확정 — 재고 차감의 유일한 근거.
+   구버전 기록(gsCook 없음)은 이번 한 번만 gs 를 투입량으로 간주해 굳힌다.
+   이후 사용자가 '먹은 양'을 몇 번 고쳐도 이 값은 변하지 않는다. */
+if(!EL.gsCook||!EL.gsCook.length)EL.gsCook=JSON.parse(JSON.stringify(EL.gs));
 drawEL();document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
 function drawEL(){var ks=Object.keys(NUT),isM=EL.k==='milk';
 var nu=isM?milkNut(+EL.ml||0,EL.mt||'f'):(EL.gs.length?nutOf({g:EL.gs,sv:1}).t:(EL.nu||{}));
@@ -459,6 +505,15 @@ document.getElementById('mb').innerHTML='<div class="mt2">'+(isM?'🍼 수유':'
 +(EL.gs&&EL.gs.length?'<button class="btn y s" onclick="elScaleGs()">🥕 재료 비례 맞추기</button>':'')+'</div>')
 +'<div class="rw" style="margin-top:10px"><div class="fd" style="flex:1;margin:0"><label>날짜</label><input type="date" value="'+ymdOf(EL.d)+'" onchange="EL.d=fmt(d0(this.value));drawEL()"></div><div class="fd" style="flex:1;margin:0"><label>먹은 시각</label><input type="time" value="'+(EL.tm||'')+'" onchange="EL.tm=this.value;drawEL()"></div></div></div>'
 +(isM?'':'<div class="st">🥕 먹은 재료 · 양</div><div class="cd">'
+/* ★ 재고는 조리 투입량으로 차감된다는 사실을 화면에 드러낸다.
+   아래 입력칸은 '먹은 양'(영양 계산용)이며 재고와 무관하다. */
++(function(){var ck=EL.gsCook&&EL.gsCook.length?EL.gsCook:null;if(!ck)return '';
+var ct=gsTotal(ck),et=gsTotal(EL.gs);
+var same=Math.abs(ct-et)<0.05;
+return '<div style="background:#F1F6F1;border-radius:8px;padding:7px 9px;margin-bottom:8px;font-size:11px;line-height:1.55">'
++'<b>🍲 조리에 넣은 양 '+ct+'g</b> <span class="mu">— 재고에서 이만큼 차감됩니다</span>'
++(same?'':'<br><span class="mu">아래 재료 합계 '+et+'g 은 <b>먹은 양</b>(영양 계산용)이라 재고와 다릅니다.</span>')
++'</div>'})()
 +(EL.gs.length?EL.gs.map(function(x,i){return '<div class="ei"><input style="flex:1.4" value="'+esc(x[0])+'" oninput="EL.gs['+i+'][0]=this.value"><input style="flex:.62" type="number" step="0.1" value="'+x[1]+'" oninput="EL.gs['+i+'][1]=+this.value;drawEL()"><select style="flex:.52" onchange="EL.gs['+i+'][2]=this.value;drawEL()">'+['g','ml','개','방울'].map(function(u){return '<option '+(x[2]===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select><select style="flex:1" onchange="EL.gs['+i+'][3]=this.value;drawEL()"><option value="">영양 미반영</option>'+ks.map(function(k){return '<option '+(x[3]===k?'selected':'')+'>'+k+'</option>'}).join('')+'</select><button style="color:var(--sub)" onclick="EL.gs.splice('+i+',1);drawEL()">✕</button></div>'}).join('')
 :'<div class="mu" style="font-size:11px">재료 기록이 없습니다. 아래에서 추가하면 영양이 재계산됩니다.</div>')
 +'<div class="ei" style="margin-top:8px"><select id="eLK" style="flex:1.4" onchange="document.getElementById(\'eLN\').value=this.value"><option value="">— 재료 선택 —</option>'+ks.map(function(k){return '<option>'+k+'</option>'}).join('')+'</select><input id="eLN" style="flex:1" placeholder="직접 입력"><input id="eLQ" style="flex:.6" type="number" placeholder="20"><select id="eLU" style="flex:.5"><option>g</option><option>ml</option><option>개</option><option>방울</option></select></div>'
@@ -481,14 +536,20 @@ if(!amt)return alert('먹은 양(g)을 먼저 입력해 주세요.');
 var cur=gsTotal(EL.gs);
 if(cur<=0)return alert('재료 중량을 읽을 수 없어요.');
 var f=amt/cur;
-if(!confirm('재료 합계 '+cur+'g → 먹은 양 '+amt+'g 기준으로\n모든 재료를 ×'+rnd2(f)+' 조정할까요?'))return;
+if(!confirm('재료 합계 '+cur+'g → 먹은 양 '+amt+'g 기준으로\n모든 재료를 ×'+rnd2(f)+' 조정할까요?\n\n· 바뀌는 것 : 섭취 영양 계산\n· 그대로인 것 : 재고 차감 (조리에 넣은 양은 이미 소비됐으므로)'))return;
 EL.gs=gsScale(EL.gs,f);
 drawEL()}
 function saveEL(){if(EL.k==='milk'){EL.n=MILK[EL.mt||'f'].n+' '+(EL.ml||0)+'ml'}
 else{EL.nu=gsNut(EL.gs)||EL.nu;EL.t=slotOf(EL.tm)||EL.t;
 /* 재고: 기존 차감 되돌리고 새 재료로 다시 차감 */
 if(typeof stkUndo==='function')stkUndo(EL.id);
-if(EL.gs&&EL.gs.length&&typeof stkUse==='function')stkUse(EL.gs,EL.n,EL.id)}
+/* ★★ 재고 차감은 '먹은 양(EL.gs)' 이 아니라 '조리 투입량(EL.gsCook)' 이다 ★★
+   냄비에 넣은 재료는 아기가 남겼든 다 먹었든 이미 100% 소비됐다.
+   여기서 EL.gs 를 쓰면 120g 으로 고칠 때 원재료가 2배 깎이고,
+   30g 으로 고칠 때 절반만 깎여 유령 재고가 생긴다. */
+var elCook=(EL.gsCook&&EL.gsCook.length)?EL.gsCook:EL.gs;
+if(elCook&&elCook.length&&typeof stkUse==='function')stkUse(elCook,EL.n,EL.id);
+if(elCook&&elCook.length)EL.gsCook=JSON.parse(JSON.stringify(elCook))}
 var i=-1;logs.forEach(function(l,x){if(l.id===EL.id)i=x});
 if(i>=0)logs[i]=EL;
 save();closeM();render()}

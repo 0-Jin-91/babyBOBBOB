@@ -145,8 +145,30 @@ return '<div class="alert '+(gone?'bad':'mid')+'"><span class="ic">'+(gone?'🚨
 +by.map(function(x){return '<div class="mu" style="font-size:11px;margin-top:2px">· <b>'+esc(x.n)+'</b> 큐브 '+(x.q<=0?'<b style="color:var(--rd)">소진</b>':x.q+'개 남음')+' — 원재료 재고도 없어요 → <b>장보기 필요</b></div>'}).join('')
 +'<button class="btn g s" style="margin-top:6px" onclick="tab=\'plan\';pTab=\'s\';render()">🛒 장보기 목록 보기</button></div>':'')
 +'</div></div>'}
-/* 원재료 재고를 큐브화: gEach g 짜리 qty 개 → 큐브 등록 + 원재료 차감 */
+/*----- 큐브화 손질법 안내 모달 -----
+   왜 필요한가: 예전 cubeify 는 곧바로 "1개 몇 g?" 을 물었다. 정작 중요한
+   "몇 분 삶아야 / 쪄야 하는지, 데친 물을 버려야 하는지"를 알려 줄 자리가
+   아예 없었다. 그래서 규격을 묻기 전에 이 화면을 먼저 띄운다.
+   손질법 데이터가 없는 재료는 이 화면을 건너뛰고 바로 규격 입력으로 간다. */
+var CFY=null;                    /* 큐브화 대기 중인 재고 id */
 function cubeify(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
+/* 손질법이 있으면 먼저 보여준다 */
+if(typeof prepOf==='function'&&prepOf(s.key,s.n)&&typeof prepCard==='function'){
+CFY=id;drawCfy(s);return}
+cubeifyGo(id)}
+function drawCfy(s){var el=document.getElementById('mb');if(!el)return cubeifyGo(s.id);
+var leftG=u2g(s,Math.max(0,s.left));
+el.innerHTML='<div class="mt2" style="margin-bottom:4px">🧊 '+esc(s.n)+' 큐브화</div>'
++'<p class="mu" style="margin:0 0 10px">먼저 손질·가열 방법을 확인하세요. 영양소 손실을 줄이는 방법과 주의사항입니다.</p>'
++prepCard(s.key,s.n)
++'<div class="cd" style="font-size:11.5px"><b>현재 원재료 보유</b> 약 <b style="color:var(--pd)">'+rnd(leftG)+'g</b>'
++'<div class="mu" style="font-size:10.5px;margin-top:3px">위 방법으로 익힌 뒤, 아래 버튼을 눌러 큐브 규격과 개수를 등록하세요.</div></div>'
++'<button class="btn" onclick="cubeifyGo(\''+s.id+'\')">✓ 손질 확인했어요 · 큐브 등록하기</button>'
++'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>';
+document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
+/* 원재료 재고를 큐브화: gEach g 짜리 qty 개 → 큐브 등록 + 원재료 차감 */
+function cubeifyGo(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if(!s)return;
+CFY=null;if(typeof closeM==='function')closeM();
 var leftG=u2g(s,Math.max(0,s.left));
 var ge=prompt('「'+s.n+'」 큐브화\n\n큐브 1개를 몇 g 으로 만들까요?\n(현재 원재료 남은 양 약 '+rnd(leftG)+'g)',CUBE_G);
 if(ge===null)return;ge=+ge;if(!ge||ge<=0)return alert('0보다 큰 g 을 넣어 주세요');
@@ -169,7 +191,28 @@ uNow(s);                        /* 큐브화로 원재료가 줄었다 → 수�
 if(typeof save==='function')save();else stkSave();
 sTab='cube';render()}
 /* 재고 등록 화면에서 '큐브로 바로 등록' — 장보기 후 이미 큐브화한 것 */
+/* ★ 규격을 묻기 전에 손질법을 먼저 보여준다.
+   원재료 → 🧊 큐브화(cubeify) 경로에는 손질법 모달이 있었는데 이 경로에는 없었다.
+   그런데 실제로 큐브를 만드는 상황은 대개 이쪽이다 — 시금치를 사와서 데쳐 얼리는
+   순간에 "데친 물은 버리세요"가 가장 필요한데, 정작 그 자리에 안내가 없었다.
+   손질법 데이터가 없는 재료(물·육수 등)는 이 화면을 건너뛰고 바로 규격 입력으로 간다. */
 function cubeAddDirect(){if(!SE)return alert('재료를 선택해 주세요');
+var dk=(SE.key&&typeof NUT!=='undefined'&&NUT[SE.key])?SE.key:SE.n;
+if(typeof prepOf==='function'&&prepOf(dk,SE.n)&&typeof prepCard==='function'&&document.getElementById('mb')){
+return drawCfyDirect(dk)}
+cubeAddDirectGo()}
+/* 손질법 확인 화면 (등록 탭 전용).
+   drawCfy 는 STK 재고 객체(s.left·u2g)를 전제로 하므로 재료명만 있는 SE 에는 쓸 수 없다.
+   그래서 별도 함수로 두고, 확인 버튼이 기존 prompt 흐름(cubeAddDirectGo)을 그대로 부른다. */
+function drawCfyDirect(dk){var el=document.getElementById('mb');if(!el)return cubeAddDirectGo();
+el.innerHTML='<div class="mt2" style="margin-bottom:4px">🧊 '+esc(SE.n)+' 큐브 등록</div>'
++'<p class="mu" style="margin:0 0 10px">먼저 손질·가열 방법을 확인하세요. 영양소 손실을 줄이는 방법과 주의사항입니다.</p>'
++prepCard(dk,SE.n)
++'<button class="btn" onclick="cubeAddDirectGo()">✓ 손질 확인했어요 · 큐브 등록하기</button>'
++'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>';
+document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
+function cubeAddDirectGo(){if(!SE)return alert('재료를 선택해 주세요');
+if(typeof closeM==='function')closeM();
 var ge=prompt('「'+SE.n+'」 큐브 1개 용량 (g)',CUBE_G);if(ge===null)return;ge=+ge;if(!ge||ge<=0)return alert('0보다 큰 g');
 var q=prompt('큐브 개수',7);if(q===null)return;q=+q;if(!q||q<=0)return alert('1개 이상');
 if(typeof cubes==='undefined')cubes=[];
@@ -197,6 +240,11 @@ return '<div class="cb"><div style="flex:0 0 30px;height:30px;border-radius:9px;
 +'<div class="sp"><button onclick="cQ2(\''+c.id+'\',-1)">−</button><b style="width:20px;text-align:center">'+c.q+'</b><button onclick="cQ2(\''+c.id+'\',1)">＋</button>'
 +'<button style="padding:0 4px" onclick="cubeEdit(\''+c.id+'\')" title="수정">✏️</button>'
 +'<button style="color:var(--sub);padding:0 3px" onclick="cD2(\''+c.id+'\')">✕</button></div></div>'
+/* 보유 큐브에도 손질법 요약을 한 줄 붙인다 — 원재료 탭(stkRows)에는 있는데
+   여기에만 없었다. 다음 큐브를 만들 때 "지난번에 몇 분 데쳤지" 를 확인하는 자리다.
+   compact=1 이라 '💧 데치기 30초~1분 · ⚠️ 주의 있음' 한 줄이고, 자세한 내용은
+   재료도감에서 본다. 데이터 없는 재료는 '' 라 아무것도 늘지 않는다. */
++((typeof prepCard==='function'&&typeof prepOf==='function'&&prepOf(c.key,c.n))?prepCard(c.key,c.n,1):'')
 +(CE.id===c.id?cubeEditForm(c):'')}).join('')
 +'<div class="mu" style="font-size:10.5px;margin-top:8px">끼니를 <b>기록하면 큐브가 자동으로 차감</b>됩니다(기한 임박한 것부터). 기록을 취소하면 되돌아옵니다. − ＋ 는 수동 보정용, ✏️ 는 <b>만든 날짜·개수·규격 수정</b>입니다.</div></div>'}
 
@@ -263,6 +311,7 @@ return '<div class="cd" style="padding:10px;border-left:4px solid '+(lv==='bad'?
 +'<div class="rw" style="margin-top:8px"><button class="btn g s" onclick="stkRefill(\''+s.id+'\')">🔄 충전</button>'
 +'<button class="btn y s" onclick="stkAdj(\''+s.id+'\')">✏️ 조정</button>'
 +'<button class="btn s" style="background:#E8F4FF;color:var(--bl)" onclick="cubeify(\''+s.id+'\')">🧊 큐브화</button></div>'
++((typeof prepCard==='function'&&prepOf(s.key,s.n))?prepCard(s.key,s.n,1):'')
 +(function(){var q=isCnt(s.unit)?[-0.5,-1,-2]:[-10,-20,-50];
 return '<div class="rw" style="margin-top:6px">'+q.map(function(v){
 return '<button class="mu" style="flex:1;font-weight:700;color:var(--bl);font-size:11px" onclick="stkQuick(\''+s.id+'\','+v+')">'+v+s.unit+'</button>'}).join('')})()
@@ -272,9 +321,15 @@ function stkPerEdit(id){var s=null;STK.forEach(function(x){if(x.id===id)s=x});if
 var v=prompt('「'+s.n+'」 1'+s.unit+'의 용량(g)\n\n예) 소고기 200g 짜리 → 200 / 달걀 1개 → 50 / 두부 1팩 → 300\n\n레시피 사용량(g)을 이 값으로 나눠 '+s.unit+' 수를 차감합니다.',stkPer(s));
 if(v===null)return;v=+v;if(!v||v<=0)return alert('0보다 큰 숫자를 넣어 주세요');
 s.per=v;uNow(s);stkSave();
-/* 이 규격을 쓰는 레시피들의 1개당 g 도 함께 갱신 */
+/* ★ 저장된 레시피의 중량은 건드리지 않는다 (v91).
+   예전에는 여기서 perSync() 가 빈 x[4] 를 이 값으로 채웠고, 문구도 "중량도
+   자동으로 다시 계산했습니다"였다. 실제로는 그 순간 해당 레시피의 총 그램이
+   20~30배 뛰었다(두부 1개 10g→300g). 재고 규격은 재고 차감 기준일 뿐,
+   사용자가 저장해 둔 메뉴의 재료량을 바꿀 권한은 없다.
+   → 이제 '미지정인 레시피가 몇 곳인지'만 알리고, 반영은 편집화면에서 사용자가 한다. */
 var n=(typeof perSync==='function')?perSync():0;
-if(n)alert('「'+s.n+'」 규격을 1'+s.unit+'='+v+'g 으로 바꿨어요.\n\n이 재료를 개수로 쓰는 레시피 '+n+'곳의 중량도 자동으로 다시 계산했습니다.');
+alert('「'+s.n+'」 규격을 1'+s.unit+'='+v+'g 으로 바꿨어요.\n\n· 재고 차감은 이 값으로 계산됩니다.\n· 저장된 레시피의 재료량은 그대로입니다.'
++(n?'\n\n이 재료를 개수로 쓰면서 1개당 g 이 아직 미지정인 레시피가 '+n+'곳 있어요.\n그 메뉴 편집화면에서 ⚠️ 표시를 눌러 적용할 수 있습니다.':''));
 render()}
 
 /*----- 등록 -----*/
@@ -357,7 +412,8 @@ if(!per||per<=0)return alert('1개 용량(예: 200)을 입력해 주세요');
 if(!cnt||cnt<=0)return alert('개수를 입력해 주세요');
 STK.push(uNow({id:'k'+Date.now(),n:SE.n,key:SE.key,unit:u,per:per,spec:per+pu,full:cnt,left:cnt,dt:fmt(TD()),exp:exp,memo:memo,
 hist:[{d:fmt(TD()),t:nowHM(),g:cnt,why:'최초 등록 ('+per+pu+'×'+rnd2(cnt)+u+')'}]}));
-if(typeof perSync==='function')perSync();   /* 등록한 규격을 기존 레시피에도 반영 */
+/* ★ perSync 는 v91부터 집계 전용 — 저장된 레시피를 바꾸지 않는다.
+   등록만으로 기존 메뉴의 재료량이 달라지면 안 된다. 호출 자체를 뺀다. */
 stkSave();SE=null;ISQ.SE='';SU=CNTU[0];sTab='list';render()}
 
 /*----- 충전 · 조정 -----*/

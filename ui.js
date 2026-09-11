@@ -123,7 +123,7 @@ return '<div class="cd"><b style="font-size:13.5px;color:'+lvCol(x.pc)+'">'+lvIc
 +'<div class="st">🔄 더 좋은 메뉴로 교체</div>'+altBetter(r,3):'')
 +(hi.length?'<div class="st">📉 과다한 영양소</div><div class="cd">'+hi.map(function(x){var kk=x.k;
 return '<div style="margin-bottom:8px"><b style="font-size:13px;color:var(--warn)">⚠️ '+x.nm+' '+Math.round(x.pc)+'%</b><p class="mu" style="margin:4px 0 0">1끼 목표('+rnd2(x.goal)+x.u+')보다 많습니다. '+(kk==='p'?'고기·생선·두부 양을 5~10g 줄여보세요. 단백질 과다는 신장에 부담이 될 수 있습니다.':'해당 재료를 조금 줄이거나 다른 재료로 나눠 담아보세요.')+'</p><div class="ch" style="margin-top:6px">'+(r.g||[]).filter(function(gg){return gg[3]&&NUT[gg[3]]&&NUT[gg[3]][NI[kk]]>0}).slice(0,4).map(function(gg){return '<button style="background:#FFF1CC;color:#8A5D00" onclick="cutQuick(\''+r.i+'\',\''+gg[3]+'\')">− '+gg[0]+'</button>'}).join('')+'</div></div>'}).join('')
-+'<div class="mu" style="font-size:11px">− 버튼을 누르면 해당 재료가 20% 줄어듭니다.</div></div>':'')
++'<div class="mu" style="font-size:11px;line-height:1.7">− 버튼을 누르면 해당 재료가 20% 줄어들고, <b>저장된 레시피의 재료량이 실제로 바뀝니다</b>(확인창이 뜹니다).<br><b>달성률이 100%를 넘었다는 것만으로 재료를 줄일 이유는 없습니다.</b> 1끼 목표는 최소 기준이라 넘겨도 괜찮고, 넘긴 만큼 이미 그 재료를 넣어 만든 것이므로 레시피 양을 깎으면 실제로 만든 음식과 기록이 어긋납니다. 위 ⚠️ 표시는 <b>과다 섭취가 우려되는 항목(단백질·요오드 등)에 한해</b> 다음에 만들 때 참고하라는 안내입니다.</div></div>':'')
 +'<button class="btn g" onclick="closeM();openEd(\''+r.i+'\')">✏️ 직접 수정하기</button>'
 +'<button class="btn y" style="margin-top:8px" onclick="closeM()">닫기</button>';
 document.getElementById('md').classList.add('on');document.body.style.overflow='hidden'}
@@ -133,8 +133,18 @@ function putG(id,g){var isBase=BASE.filter(function(b){return b.i===id}).length>
 if(isBase){ov[id]={n:r.n,g:g,st:r.st,tm:r.tm,sv:r.sv,tip:r.tip,s:r.s,y:r.y}}
 else{myR.forEach(function(x){if(x.i===id)x.g=g})}
 save()}
-function cutQuick(id,fn){var r=getR(id),g=JSON.parse(JSON.stringify(r.g||[]));
-g.forEach(function(x){if(x[3]===fn)x[1]=Math.max(1,Math.round(+x[1]*.8*10)/10)});
+/* 재료 20% 줄이기
+   ★ putG 는 저장된 레시피(ov/myR)를 실제로 덮어쓴다. 사용자가 확정한 재료량을
+     바꾸는 동작이므로 반드시 "무엇이 얼마로" 를 보여 주고 확인을 받는다.
+     예전에는 버튼 한 번에 조용히 깎여서 "메뉴 양이 저 혼자 바뀐다"로 보였다. */
+function cutQuick(id,fn){var r=getR(id);if(!r)return;
+var g=JSON.parse(JSON.stringify(r.g||[])),cur=0,u='g';
+g.forEach(function(x){if(x[3]===fn){cur=+x[1]||0;u=x[2]||'g'}});
+if(!cur)return alert('「'+fn+'」이(가) 이 레시피에 없습니다.');
+var next=Math.max(1,Math.round(cur*.8*10)/10);
+if(next>=cur)return alert('더 줄일 수 없습니다.');
+if(!confirm('「'+fn+'」을 줄일까요?\n\n'+cur+u+'  →  '+next+u+' (20% 감량)\n\n※ 이 레시피에 저장된 재료량이 실제로 바뀝니다.\n   [기본값 복원]으로 되돌릴 수 있습니다.'))return;
+g.forEach(function(x){if(x[3]===fn)x[1]=next});
 putG(id,g);diagMeal(id)}
 function addG(id,fn){var r=getR(id),g=JSON.parse(JSON.stringify(r.g||[]));
 var q=QG[fn]||10,u=qUnit(fn),hit=-1;
@@ -162,6 +172,7 @@ save();closeM();render()}
 
 /*========== 모달 공통 ==========*/
 function closeM(){var md=document.getElementById('md'),sh=document.getElementById('sh');
+if(typeof PREPEDIT!=='undefined')PREPEDIT=0;
 if(window.updStop)updStop();          /* 자동 새로고침 카운트다운이 돌고 있으면 중단 */
 md.classList.remove('on');document.body.style.overflow='';
 /* 스와이프 중 남은 인라인 스타일까지 완전히 초기화 — 안 지우면 회색 영역이 남는다 */

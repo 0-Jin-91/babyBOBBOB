@@ -156,6 +156,11 @@ document.getElementById('mb').innerHTML='<div style="font-size:40px;text-align:c
 +(m<f[3]?'<div class="alert bad"><span class="ic">⏳</span><div>아직 이른 재료예요. <b>'+fmt(addM(d0(baby.birth),f[3]))+'</b>(만 '+f[3]+'개월) 이후에 시도해 보세요.</div></div>':'')
 +'<div class="st">관찰 · 반응</div><div class="cd"><button class="btn g s" onclick="startObs(\''+n+'\')">🔔 이 재료로 3일 관찰 시작</button><div class="ch" style="margin-top:9px">'+[['ok','😊 잘 먹었어요'],['watch','😐 관찰 중'],['bad','😖 반응 있었어요']].map(function(x){return '<button class="'+(t===x[0]?'on':'')+'" onclick="setF(\''+n+'\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>'
 +(t==='bad'?'<div class="alert bad" style="margin-top:9px"><span class="ic">🚑</span><div>호흡 곤란·얼굴 부기·심한 구토가 있으면 즉시 병원에 가세요.</div></div>':'')+'</div>'
+/* 🧊 큐브화 손질법 — 사용자가 "이 재료 몇 분 익혀야 하나"를 찾는 가장 자연스러운 자리.
+   prepOf 는 f[4](NUT 키) → f[0](이름) 순으로 뒤지므로, 꿀·소금·설탕처럼
+   f[4] 가 빈 항목도 이름으로 찾아 붉은 금지 카드가 뜬다.
+   손질법 데이터가 없는 재료면 prepCard 가 '' 를 반환해 아무것도 늘지 않는다. */
++(typeof prepCard==='function'?prepCard(f[4],f[0]):'')
 +comboFood(f[4])
 +(rs.length?'<div class="st">이 재료로 만드는 메뉴</div>'+rs.map(function(r){return rcard(r)}).join(''):'')
 +'<button class="btn y" onclick="closeM()">닫기</button>';

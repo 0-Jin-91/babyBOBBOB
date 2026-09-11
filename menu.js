@@ -57,6 +57,7 @@ return '<div class="rw" style="justify-content:space-between;align-items:center"
 +r.g.map(function(x){return '<div class="ir"><span>'+esc(x[0])+'</span><b>'+rnd((+x[1]||0)*qty)+x[2]+'</b></div>'}).join('')+'</div><div class="mu" style="font-size:10.5px;margin-top:6px">기준: '+st.ra+' · 1회 '+st.am+'</div></div>'
 +nutBlock(nu,qty)
 +((typeof stkHowto==='function')?stkHowto(r):'')
++((typeof prepBlock==='function')?prepBlock(r):'')
 +comboBlock(r)
 +'<div class="cd"><b style="font-size:13.5px">👩‍🍳 만드는 순서</b><div class="mu" style="font-size:10.5px;margin:2px 0 8px">기본 그림이 표시됩니다. 📷로 직접 찍은 사진으로 바꿀 수 있어요.</div><ul class="sl">'
 +r.st.map(function(s,x){var k=r.i+'_'+x,p=ph[k];

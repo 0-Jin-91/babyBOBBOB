@@ -230,8 +230,20 @@ if(BS.length)h+='<div class="hr"></div><b style="font-size:12.5px">✨ 이 재�
 if(S.length)h+='<div class="hr"></div><b style="font-size:12.5px">＋ 흡수·균형을 위한 재료</b><div class="ch" style="margin-top:6px">'
 +S.map(function(x){return '<button style="background:#E7F1FB;color:#3A6FA8" onclick="comboAdd(\''+r.i+'\',\''+x.n+'\')">＋ '+x.n+' '+(QG[x.n]||10)+qUnit(x.n)+'<span class="mu" style="font-weight:600"> · '+x.w+'</span></button>'}).join('')+'</div>';
 return h+'<div class="mu" style="font-size:10px;margin-top:8px">※ 일반적인 소화·흡수 원리에 근거한 참고 정보이며, 금지 조합이 아닙니다. 아기 반응이 우선입니다.</div></div>'}
-/* 주의 재료 20% 줄이기 (상세에서) */
-function comboCut(id,fn){cutQuick2(id,fn);
+/* 주의 재료 20% 줄이기 (상세에서)
+   ★ 이 동작은 저장된 레시피의 재료량을 실제로 깎는다(putG → ov[id] 덮어쓰기).
+     사용자가 의도한 게 아니면 "내가 만든 메뉴 양이 저 혼자 바뀌었다"가 된다.
+     그래서 (1) 무엇이 얼마로 바뀌는지 숫자로 보여주고 확인을 받는다.
+     (2) 원래대로 되돌릴 수 있다는 사실을 함께 알린다. */
+function comboCut(id,fn){
+var r=getR(id);if(!r)return;
+var cur=0,u='g';
+(r.g||[]).forEach(function(x){if(x[3]===fn){cur=+x[1]||0;u=x[2]||'g'}});
+if(!cur)return alert('「'+fn+'」이(가) 이 레시피에 없습니다.');
+var next=Math.max(.5,Math.round(cur*.8*10)/10);
+if(next>=cur)return alert('더 줄일 수 없습니다.');
+if(!confirm('「'+fn+'」을 줄일까요?\n\n'+cur+u+'  →  '+next+u+' (20% 감량)\n\n※ 이 레시피에 저장된 재료량이 실제로 바뀝니다.\n   기본 레시피는 상세 화면의 [기본 레시피로 되돌리기]로 복구할 수 있습니다.'))return;
+cutQuick2(id,fn);
 if(curR&&curR.i===id){curR=getR(id);document.getElementById('mb').innerHTML=rBody()}
 render()}
 function cutQuick2(id,fn){var r=getR(id),g=JSON.parse(JSON.stringify(r.g||[]));

@@ -180,48 +180,101 @@ function stkByKey(k){if(typeof STK==='undefined'||!k)return null;
 var hit=null;STK.forEach(function(s){if(s.key===k&&!hit)hit=s});return hit}
 /* 그 재료를 재고 규격 기준으로 담을 때의 행 하나 */
 function stkRow(k){var s=stkByKey(k),q=QG[k]||10,u=qUnit(k);
-if(s&&isCnt(s.unit)){var per=stkPer(s);
-/* 권장량(g)에 맞는 개수 — 1개 단위. 최소 1개.
-   ★ 예전에는 0.5 단위로 끊었다. 반 개를 실제로 넣는 사람은 없어서
-     화면의 0.5 가 오해만 만들었다(edAddStk 와 같은 이유). */
-var n=Math.max(1,Math.ceil(q/per));
+/* ★★ 재고 단위가 '개'라도 레시피 행을 개수로 만들지 않는다 (v91) ★★
+   재고의 팩·봉·통은 '사 온 포장 단위'이고, 레시피에 필요한 것은 '한 끼에 넣는 양'이다.
+   둘을 같은 것으로 취급해 Math.ceil 로 최소 1개를 넣으면, 1개 미만을 쓸 수 없다는
+   제약 때문에 실제 투입량이 권장량을 크게 넘는다. 실측(v91):
+     두부 권장 20g + 재고 1팩=300g   → 1개 = 300g  (15배)
+     브로콜리 권장 10g + 1봉=300g    → 1개 = 300g  (30배)
+     단호박 권장 20g + 1통=800g      → 1개 = 800g  (40배)
+   15개 조합을 검사해 전부 2배 이상이었다. 아기 한 끼에 단호박 800g 은 없다.
+   → 개수는 진짜 '개'로 세는 재료(달걀·달걀노른자 = qUnit 이 '개')에만 쓰고,
+     그 외에는 g 으로 담는다. 재고 차감은 stkUse 가 g→개수 환산(g2u)을 하므로
+     레시피를 g 으로 둬도 팩 단위 재고에서 정상 차감된다. */
+if(u==='개'){
+/* 진짜 개수 재료 — 개당 g 은 재고에 등록된 값이 있으면 그것을, 없으면 PCG 기준 */
+var per=(s&&isCnt(s.unit))?stkPer(s):(PCG[k]||10);
+var n=Math.max(1,Math.round(q/per))||1;
 return [k,n,'개',k,per]}
 return [k,q,u,k]}
-/* 재고 규격이 바뀌었을 때 저장된 모든 레시피의 개당 g 을 갱신한다.
-   반환: 바뀐 행 수 */
+/* 재고 규격이 바뀌었을 때 개당 g 을 갱신한다.
+   반환: 바뀐 행 수
+
+   ★★ 중요 — 여기서 '저장된 내 레시피'를 건드리면 안 된다 ★★
+   x[4] 는 개당 g 이고 gOf() 가 총 그램을 계산할 때 곱하는 값이다.
+   따라서 저장된 myR·ov 의 x[4] 를 재고 규격으로 덮어쓰면
+   **사용자가 이미 확정해 저장한 메뉴의 실제 재료량이 소급 변경**된다.
+   (예: 달걀 1개=50g 으로 저장한 메뉴가, 나중에 재고에 달걀 1팩=500g 을
+    등록하는 순간 그 메뉴의 달걀이 500g 이 된다.)
+   부팅마다(boot.js) 자동 실행되므로 사용자에게는 "내가 저장한 양이
+   저 혼자 바뀐다"로만 보였다. 그래서 대상을 이렇게 좁힌다:
+
+     - 저장된 myR / ov  → 손대지 않는다 (사용자가 확정한 값이므로 보존)
+     - x[4] 가 아직 없는 행 → 규격 정보가 없던 것이니 채워 준다 (신규 정보 보강, 값 변경 아님)
+
+   ★ 편집 중인 ME 는 여기서 건드리지 않는다 (예전에는 채웠다).
+     x[4] 는 gOf() 가 총 그램을 계산할 때 곱하는 값이라, 빈 칸을 채우는 것만으로도
+     화면에 보이는 총량이 실제로 달라진다. perSync 는 boot.js 에서 부팅마다 자동
+     실행되므로, 메뉴를 편집하던 중 새로고침하면 사용자가 손대지 않은 양이
+     저 혼자 바뀐 것으로 보였다. ME 의 규격 보정은 사용자가 편집 화면을 직접
+     열 때 edPerFix() 가 담당한다(그쪽은 사용자 행동이 방아쇠라 예측 가능하다).
+
+   재고 규격을 실제로 반영하고 싶으면 편집 화면에서 [규격 수정]을
+   눌러 사용자가 명시적으로 바꾼다(edPerSet). */
 function perSync(){if(typeof STK==='undefined')return 0;
 var n=0;
-function fix(g){(g||[]).forEach(function(x){
+/* ★★ 여기서 x[4] 에 값을 넣지 않는다 (v91) ★★
+   예전에는 '비어 있는 칸만 채우니 값 변경이 아니다'라고 보고 대입했다. 틀렸다.
+   gOf() 는 x[4] 가 없으면 PCG(달걀 50g 등) 또는 10g 을 쓰는데, 재고 규격은
+   1팩=300g 처럼 자릿수가 다르다. 빈 칸을 채우는 것만으로 총 그램이 20~30배
+   뛰었다(두부 1개 10g→300g). 개수 x[1] 은 그대로라 사용자에게는 "내가 저장한
+   양이 저 혼자 바뀌었다"로만 보였고, 부팅마다 자동 실행돼 원인 추적도 어려웠다.
+   → 이제 '미지정 행이 몇 개인지'만 세어 알려주고, 값은 사용자가 정한다.
+      (편집화면 edPerRow 가 ⚠️ 미지정 배지 + [적용] 버튼으로 드러낸다) */
+function cnt(g){(g||[]).forEach(function(x){
 if(x[2]!=='개'||!x[3])return;
+if(+x[4]>0)return;                 /* 이미 정해진 값은 사용자 것 */
 var s=stkByKey(x[3]);if(!s||!isCnt(s.unit))return;
-var per=stkPer(s);
-if(+x[4]!==per){x[4]=per;n++}})}
-(typeof myR!=='undefined'?myR:[]).forEach(function(r){fix(r.g)});
-if(typeof ov!=='undefined')for(var k in ov)fix(ov[k].g);
-if(typeof ME!=='undefined'&&ME&&ME.g)fix(ME.g);
-if(n)save();
+n++})}
+(typeof myR!=='undefined'?myR:[]).forEach(function(r){cnt(r.g)});
+if(typeof ov!=='undefined')for(var k in ov)cnt(ov[k].g);
 return n}
-/* 편집 중인 행에 재고 규격을 즉시 물린다 */
-function edPerFix(){if(typeof ME==='undefined'||!ME||!ME.g)return;
-ME.g.forEach(function(x){if(x[2]==='개'&&x[3]){var s=stkByKey(x[3]);
-if(s&&isCnt(s.unit))x[4]=stkPer(s)}})}
+/* 편집 중인 행의 '미지정 개당 g' 개수를 센다 (v91: 대입하지 않는다).
+   ★ 예전에는 openEd() 가 이 함수로 x[4] 를 채웠다. 사용자 행동이 방아쇠라
+     예측 가능하다고 보았지만, 사용자가 한 행동은 '메뉴를 열어 본 것'뿐인데
+     총 그램이 달라졌다. 열어 보기만 해도 값이 바뀌는 것은 여전히 사고다.
+   → 채우지 않고, 편집화면이 ⚠️ 로 드러내 사용자가 [적용]을 누르게 한다. */
+function edPerFix(){if(typeof ME==='undefined'||!ME||!ME.g)return 0;
+var n=0;
+ME.g.forEach(function(x){if(x[2]==='개'&&x[3]&&!(+x[4]>0)){var s=stkByKey(x[3]);
+if(s&&isCnt(s.unit))n++}});
+return n}
 
 /*========== 편집 화면 · 재고 활용 ==========*/
 /* 재고에서 눌러 담을 때는 재고에 등록한 규격(1개당 g)을 그대로 쓴다 */
 function edAddStk(k){var s=stkByKey(k);
 if(!(s&&isCnt(s.unit)))return edAdd(k);
-var per=stkPer(s),hit=-1;
+var hit=-1;
 ME.g.forEach(function(x,i){if(x[3]===k)hit=i});
-/* ★ 개수는 1개 단위로 올린다.
-   예전에는 Math.max(.5, …*2)/2 로 0.5개 단위로 맞췄다. 계산상으로는 권장량에
-   가깝지만, 큐브·달걀처럼 '개'로 세는 재료는 실제로 반 개를 넣지 않는다.
-   화면에 0.5 가 찍히면 사용자는 자기가 잘못 입력한 것으로 오해한다.
-   → 최소 1개, 그리고 정수로 올림한다(부족한 쪽보다 채우는 쪽이 안전). */
-var step=Math.max(1,Math.ceil((QG[k]||10)/per));
-if(hit>=0){var r=ME.g[hit];
-if(r[2]==='개'){r[1]=Math.max(1,Math.round(+r[1]+step));r[4]=per}
-else{r[1]=Math.round((+r[1]+(QG[k]||10))*10)/10}}
+/* ★★ 재고가 팩·봉·통이어도 레시피 행은 g 으로 담는다 (v91) ★★
+   예전에는 Math.ceil((QG[k]||10)/per) 로 최소 1개를 넣었다. per 가 포장 단위라
+   두부 1팩=300g 이면 권장 20g 자리에 300g(15배), 단호박 1통=800g 이면 800g(40배)이
+   들어갔다. 개수 단위는 1개 미만을 쓸 수 없어 구조적으로 과다해진다.
+   진짜 '개'로 세는 재료(달걀 등, qUnit==='개')는 stkRow 와 같은 기준으로 개수를 쓴다. */
+if(qUnit(k)==='개'){
+var per=stkPer(s),step=Math.max(1,Math.round((QG[k]||10)/per))||1;
+if(hit>=0){var r0=ME.g[hit];
+if(r0[2]==='개'){r0[1]=Math.max(1,Math.round(+r0[1]+step));if(!(+r0[4]>0))r0[4]=per}
+else r0[1]=Math.round((+r0[1]+(QG[k]||10))*10)/10}
 else ME.g.push([k,step,'개',k,per]);
+return drawEd()}
+var q=QG[k]||10;
+if(hit>=0){var r=ME.g[hit];
+if(r[2]==='개'){/* 이미 개수 행이면 개수 체계를 유지한다 — 단위를 바꿔 값을 흔들지 않는다 */
+var rp=+r[4]||stkPer(s);r[1]=Math.max(1,Math.round(+r[1]+Math.max(1,Math.round(q/rp))));
+if(!(+r[4]>0))r[4]=rp}
+else r[1]=Math.round((+r[1]+q)*10)/10}
+else ME.g.push([k,q,qUnit(k),k]);
 drawEd()}
 function edFromStock(){var o=stkCombo(Math.floor(Math.random()*7));
 if(!o)return alert('영양 연동되는 재고가 2가지 이상 필요해요.');
